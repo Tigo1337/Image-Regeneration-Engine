@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { roomRedesignRequestSchema } from "@shared/schema";
-import { generateRoomRedesign, buildGenerationPrompt } from "./gemini";
+import { generateRoomRedesign } from "./gemini";
 import { processImageForGemini } from "./image-utils";
+import { getImageAnalysisPrompt, buildGenerationPrompt } from "./prompt-templates";
 import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({
@@ -29,15 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const base64Data = processedImage.replace(/^data:image\/[a-z]+;base64,/, '');
 
       // Step 1: Analyze the original room image with Gemini Flash (vision)
-      const analysisPrompt = `You are an expert interior designer. Analyze this room image in detail and describe:
-1. The overall room type (bedroom, living room, kitchen, bathroom, etc.)
-2. Current style and color palette
-3. Key architectural features (windows, doors, ceiling height, built-in elements)
-4. Furniture and decor items present
-5. Lighting and atmosphere
-6. The specific elements the user wants to preserve: ${validatedData.preservedElements}
-
-Provide a comprehensive description focusing on spatial layout, materials, textures, and the exact location and appearance of preserved elements.`;
+      const analysisPrompt = getImageAnalysisPrompt(validatedData.preservedElements);
 
       const analysisResponse = await ai.models.generateContent({
         model: "gemini-2.5-flash",
@@ -58,7 +51,13 @@ Provide a comprehensive description focusing on spatial layout, materials, textu
       });
 
       const roomAnalysis = analysisResponse.text || "A well-lit interior room";
-      const generationPrompt = await buildGenerationPrompt(roomAnalysis, validatedData);
+      const generationPrompt = buildGenerationPrompt(
+        roomAnalysis,
+        validatedData.preservedElements,
+        validatedData.targetStyle,
+        validatedData.quality,
+        validatedData.creativityLevel
+      );
 
       res.json({
         success: true,
