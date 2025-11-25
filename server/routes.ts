@@ -102,6 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         preservedElements: validatedData.preservedElements,
         targetStyle: validatedData.targetStyle,
         quality: validatedData.quality,
+        aspectRatio: validatedData.aspectRatio,
         creativityLevel: validatedData.creativityLevel,
         customPrompt: prompt,
       });

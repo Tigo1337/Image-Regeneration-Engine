@@ -10,12 +10,13 @@ interface RoomRedesignParams {
   preservedElements: string;
   targetStyle: string;
   quality: string;
+  aspectRatio: string;
   creativityLevel: number;
   customPrompt?: string;
 }
 
 export async function generateRoomRedesign(params: RoomRedesignParams): Promise<string> {
-  const { imageBase64, customPrompt } = params;
+  const { imageBase64, customPrompt, quality, aspectRatio } = params;
 
   try {
     // Use custom prompt if provided (user reviewed and edited)
@@ -23,6 +24,39 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
 
     // Remove data URL prefix if present to get pure base64
     const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+
+    // Map quality to resolution
+    const resolutionMap: Record<string, string> = {
+      "Standard": "1024x768",
+      "High Fidelity (2K)": "2048x1536",
+      "Ultra (4K)": "4096x3072"
+    };
+    
+    // Map aspect ratio for generation config
+    const aspectRatioMap: Record<string, string> = {
+      "Original": "1:1",
+      "16:9": "16:9",
+      "1:1": "1:1",
+      "4:3": "4:3"
+    };
+
+    const config: any = {
+      responseModalities: [Modality.IMAGE],
+    };
+
+    // Add resolution if quality is specified
+    if (quality in resolutionMap) {
+      config.generationConfig = {
+        outputPixelHeight: parseInt(resolutionMap[quality].split("x")[1]),
+        outputPixelWidth: parseInt(resolutionMap[quality].split("x")[0]),
+      };
+    }
+
+    // Add aspect ratio if not original
+    if (aspectRatio !== "Original" && aspectRatio in aspectRatioMap) {
+      if (!config.generationConfig) config.generationConfig = {};
+      config.generationConfig.aspectRatio = aspectRatioMap[aspectRatio];
+    }
 
     const imageResponse = await ai.models.generateContent({
       model: "gemini-3-pro-image-preview",
@@ -40,9 +74,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
           ]
         }
       ],
-      config: {
-        responseModalities: [Modality.IMAGE],
-      },
+      config,
     });
 
     const candidate = imageResponse.candidates?.[0];
