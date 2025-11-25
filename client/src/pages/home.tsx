@@ -18,11 +18,12 @@ export default function Home() {
 
   const promptMutation = useMutation({
     mutationFn: async (data: RoomRedesignRequest & { imageData: string }) => {
-      return await apiRequest<{ success: boolean; prompt?: string; error?: string }>(
+      const res = await apiRequest(
         "POST",
         "/api/generate-prompt",
         data
       );
+      return res.json() as Promise<{ success: boolean; prompt?: string; error?: string }>;
     },
     onSuccess: (response) => {
       if (response.success && response.prompt) {
@@ -51,11 +52,12 @@ export default function Home() {
 
   const generateMutation = useMutation({
     mutationFn: async (data: RoomRedesignRequest & { imageData: string; prompt: string }) => {
-      return await apiRequest<RoomRedesignResponse>(
+      const res = await apiRequest(
         "POST",
         "/api/generate",
         data
       );
+      return res.json() as Promise<RoomRedesignResponse>;
     },
     onSuccess: (response) => {
       if (response.success && response.generatedImage) {
