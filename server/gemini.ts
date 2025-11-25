@@ -25,19 +25,19 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     // Remove data URL prefix if present to get pure base64
     const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
 
-    // Map quality to resolution
-    const resolutionMap: Record<string, string> = {
-      "Standard": "1024x768",
-      "High Fidelity (2K)": "2048x1536",
-      "Ultra (4K)": "4096x3072"
+    // Map quality to base resolution (longest dimension)
+    const qualityBaseResolutionMap: Record<string, number> = {
+      "Standard": 1024,
+      "High Fidelity (2K)": 2048,
+      "Ultra (4K)": 4096
     };
     
-    // Map aspect ratio for generation config
-    const aspectRatioMap: Record<string, string> = {
-      "Original": "1:1",
-      "16:9": "16:9",
-      "1:1": "1:1",
-      "4:3": "4:3"
+    // Map aspect ratios to width:height ratio
+    const aspectRatioMap: Record<string, [number, number]> = {
+      "Original": [4, 3],  // Default to 4:3 for original
+      "16:9": [16, 9],
+      "1:1": [1, 1],
+      "4:3": [4, 3]
     };
 
     const config: any = {
@@ -49,16 +49,33 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       imageConfig: {}
     };
 
-    // Add resolution if quality is specified
-    if (quality in resolutionMap) {
-      const [width, height] = resolutionMap[quality].split("x").map(Number);
-      generationConfig.imageConfig.outputPixelHeight = height;
-      generationConfig.imageConfig.outputPixelWidth = width;
+    // Calculate resolution based on quality and aspect ratio
+    if (quality in qualityBaseResolutionMap) {
+      const baseResolution = qualityBaseResolutionMap[quality];
+      const [ratioWidth, ratioHeight] = aspectRatioMap[aspectRatio] || [4, 3];
+      
+      // Calculate dimensions maintaining aspect ratio
+      // Use baseResolution for the longer dimension
+      let outputPixelWidth: number;
+      let outputPixelHeight: number;
+      
+      if (ratioWidth >= ratioHeight) {
+        // Width is longer or equal
+        outputPixelWidth = baseResolution;
+        outputPixelHeight = Math.round((baseResolution * ratioHeight) / ratioWidth);
+      } else {
+        // Height is longer
+        outputPixelHeight = baseResolution;
+        outputPixelWidth = Math.round((baseResolution * ratioWidth) / ratioHeight);
+      }
+      
+      generationConfig.imageConfig.outputPixelHeight = outputPixelHeight;
+      generationConfig.imageConfig.outputPixelWidth = outputPixelWidth;
     }
 
-    // Add aspect ratio if not original
+    // Set aspect ratio (for Gemini API, only set if not original)
     if (aspectRatio !== "Original" && aspectRatio in aspectRatioMap) {
-      generationConfig.imageConfig.aspectRatio = aspectRatioMap[aspectRatio];
+      generationConfig.imageConfig.aspectRatio = aspectRatio;
     }
 
     if (Object.keys(generationConfig.imageConfig).length > 0) {
