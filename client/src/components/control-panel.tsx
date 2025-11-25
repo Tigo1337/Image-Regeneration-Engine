@@ -33,6 +33,8 @@ interface ControlPanelProps {
   generatedPrompt?: string;
   onPromptChange?: (prompt: string) => void;
   onCancelPrompt?: () => void;
+  manualPrompt?: string;
+  onManualPromptChange?: (prompt: string) => void;
 }
 
 export function ControlPanel({ 
@@ -43,7 +45,9 @@ export function ControlPanel({
   isGeneratingPrompt,
   generatedPrompt,
   onPromptChange,
-  onCancelPrompt
+  onCancelPrompt,
+  manualPrompt = "",
+  onManualPromptChange
 }: ControlPanelProps) {
   const form = useForm<RoomRedesignRequest>({
     resolver: zodResolver(roomRedesignRequestSchema),
@@ -237,17 +241,55 @@ export function ControlPanel({
             </div>
           </div>
         ) : (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            size="lg"
-            disabled={disabled || isGeneratingPrompt || isGenerating}
-            onClick={() => onGeneratePrompt?.(form.getValues())}
-            data-testid="button-generate-prompt"
-          >
-            {isGeneratingPrompt ? "Generating Prompt..." : "Generate Prompt"}
-          </Button>
+          <div className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              size="lg"
+              disabled={disabled || isGeneratingPrompt || isGenerating}
+              onClick={() => onGeneratePrompt?.(form.getValues())}
+              data-testid="button-generate-prompt"
+            >
+              {isGeneratingPrompt ? "Generating Prompt..." : "Generate Prompt"}
+            </Button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="px-2 bg-card text-muted-foreground">Or enter manually</span>
+              </div>
+            </div>
+
+            <div className="bg-muted p-4 rounded-md">
+              <Label className="text-sm font-semibold text-card-foreground mb-2 block">
+                Manual Prompt
+              </Label>
+              <textarea
+                value={manualPrompt}
+                onChange={(e) => onManualPromptChange?.(e.target.value)}
+                placeholder="Enter your own prompt for image generation..."
+                className="w-full h-24 p-2 text-xs bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                data-testid="textarea-manual-prompt"
+              />
+            </div>
+
+            {manualPrompt && (
+              <Button
+                type="button"
+                className="w-full"
+                size="lg"
+                disabled={disabled || isGenerating}
+                onClick={() => onGenerate(form.getValues())}
+                data-testid="button-generate-with-manual"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                {isGenerating ? "Generating..." : "Generate Redesign"}
+              </Button>
+            )}
+          </div>
         )}
       </form>
     </Form>

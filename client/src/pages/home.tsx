@@ -14,6 +14,7 @@ export default function Home() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
   const [editedPrompt, setEditedPrompt] = useState<string | null>(null);
+  const [manualPrompt, setManualPrompt] = useState<string>("");
   const { toast } = useToast();
 
   const promptMutation = useMutation({
@@ -102,11 +103,13 @@ export default function Home() {
   };
 
   const handleGenerate = (formData: RoomRedesignRequest) => {
-    if (!originalImage || !editedPrompt) {
+    const promptToUse = editedPrompt || manualPrompt;
+    
+    if (!originalImage || !promptToUse) {
       toast({
         variant: "destructive",
         title: "Missing data",
-        description: "Please upload an image and generate a prompt first",
+        description: "Please upload an image and provide a prompt",
       });
       return;
     }
@@ -114,7 +117,7 @@ export default function Home() {
     generateMutation.mutate({
       ...formData,
       imageData: originalImage,
-      prompt: editedPrompt,
+      prompt: promptToUse,
     });
   };
 
@@ -151,6 +154,8 @@ export default function Home() {
               generatedPrompt={generatedPrompt}
               onPromptChange={setEditedPrompt}
               onCancelPrompt={handleCancelPrompt}
+              manualPrompt={manualPrompt}
+              onManualPromptChange={setManualPrompt}
             />
           </div>
         </div>
