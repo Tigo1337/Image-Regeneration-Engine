@@ -11,66 +11,6 @@ const ai = new GoogleGenAI({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  app.post("/api/generate-prompt", async (req, res) => {
-    try {
-      const { imageData, ...formData } = req.body;
-
-      // Validate the request
-      const validatedData = roomRedesignRequestSchema.parse(formData);
-
-      if (!imageData) {
-        return res.status(400).json({
-          success: false,
-          error: "No image data provided"
-        });
-      }
-
-      // Process image to ensure it meets Gemini's requirements
-      const processedImage = await processImageForGemini(imageData);
-      const base64Data = processedImage.replace(/^data:image\/[a-z]+;base64,/, '');
-
-      // Step 1: Analyze the original room image with Gemini Flash (vision)
-      const analysisPrompt = getImageAnalysisPrompt(validatedData.preservedElements);
-
-      const analysisResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: analysisPrompt },
-              {
-                inlineData: {
-                  mimeType: "image/jpeg",
-                  data: base64Data
-                }
-              }
-            ]
-          }
-        ],
-      });
-
-      const roomAnalysis = analysisResponse.text || "A well-lit interior room";
-      const generationPrompt = buildGenerationPrompt(
-        roomAnalysis,
-        validatedData.preservedElements,
-        validatedData.targetStyle,
-        validatedData.quality,
-        validatedData.creativityLevel
-      );
-
-      res.json({
-        success: true,
-        prompt: generationPrompt,
-      });
-    } catch (error) {
-      console.error("Error in /api/generate-prompt:", error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to generate prompt"
-      });
-    }
-  });
 
   app.post("/api/generate", async (req, res) => {
     try {
@@ -116,6 +56,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Failed to generate room redesign"
+      });
+    }
+  });
+
+  app.post("/api/modify", async (req, res) => {
+    try {
+      const { imageData, referenceImage, prompt, ...formData } = req.body;
+
+      // Validate the request
+      const validatedData = roomRedesignRequestSchema.parse(formData);
+
+      if (!imageData) {
+        return res.status(400).json({
+          success: false,
+          error: "No image data provided"
+        });
+      }
+
+      if (!referenceImage) {
+        return res.status(400).json({
+          success: false,
+          error: "No reference image provided"
+        });
+      }
+
+      if (!prompt) {
+        return res.status(400).json({
+          success: false,
+          error: "No modification prompt provided"
+        });
+      }
+
+      // Process the reference (previously generated) image
+      const processedReference = await processImageForGemini(referenceImage);
+
+      // Generate modified image using the reference image
+      const generatedImage = await generateRoomRedesign({
+        imageBase64: processedReference,
+        preservedElements: validatedData.preservedElements,
+        targetStyle: validatedData.targetStyle,
+        quality: validatedData.quality,
+        aspectRatio: validatedData.aspectRatio,
+        creativityLevel: validatedData.creativityLevel,
+        customPrompt: prompt,
+      });
+
+      res.json({
+        success: true,
+        generatedImage,
+      });
+    } catch (error) {
+      console.error("Error in /api/modify:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to apply modification"
       });
     }
   });

@@ -12,50 +12,15 @@ import { Sparkles } from "lucide-react";
 export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
-  const [editedPrompt, setEditedPrompt] = useState<string | null>(null);
   const [manualPrompt, setManualPrompt] = useState<string>("");
   const { toast } = useToast();
 
-  const promptMutation = useMutation({
-    mutationFn: async (data: RoomRedesignRequest & { imageData: string }) => {
-      const res = await apiRequest(
-        "POST",
-        "/api/generate-prompt",
-        data
-      );
-      return res.json() as Promise<{ success: boolean; prompt?: string; error?: string }>;
-    },
-    onSuccess: (response) => {
-      if (response.success && response.prompt) {
-        setGeneratedPrompt(response.prompt);
-        setEditedPrompt(response.prompt);
-        toast({
-          title: "Prompt generated!",
-          description: "Review and edit the prompt if needed, then generate the redesign.",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Prompt generation failed",
-          description: response.error || "Failed to generate prompt",
-        });
-      }
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate prompt",
-      });
-    },
-  });
-
   const generateMutation = useMutation({
-    mutationFn: async (data: RoomRedesignRequest & { imageData: string; prompt: string }) => {
+    mutationFn: async (data: RoomRedesignRequest & { imageData: string; referenceImage?: string; prompt: string; isModification?: boolean }) => {
+      const endpoint = data.isModification ? "/api/modify" : "/api/generate";
       const res = await apiRequest(
         "POST",
-        "/api/generate",
+        endpoint,
         data
       );
       return res.json() as Promise<RoomRedesignResponse>;
@@ -63,11 +28,10 @@ export default function Home() {
     onSuccess: (response) => {
       if (response.success && response.generatedImage) {
         setGeneratedImage(response.generatedImage);
-        setGeneratedPrompt(null);
-        setEditedPrompt(null);
+        setManualPrompt("");
         toast({
-          title: "Room redesigned successfully!",
-          description: "Your AI-generated design is ready.",
+          title: generatedImage ? "Modification applied successfully!" : "Room redesigned successfully!",
+          description: generatedImage ? "Your modifications have been applied." : "Your AI-generated design is ready.",
         });
       } else {
         toast({
@@ -86,26 +50,8 @@ export default function Home() {
     },
   });
 
-  const handleGeneratePrompt = (formData: RoomRedesignRequest) => {
-    if (!originalImage) {
-      toast({
-        variant: "destructive",
-        title: "No image",
-        description: "Please upload or provide an image URL first",
-      });
-      return;
-    }
-
-    promptMutation.mutate({
-      ...formData,
-      imageData: originalImage,
-    });
-  };
-
   const handleGenerate = (formData: RoomRedesignRequest) => {
-    const promptToUse = editedPrompt || manualPrompt;
-    
-    if (!originalImage || !promptToUse) {
+    if (!originalImage || !manualPrompt) {
       toast({
         variant: "destructive",
         title: "Missing data",
@@ -114,16 +60,24 @@ export default function Home() {
       return;
     }
 
-    generateMutation.mutate({
-      ...formData,
-      imageData: originalImage,
-      prompt: promptToUse,
-    });
-  };
-
-  const handleCancelPrompt = () => {
-    setGeneratedPrompt(null);
-    setEditedPrompt(null);
+    if (generatedImage) {
+      // Modification mode - use generated image as reference
+      generateMutation.mutate({
+        ...formData,
+        imageData: originalImage,
+        referenceImage: generatedImage,
+        prompt: manualPrompt,
+        isModification: true,
+      });
+    } else {
+      // First generation mode - use original image
+      generateMutation.mutate({
+        ...formData,
+        imageData: originalImage,
+        prompt: manualPrompt,
+        isModification: false,
+      });
+    }
   };
 
   return (
@@ -147,15 +101,11 @@ export default function Home() {
             <ImageUploadTabs onImageLoad={setOriginalImage} />
             <ControlPanel 
               onGenerate={handleGenerate}
-              onGeneratePrompt={handleGeneratePrompt}
               disabled={!originalImage}
               isGenerating={generateMutation.isPending}
-              isGeneratingPrompt={promptMutation.isPending}
-              generatedPrompt={generatedPrompt}
-              onPromptChange={setEditedPrompt}
-              onCancelPrompt={handleCancelPrompt}
               manualPrompt={manualPrompt}
               onManualPromptChange={setManualPrompt}
+              isModificationMode={!!generatedImage}
             />
           </div>
         </div>
@@ -170,7 +120,7 @@ export default function Home() {
       </main>
 
       {/* Loading Overlay */}
-      {(generateMutation.isPending || promptMutation.isPending) && <LoadingOverlay />}
+      {generateMutation.isPending && <LoadingOverlay />}
     </div>
   );
 }
