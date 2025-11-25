@@ -160,6 +160,35 @@ export function ImageCanvas({
                   />
                 </div>
               </Card>
+
+              {/* Configuration Display */}
+              {currentFormData && (
+                <Card className="p-4 bg-muted/20">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Configuration</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Style</p>
+                      <p className="text-foreground font-medium" data-testid="config-style">{currentFormData.targetStyle}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Quality</p>
+                      <p className="text-foreground font-medium" data-testid="config-quality">{currentFormData.quality}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Aspect Ratio</p>
+                      <p className="text-foreground font-medium" data-testid="config-aspect-ratio">{currentFormData.aspectRatio}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Creativity</p>
+                      <p className="text-foreground font-medium" data-testid="config-creativity">{currentFormData.creativityLevel}%</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground text-xs">Elements to Preserve</p>
+                      <p className="text-foreground font-medium line-clamp-2" data-testid="config-elements">{currentFormData.preservedElements}</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
           )}
         </div>
