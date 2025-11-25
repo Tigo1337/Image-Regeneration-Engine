@@ -25,61 +25,33 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     // Remove data URL prefix if present to get pure base64
     const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
 
-    // Map quality to base resolution (longest dimension)
-    const qualityBaseResolutionMap: Record<string, number> = {
-      "Standard": 1024,
-      "High Fidelity (2K)": 2048,
-      "Ultra (4K)": 4096
-    };
-    
-    // Map aspect ratios to width:height ratio
-    const aspectRatioMap: Record<string, [number, number]> = {
-      "Original": [4, 3],  // Default to 4:3 for original
-      "16:9": [16, 9],
-      "1:1": [1, 1],
-      "4:3": [4, 3]
+    // Map quality to Gemini imageSize parameter
+    const qualityToImageSizeMap: Record<string, string> = {
+      "Standard": "1K",
+      "High Fidelity (2K)": "2K",
+      "Ultra (4K)": "4K"
     };
 
     const config: any = {
       responseModalities: [Modality.IMAGE],
     };
 
-    // Build generationConfig with imageConfig
-    const generationConfig: any = {
-      imageConfig: {}
-    };
+    // Build imageConfig directly in config (not nested under generationConfig)
+    const imageConfig: any = {};
 
-    // Calculate resolution based on quality and aspect ratio
-    if (quality in qualityBaseResolutionMap) {
-      const baseResolution = qualityBaseResolutionMap[quality];
-      const [ratioWidth, ratioHeight] = aspectRatioMap[aspectRatio] || [4, 3];
-      
-      // Calculate dimensions maintaining aspect ratio
-      // Use baseResolution for the longer dimension
-      let outputPixelWidth: number;
-      let outputPixelHeight: number;
-      
-      if (ratioWidth >= ratioHeight) {
-        // Width is longer or equal
-        outputPixelWidth = baseResolution;
-        outputPixelHeight = Math.round((baseResolution * ratioHeight) / ratioWidth);
-      } else {
-        // Height is longer
-        outputPixelHeight = baseResolution;
-        outputPixelWidth = Math.round((baseResolution * ratioWidth) / ratioHeight);
-      }
-      
-      generationConfig.imageConfig.outputPixelHeight = outputPixelHeight;
-      generationConfig.imageConfig.outputPixelWidth = outputPixelWidth;
+    // Set image size based on quality
+    if (quality in qualityToImageSizeMap) {
+      imageConfig.imageSize = qualityToImageSizeMap[quality];
     }
 
     // Set aspect ratio (for Gemini API, only set if not original)
-    if (aspectRatio !== "Original" && aspectRatio in aspectRatioMap) {
-      generationConfig.imageConfig.aspectRatio = aspectRatio;
+    if (aspectRatio !== "Original") {
+      imageConfig.aspectRatio = aspectRatio;
     }
 
-    if (Object.keys(generationConfig.imageConfig).length > 0) {
-      config.generationConfig = generationConfig;
+    // Add imageConfig to main config if it has any settings
+    if (Object.keys(imageConfig).length > 0) {
+      config.imageConfig = imageConfig;
     }
 
     // Log the API request
@@ -89,7 +61,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     console.log("Image data size:", base64Data.length, "bytes");
     console.log("Quality setting:", quality);
     console.log("Aspect Ratio setting:", aspectRatio);
-    console.log("Generation Config:", JSON.stringify(config.generationConfig || {}, null, 2));
+    console.log("Config:", JSON.stringify(config, null, 2));
     console.log("==========================================");
 
     const imageResponse = await ai.models.generateContent({
