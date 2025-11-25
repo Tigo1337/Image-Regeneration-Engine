@@ -65,6 +65,16 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       config.generationConfig = generationConfig;
     }
 
+    // Log the API request
+    console.log("=== Gemini Image Generation API Request ===");
+    console.log("Model: gemini-3-pro-image-preview");
+    console.log("Prompt:", generationPrompt);
+    console.log("Image data size:", base64Data.length, "bytes");
+    console.log("Quality setting:", quality);
+    console.log("Aspect Ratio setting:", aspectRatio);
+    console.log("Generation Config:", JSON.stringify(config.generationConfig || {}, null, 2));
+    console.log("==========================================");
+
     const imageResponse = await ai.models.generateContent({
       model: "gemini-3-pro-image-preview",
       contents: [
@@ -84,7 +94,13 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       config,
     });
 
+    // Log response
+    console.log("=== Gemini API Response ===");
+    console.log("Response candidates count:", imageResponse.candidates?.length);
     const candidate = imageResponse.candidates?.[0];
+    console.log("Candidate content parts:", candidate?.content?.parts?.length);
+    console.log("============================");
+
     const imagePart = candidate?.content?.parts?.find((part: any) => part.inlineData);
 
     if (!imagePart?.inlineData?.data) {
@@ -92,9 +108,14 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     }
 
     const mimeType = imagePart.inlineData.mimeType || "image/png";
+    console.log("Generated image MIME type:", mimeType);
+    console.log("Generated image size:", imagePart.inlineData.data.length, "bytes");
+    
     return `data:${mimeType};base64,${imagePart.inlineData.data}`;
   } catch (error) {
-    console.error("Gemini API error:", error);
+    console.error("=== Gemini API Error ===");
+    console.error("Error details:", error);
+    console.error("========================");
     throw new Error(`Failed to generate room redesign: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
