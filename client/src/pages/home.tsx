@@ -13,7 +13,7 @@ export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [originalFileName, setOriginalFileName] = useState<string>("image");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [manualPrompt, setManualPrompt] = useState<string>("");
+  const [modificationPrompt, setModificationPrompt] = useState<string>("");
   const [currentFormData, setCurrentFormData] = useState<RoomRedesignRequest | null>(null);
   const { toast } = useToast();
 
@@ -22,6 +22,8 @@ export default function Home() {
     if (fileName) {
       setOriginalFileName(fileName);
     }
+    setGeneratedImage(null);
+    setModificationPrompt("");
   };
 
   const generateMutation = useMutation({
@@ -37,7 +39,7 @@ export default function Home() {
     onSuccess: (response) => {
       if (response.success && response.generatedImage) {
         setGeneratedImage(response.generatedImage);
-        setManualPrompt("");
+        setModificationPrompt("");
         toast({
           title: generatedImage ? "Modification applied successfully!" : "Room redesigned successfully!",
           description: generatedImage ? "Your modifications have been applied." : "Your AI-generated design is ready.",
@@ -59,12 +61,21 @@ export default function Home() {
     },
   });
 
-  const handleGenerate = (formData: RoomRedesignRequest) => {
-    if (!originalImage || !manualPrompt) {
+  const handleGenerate = (formData: RoomRedesignRequest, prompt: string) => {
+    if (!originalImage) {
       toast({
         variant: "destructive",
-        title: "Missing data",
-        description: "Please upload an image and provide a prompt",
+        title: "Missing image",
+        description: "Please upload an image first",
+      });
+      return;
+    }
+
+    if (!prompt) {
+      toast({
+        variant: "destructive",
+        title: "Missing prompt",
+        description: "Please provide a prompt",
       });
       return;
     }
@@ -72,20 +83,18 @@ export default function Home() {
     setCurrentFormData(formData);
 
     if (generatedImage) {
-      // Modification mode - use generated image as reference
       generateMutation.mutate({
         ...formData,
         imageData: originalImage,
         referenceImage: generatedImage,
-        prompt: manualPrompt,
+        prompt: prompt,
         isModification: true,
       });
     } else {
-      // First generation mode - use original image
       generateMutation.mutate({
         ...formData,
         imageData: originalImage,
-        prompt: manualPrompt,
+        prompt: prompt,
         isModification: false,
       });
     }
@@ -114,9 +123,9 @@ export default function Home() {
               onGenerate={handleGenerate}
               disabled={!originalImage}
               isGenerating={generateMutation.isPending}
-              manualPrompt={manualPrompt}
-              onManualPromptChange={setManualPrompt}
               isModificationMode={!!generatedImage}
+              modificationPrompt={modificationPrompt}
+              onModificationPromptChange={setModificationPrompt}
             />
           </div>
         </div>
