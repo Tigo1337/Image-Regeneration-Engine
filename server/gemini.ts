@@ -44,18 +44,25 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       responseModalities: [Modality.IMAGE],
     };
 
+    // Build generationConfig with imageConfig
+    const generationConfig: any = {
+      imageConfig: {}
+    };
+
     // Add resolution if quality is specified
     if (quality in resolutionMap) {
-      config.generationConfig = {
-        outputPixelHeight: parseInt(resolutionMap[quality].split("x")[1]),
-        outputPixelWidth: parseInt(resolutionMap[quality].split("x")[0]),
-      };
+      const [width, height] = resolutionMap[quality].split("x").map(Number);
+      generationConfig.imageConfig.outputPixelHeight = height;
+      generationConfig.imageConfig.outputPixelWidth = width;
     }
 
     // Add aspect ratio if not original
     if (aspectRatio !== "Original" && aspectRatio in aspectRatioMap) {
-      if (!config.generationConfig) config.generationConfig = {};
-      config.generationConfig.aspectRatio = aspectRatioMap[aspectRatio];
+      generationConfig.imageConfig.aspectRatio = aspectRatioMap[aspectRatio];
+    }
+
+    if (Object.keys(generationConfig.imageConfig).length > 0) {
+      config.generationConfig = generationConfig;
     }
 
     const imageResponse = await ai.models.generateContent({
