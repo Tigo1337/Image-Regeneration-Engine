@@ -15,15 +15,31 @@ interface RoomRedesignParams {
 }
 
 export async function generateRoomRedesign(params: RoomRedesignParams): Promise<string> {
-  const { customPrompt } = params;
+  const { imageBase64, customPrompt } = params;
 
   try {
     // Use custom prompt if provided (user reviewed and edited)
     const generationPrompt = customPrompt || "Create a beautiful interior design image.";
 
+    // Remove data URL prefix if present to get pure base64
+    const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+
     const imageResponse = await ai.models.generateContent({
       model: "gemini-3-pro-image-preview",
-      contents: [{ role: "user", parts: [{ text: generationPrompt }] }],
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: generationPrompt },
+            {
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: base64Data
+              }
+            }
+          ]
+        }
+      ],
       config: {
         responseModalities: [Modality.IMAGE],
       },
