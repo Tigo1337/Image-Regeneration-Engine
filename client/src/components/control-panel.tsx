@@ -26,11 +26,25 @@ import { Sparkles, AlertCircle } from "lucide-react";
 
 interface ControlPanelProps {
   onGenerate: (data: RoomRedesignRequest) => void;
+  onGeneratePrompt?: (data: RoomRedesignRequest) => void;
   disabled?: boolean;
   isGenerating?: boolean;
+  isGeneratingPrompt?: boolean;
+  generatedPrompt?: string;
+  onPromptChange?: (prompt: string) => void;
+  onCancelPrompt?: () => void;
 }
 
-export function ControlPanel({ onGenerate, disabled, isGenerating }: ControlPanelProps) {
+export function ControlPanel({ 
+  onGenerate, 
+  onGeneratePrompt,
+  disabled, 
+  isGenerating,
+  isGeneratingPrompt,
+  generatedPrompt,
+  onPromptChange,
+  onCancelPrompt
+}: ControlPanelProps) {
   const form = useForm<RoomRedesignRequest>({
     resolver: zodResolver(roomRedesignRequestSchema),
     defaultValues: {
@@ -186,16 +200,55 @@ export function ControlPanel({ onGenerate, disabled, isGenerating }: ControlPane
           />
         </div>
 
-        <Button
-          type="submit"
-          className="w-full"
-          size="lg"
-          disabled={disabled || isGenerating}
-          data-testid="button-generate"
-        >
-          <Sparkles className="w-5 h-5 mr-2" />
-          {isGenerating ? "Generating..." : "Generate Redesign"}
-        </Button>
+        {generatedPrompt ? (
+          <div className="space-y-3">
+            <div className="bg-muted p-4 rounded-md">
+              <Label className="text-sm font-semibold text-card-foreground mb-2 block">
+                Generated Prompt
+              </Label>
+              <textarea
+                value={generatedPrompt}
+                onChange={(e) => onPromptChange?.(e.target.value)}
+                className="w-full h-24 p-2 text-xs bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                data-testid="textarea-prompt"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={onCancelPrompt}
+                data-testid="button-cancel-prompt"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="flex-1"
+                size="lg"
+                disabled={disabled || isGenerating}
+                onClick={() => onGenerate(form.getValues())}
+                data-testid="button-generate-redesign"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                {isGenerating ? "Generating..." : "Generate Redesign"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            size="lg"
+            disabled={disabled || isGeneratingPrompt || isGenerating}
+            onClick={() => onGeneratePrompt?.(form.getValues())}
+            data-testid="button-generate-prompt"
+          >
+            {isGeneratingPrompt ? "Generating Prompt..." : "Generate Prompt"}
+          </Button>
+        )}
       </form>
     </Form>
   );

@@ -1,12 +1,8 @@
-// Using Replit AI Integrations for Gemini - blueprint:javascript_gemini_ai_integrations
+// Using user's own Google Gemini API key
 import { GoogleGenAI, Modality } from "@google/genai";
 
 const ai = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY!,
-  httpOptions: {
-    apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL!,
-  },
+  apiKey: process.env.GOOGLE_GEMINI_API_KEY!,
 });
 
 interface RoomRedesignParams {
@@ -15,48 +11,13 @@ interface RoomRedesignParams {
   targetStyle: string;
   quality: string;
   creativityLevel: number;
+  customPrompt?: string;
 }
 
-export async function generateRoomRedesign(params: RoomRedesignParams): Promise<string> {
-  const { imageBase64, preservedElements, targetStyle, quality, creativityLevel } = params;
-
-  // Remove data URL prefix if present to get pure base64
-  const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
-
-  try {
-    // Step 1: Analyze the original room image with Gemini Flash (vision)
-    const analysisPrompt = `You are an expert interior designer. Analyze this room image in detail and describe:
-1. The overall room type (bedroom, living room, kitchen, bathroom, etc.)
-2. Current style and color palette
-3. Key architectural features (windows, doors, ceiling height, built-in elements)
-4. Furniture and decor items present
-5. Lighting and atmosphere
-6. The specific elements the user wants to preserve: ${preservedElements}
-
-Provide a comprehensive description focusing on spatial layout, materials, textures, and the exact location and appearance of preserved elements.`;
-
-    const analysisResponse = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: analysisPrompt },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: base64Data
-              }
-            }
-          ]
-        }
-      ],
-    });
-
-    const roomAnalysis = analysisResponse.text || "A well-lit interior room";
-
-    // Step 2: Generate a new room design using image generation model
-    const generationPrompt = `Create a photorealistic interior design image based on this description:
+export async function buildGenerationPrompt(roomAnalysis: string, params: RoomRedesignParams): Promise<string> {
+  const { preservedElements, targetStyle, quality, creativityLevel } = params;
+  
+  return `Create a photorealistic interior design image based on this description:
 
 ${roomAnalysis}
 
@@ -73,6 +34,14 @@ Style guidelines for ${targetStyle}:
 ${getStyleGuidelines(targetStyle)}
 
 Generate a stunning, magazine-quality interior design photograph.`;
+}
+
+export async function generateRoomRedesign(params: RoomRedesignParams): Promise<string> {
+  const { customPrompt } = params;
+
+  try {
+    // Use custom prompt if provided (user reviewed and edited)
+    const generationPrompt = customPrompt || "Create a beautiful interior design image.";
 
     const imageResponse = await ai.models.generateContent({
       model: "gemini-3-pro-image-preview",

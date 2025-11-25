@@ -12,10 +12,45 @@ import { Sparkles } from "lucide-react";
 export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
+  const [editedPrompt, setEditedPrompt] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const generateMutation = useMutation({
+  const promptMutation = useMutation({
     mutationFn: async (data: RoomRedesignRequest & { imageData: string }) => {
+      return await apiRequest<{ success: boolean; prompt?: string; error?: string }>(
+        "POST",
+        "/api/generate-prompt",
+        data
+      );
+    },
+    onSuccess: (response) => {
+      if (response.success && response.prompt) {
+        setGeneratedPrompt(response.prompt);
+        setEditedPrompt(response.prompt);
+        toast({
+          title: "Prompt generated!",
+          description: "Review and edit the prompt if needed, then generate the redesign.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Prompt generation failed",
+          description: response.error || "Failed to generate prompt",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate prompt",
+      });
+    },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async (data: RoomRedesignRequest & { imageData: string; prompt: string }) => {
       return await apiRequest<RoomRedesignResponse>(
         "POST",
         "/api/generate",
@@ -25,6 +60,8 @@ export default function Home() {
     onSuccess: (response) => {
       if (response.success && response.generatedImage) {
         setGeneratedImage(response.generatedImage);
+        setGeneratedPrompt(null);
+        setEditedPrompt(null);
         toast({
           title: "Room redesigned successfully!",
           description: "Your AI-generated design is ready.",
@@ -46,7 +83,7 @@ export default function Home() {
     },
   });
 
-  const handleGenerate = (formData: RoomRedesignRequest) => {
+  const handleGeneratePrompt = (formData: RoomRedesignRequest) => {
     if (!originalImage) {
       toast({
         variant: "destructive",
@@ -56,10 +93,32 @@ export default function Home() {
       return;
     }
 
-    generateMutation.mutate({
+    promptMutation.mutate({
       ...formData,
       imageData: originalImage,
     });
+  };
+
+  const handleGenerate = (formData: RoomRedesignRequest) => {
+    if (!originalImage || !editedPrompt) {
+      toast({
+        variant: "destructive",
+        title: "Missing data",
+        description: "Please upload an image and generate a prompt first",
+      });
+      return;
+    }
+
+    generateMutation.mutate({
+      ...formData,
+      imageData: originalImage,
+      prompt: editedPrompt,
+    });
+  };
+
+  const handleCancelPrompt = () => {
+    setGeneratedPrompt(null);
+    setEditedPrompt(null);
   };
 
   return (
@@ -82,9 +141,14 @@ export default function Home() {
           <div className="p-6 space-y-6">
             <ImageUploadTabs onImageLoad={setOriginalImage} />
             <ControlPanel 
-              onGenerate={handleGenerate} 
+              onGenerate={handleGenerate}
+              onGeneratePrompt={handleGeneratePrompt}
               disabled={!originalImage}
               isGenerating={generateMutation.isPending}
+              isGeneratingPrompt={promptMutation.isPending}
+              generatedPrompt={generatedPrompt}
+              onPromptChange={setEditedPrompt}
+              onCancelPrompt={handleCancelPrompt}
             />
           </div>
         </div>
@@ -99,7 +163,7 @@ export default function Home() {
       </main>
 
       {/* Loading Overlay */}
-      {generateMutation.isPending && <LoadingOverlay />}
+      {(generateMutation.isPending || promptMutation.isPending) && <LoadingOverlay />}
     </div>
   );
 }
