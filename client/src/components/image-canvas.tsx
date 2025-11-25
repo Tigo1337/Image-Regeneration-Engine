@@ -26,36 +26,40 @@ export function ImageCanvas({ originalImage, generatedImage }: ImageCanvasProps)
   }
 
   return (
-    <div className="h-full p-8">
-      <div className={`grid gap-6 h-full ${generatedImage ? 'grid-cols-2' : 'grid-cols-1'}`}>
+    <div className="h-full p-8 overflow-auto">
+      <div className={`grid gap-6 ${generatedImage ? 'grid-cols-2' : 'grid-cols-1'}`} style={{ minHeight: '100%' }}>
         {/* Original Image */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 min-h-0">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-foreground">Original</h3>
           </div>
-          <Card className="flex-1 overflow-hidden flex items-center justify-center bg-muted/20">
-            <img
-              src={originalImage}
-              alt="Original room"
-              className="max-w-full max-h-full object-contain"
-              data-testid="img-original"
-            />
+          <Card className="flex-1 overflow-auto flex items-center justify-center bg-muted/20 min-h-0">
+            <div className="flex items-center justify-center w-full h-full max-h-96">
+              <img
+                src={originalImage}
+                alt="Original room"
+                className="max-w-full max-h-full object-contain"
+                data-testid="img-original"
+              />
+            </div>
           </Card>
         </div>
 
         {/* Generated Image */}
         {generatedImage && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 min-h-0">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-foreground">AI Generated</h3>
             </div>
-            <Card className="flex-1 overflow-hidden flex items-center justify-center bg-muted/20">
-              <img
-                src={generatedImage}
-                alt="AI-generated room design"
-                className="max-w-full max-h-full object-contain"
-                data-testid="img-generated"
-              />
+            <Card className="flex-1 overflow-auto flex items-center justify-center bg-muted/20 min-h-0">
+              <div className="flex items-center justify-center w-full h-full max-h-96">
+                <img
+                  src={generatedImage}
+                  alt="AI-generated room design"
+                  className="max-w-full max-h-full object-contain"
+                  data-testid="img-generated"
+                />
+              </div>
             </Card>
           </div>
         )}
