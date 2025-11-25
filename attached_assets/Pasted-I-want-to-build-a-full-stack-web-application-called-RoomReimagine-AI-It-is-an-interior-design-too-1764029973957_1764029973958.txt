@@ -1,0 +1,55 @@
+I want to build a full-stack web application called "RoomReimagine AI". It is an interior design tool that uses Google's Gemini Vision capabilities to restyle rooms while preserving specific objects.
+1. Technology Stack:
+Frontend: React, Vite, TailwindCSS, Lucide React (icons).
+Backend: Python (FastAPI or Flask).
+AI: google-generativeai Python SDK.
+Deployment: Replit.
+2. Core Features & UI Layout:
+Layout: A sidebar on the left for controls, and a large main area for the image canvas.
+Input Methods: Create a tab system in the sidebar:
+Tab 1 (Upload): Drag and drop zone using react-dropzone.
+Tab 2 (DAM): An input field to paste a Cloudinary URL.
+Image Preview: When an image is uploaded or a URL is entered, display it immediately in the main canvas.
+3. Sidebar Controls (The Configuration):
+Please create the following form inputs in the sidebar:
+"Elements to Preserve" (Crucial): A text input where the user types what to keep (e.g., "Shower Base, Ceiling Fan").
+"Target Style": A dropdown with presets: "Modern", "Contemporary", "Boho", "Industrial", "Scandinavian", "Mid-Century Modern".
+"Quality/Resolution": A dropdown: "Standard", "High Fidelity (2K)", "Ultra (4K)".
+"Aspect Ratio": A dropdown: "Original", "16:9", "1:1", "4:3".
+"Creativity Level": A slider (0-100) labeled "Subtle Change" to "Total Transformation".
+4. Backend Logic & Prompt Engineering:
+Create a backend endpoint /generate that accepts the image and the form data.
+You must construct a dynamic prompt to send to the Gemini model.
+Use this exact logic for the System Prompt construction:
+code
+Python
+system_instruction = f"""
+You are an expert interior designer and architectural visualizer.
+Using the attached image, generate a new room scene based on the user's request.
+
+CRITICAL INSTRUCTION - OBJECT PRESERVATION:
+Strictly analyze the input image to identify the following elements: "{user_preserved_elements}".
+You must FREEZE the pixels associated with these specific elements. They must remain 100% UNCHANGED in geometry, texture, material, and position.
+Do not modify the structural shell of the room (walls, windows, ceiling) unless implied by the style change.
+
+TRANSFORMATION GOAL:
+Redesign the rest of the room to match a "{user_selected_style}" aesthetic.
+Quality Target: {user_quality_preset}.
+Creativity Level: {user_creativity_level}%.
+
+FINAL OUTPUT:
+Ensure lighting, shadows, and reflections blend realistically between the preserved elements and the new design.
+Generate a photorealistic result.
+"""
+5. Integration Requirements:
+Use os.environ to handle the GOOGLE_API_KEY.
+The backend should receive the image (base64 or file), resize it if necessary to meet Gemini API limits, and send it along with the text prompt.
+Return the generated image to the frontend and display it next to the original.
+6. Visual Polish:
+Use a dark mode theme.
+Make the "Generate" button large and distinct.
+Show a loading spinner/overlay while the AI is processing.
+Architect's Advice for Success
+API Key: You will need a Google AI Studio API Key. Once the Replit Agent creates the app, go to the "Secrets" (Lock icon) in Replit and add GOOGLE_API_KEY.
+The "4K" Constraint: Currently, most GenAI models (including Gemini) output at specific resolutions (often 1024x1024 or similar). The "4K" preset in the prompt will encourage the model to generate high-frequency detail, but the actual pixel dimensions might not be 3840x2160. To get true 4K, you would typically add a second step using an upscaler (like Real-ESRGAN), but for an MVP, prompting for "Ultra High Fidelity" is the correct first step.
+Cloudinary Handling: The agent will set up the input field for the URL. Ensure the backend downloads that image to a temporary buffer before sending it to Google, as Gemini usually expects raw image data or a Google Storage URI, not a public web URL directly in the prompt context (depending on the specific model version). The prompt above handles this by asking the backend to process the image.
