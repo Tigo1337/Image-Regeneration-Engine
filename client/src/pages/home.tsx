@@ -11,9 +11,18 @@ import { Sparkles } from "lucide-react";
 
 export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
+  const [originalFileName, setOriginalFileName] = useState<string>("image");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [manualPrompt, setManualPrompt] = useState<string>("");
+  const [currentFormData, setCurrentFormData] = useState<RoomRedesignRequest | null>(null);
   const { toast } = useToast();
+
+  const handleImageLoad = (imageData: string, fileName?: string) => {
+    setOriginalImage(imageData);
+    if (fileName) {
+      setOriginalFileName(fileName);
+    }
+  };
 
   const generateMutation = useMutation({
     mutationFn: async (data: RoomRedesignRequest & { imageData: string; referenceImage?: string; prompt: string; isModification?: boolean }) => {
@@ -60,6 +69,8 @@ export default function Home() {
       return;
     }
 
+    setCurrentFormData(formData);
+
     if (generatedImage) {
       // Modification mode - use generated image as reference
       generateMutation.mutate({
@@ -98,7 +109,7 @@ export default function Home() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
-            <ImageUploadTabs onImageLoad={setOriginalImage} />
+            <ImageUploadTabs onImageLoad={handleImageLoad} />
             <ControlPanel 
               onGenerate={handleGenerate}
               disabled={!originalImage}
@@ -116,6 +127,8 @@ export default function Home() {
         <ImageCanvas 
           originalImage={originalImage}
           generatedImage={generatedImage}
+          originalFileName={originalFileName}
+          currentFormData={currentFormData || undefined}
         />
       </main>
 

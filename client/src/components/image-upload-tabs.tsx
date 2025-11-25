@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useDropzone } from "react-dropzone";
 
 interface ImageUploadTabsProps {
-  onImageLoad: (imageData: string) => void;
+  onImageLoad: (imageData: string, fileName?: string) => void;
 }
 
 export function ImageUploadTabs({ onImageLoad }: ImageUploadTabsProps) {
@@ -27,7 +27,9 @@ export function ImageUploadTabs({ onImageLoad }: ImageUploadTabsProps) {
         const reader = new FileReader();
         reader.onload = () => {
           const result = reader.result as string;
-          onImageLoad(result);
+          // Remove file extension for the base name
+          const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+          onImageLoad(result, nameWithoutExt);
           toast({
             title: "Image uploaded",
             description: `${file.name} loaded successfully`,
@@ -61,7 +63,7 @@ export function ImageUploadTabs({ onImageLoad }: ImageUploadTabsProps) {
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
-        onImageLoad(result);
+        onImageLoad(result, "uploaded-image");
         toast({
           title: "Image loaded",
           description: "Image from URL loaded successfully",
