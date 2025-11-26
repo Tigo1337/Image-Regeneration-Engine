@@ -3,7 +3,7 @@ import { ImageUploadTabs } from "@/components/image-upload-tabs";
 import { ControlPanel } from "@/components/control-panel";
 import { ImageCanvas } from "@/components/image-canvas";
 import { LoadingOverlay } from "@/components/loading-overlay";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { RoomRedesignRequest, RoomRedesignResponse } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,7 @@ export default function Home() {
   const [modificationPrompt, setModificationPrompt] = useState<string>("");
   const [currentFormData, setCurrentFormData] = useState<RoomRedesignRequest | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleImageLoad = (imageData: string, fileName?: string) => {
     setOriginalImage(imageData);
@@ -36,10 +37,27 @@ export default function Home() {
       );
       return res.json() as Promise<RoomRedesignResponse>;
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       if (response.success && response.generatedImage) {
         setGeneratedImage(response.generatedImage);
         setModificationPrompt("");
+        
+        // Save to gallery if this is a new generation (not a modification)
+        if (originalImage && currentFormData && !generatedImage) {
+          try {
+            await apiRequest("POST", "/api/gallery/save", {
+              originalImage,
+              generatedImage: response.generatedImage,
+              originalFileName,
+              config: currentFormData,
+            });
+            // Invalidate gallery cache to show new design
+            queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
+          } catch (error) {
+            console.error("Failed to save design to gallery:", error);
+          }
+        }
+        
         toast({
           title: generatedImage ? "Modification applied successfully!" : "Room redesigned successfully!",
           description: generatedImage ? "Your modifications have been applied." : "Your AI-generated design is ready.",

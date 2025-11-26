@@ -5,6 +5,7 @@ import { generateRoomRedesign } from "./gemini";
 import { processImageForGemini } from "./image-utils";
 import { getImageAnalysisPrompt, buildGenerationPrompt } from "./prompt-templates";
 import { GoogleGenAI } from "@google/genai";
+import { storage } from "./storage";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_GEMINI_API_KEY!,
@@ -111,6 +112,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Failed to apply modification"
+      });
+    }
+  });
+
+  app.post("/api/gallery/save", async (req, res) => {
+    try {
+      const { originalImage, generatedImage, originalFileName, config } = req.body;
+
+      if (!originalImage || !generatedImage || !originalFileName || !config) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required fields"
+        });
+      }
+
+      const design = await storage.saveGeneratedDesign({
+        timestamp: Date.now(),
+        originalImage,
+        generatedImage,
+        originalFileName,
+        config,
+      });
+
+      res.json({
+        success: true,
+        design,
+      });
+    } catch (error) {
+      console.error("Error in /api/gallery/save:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to save design"
+      });
+    }
+  });
+
+  app.get("/api/gallery", async (req, res) => {
+    try {
+      const designs = await storage.getGeneratedDesigns();
+      res.json(designs);
+    } catch (error) {
+      console.error("Error in /api/gallery:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to fetch designs"
       });
     }
   });
