@@ -36,3 +36,13 @@ export interface RoomRedesignResponse {
   generatedImage?: string; // base64 data URL
   error?: string;
 }
+
+// Generated design for history
+export interface GeneratedDesign {
+  id: string;
+  timestamp: number;
+  originalImage: string; // base64 data URL
+  generatedImage: string; // base64 data URL
+  originalFileName: string;
+  config: RoomRedesignRequest;
+}

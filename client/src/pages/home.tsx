@@ -100,6 +100,14 @@ export default function Home() {
     }
   };
 
+  const handleReset = () => {
+    setOriginalImage(null);
+    setOriginalFileName("image");
+    setGeneratedImage(null);
+    setModificationPrompt("");
+    setCurrentFormData(null);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
@@ -118,7 +126,17 @@ export default function Home() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
-            <ImageUploadTabs onImageLoad={handleImageLoad} />
+            {generatedImage ? (
+              <button
+                onClick={handleReset}
+                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover-elevate font-medium text-sm"
+                data-testid="button-back-to-home"
+              >
+                ← Back to Home
+              </button>
+            ) : (
+              <ImageUploadTabs onImageLoad={handleImageLoad} />
+            )}
             <ControlPanel 
               onGenerate={handleGenerate}
               disabled={!originalImage}
