@@ -52,6 +52,9 @@ Redesign the rest of the room to match a "${style}" aesthetic.
 Key characteristics to apply: ${specificAesthetic}.
 Replace furniture, lighting, and decor that are NOT in the preservation list.`;
 
+  prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
+For the selected style, choose the single most appropriate metallic finish (e.g., brushed nickel, matte black, chrome). You MUST apply this exact finish uniformly to **ALL** visible metallic fixtures, including preserved elements, plumbing hardware, lighting fixtures, and cabinet pulls. Maintain absolute consistency of this single finish across the entire scene.`;
+  
   prompt += `\n\nFINAL OUTPUT & COMPOSITION:
 Ensure lighting, shadows, and reflections blend realistically between the preserved elements and the new design.
 Generate a photorealistic result.`;
