@@ -127,10 +127,10 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
-      <aside className="w-96 border-r border-border bg-card flex flex-col">
-        <div className="p-6 border-b border-card-border">
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card flex flex-col">
+        <div className="p-4 border-b border-card-border">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary text-primary-foreground">
               <Sparkles className="w-5 h-5" />
@@ -142,18 +142,21 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+        {/* Controls Section */}
+        <div className="overflow-x-auto">
+          <div className="p-4 space-y-4 min-w-max md:min-w-full">
             {generatedImage ? (
               <button
                 onClick={handleReset}
-                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover-elevate font-medium text-sm"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover-elevate font-medium text-sm"
                 data-testid="button-back-to-home"
               >
                 ← Back to Home
               </button>
             ) : (
-              <ImageUploadTabs onImageLoad={handleImageLoad} />
+              <div className="max-w-sm">
+                <ImageUploadTabs onImageLoad={handleImageLoad} />
+              </div>
             )}
             <ControlPanel 
               onGenerate={handleGenerate}
@@ -165,7 +168,7 @@ export default function Home() {
             />
           </div>
         </div>
-      </aside>
+      </header>
 
       {/* Main Canvas */}
       <main className="flex-1 overflow-auto">
