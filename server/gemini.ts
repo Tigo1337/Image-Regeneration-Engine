@@ -1,5 +1,6 @@
 // Using user's own Google Gemini API key
 import { GoogleGenAI, Modality } from "@google/genai";
+import sharp from "sharp";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_GEMINI_API_KEY!,
@@ -57,10 +58,8 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       imageConfig.aspectRatio = aspectRatio;
     }
 
-    // Set output format
-    if (outputFormat in formatToMimeTypeMap) {
-      imageConfig.outputMimeType = formatToMimeTypeMap[outputFormat];
-    }
+    // Note: outputMimeType is not supported by Gemini API
+    // We'll convert the image server-side to the requested format
 
     // Add imageConfig to main config if it has any settings
     if (Object.keys(imageConfig).length > 0) {
@@ -110,11 +109,37 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       throw new Error("No image data in Gemini response");
     }
 
-    const mimeType = imagePart.inlineData.mimeType || "image/png";
-    console.log("Generated image MIME type:", mimeType);
-    console.log("Generated image size:", imagePart.inlineData.data.length, "bytes");
+    let imageData = imagePart.inlineData.data;
+    let mimeType = imagePart.inlineData.mimeType || "image/png";
+    console.log("Generated image MIME type (from Gemini):", mimeType);
+    console.log("Generated image size (before conversion):", imageData.length, "bytes");
     
-    return `data:${mimeType};base64,${imagePart.inlineData.data}`;
+    // Convert image to requested format if different from what Gemini returned
+    const targetMimeType = formatToMimeTypeMap[outputFormat];
+    if (targetMimeType && mimeType !== targetMimeType) {
+      console.log("Converting image from", mimeType, "to", targetMimeType);
+      
+      // Convert base64 to buffer
+      const imageBuffer = Buffer.from(imageData, 'base64');
+      
+      // Determine output format for Sharp
+      let sharpFormat: keyof sharp.FormatEnum = 'png';
+      if (outputFormat === 'JPEG') {
+        sharpFormat = 'jpeg';
+      } else if (outputFormat === 'WebP') {
+        sharpFormat = 'webp';
+      }
+      
+      // Convert the image
+      const convertedBuffer = await sharp(imageBuffer).toFormat(sharpFormat).toBuffer();
+      imageData = convertedBuffer.toString('base64');
+      mimeType = targetMimeType;
+      
+      console.log("Image converted successfully");
+      console.log("Generated image size (after conversion):", imageData.length, "bytes");
+    }
+    
+    return `data:${mimeType};base64,${imageData}`;
   } catch (error) {
     console.error("=== Gemini API Error ===");
     console.error("Error details:", error);
