@@ -182,6 +182,10 @@ export function ImageCanvas({
                       <p className="text-muted-foreground text-xs">Creativity</p>
                       <p className="text-foreground font-medium" data-testid="config-creativity">{currentFormData.creativityLevel}%</p>
                     </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Output Format</p>
+                      <p className="text-foreground font-medium" data-testid="config-format">{currentFormData.outputFormat}</p>
+                    </div>
                     <div className="col-span-2">
                       <p className="text-muted-foreground text-xs">Elements to Preserve</p>
                       <p className="text-foreground font-medium line-clamp-2" data-testid="config-elements">{currentFormData.preservedElements}</p>

@@ -13,10 +13,11 @@ interface RoomRedesignParams {
   aspectRatio: string;
   creativityLevel: number;
   customPrompt?: string;
+  outputFormat?: string;
 }
 
 export async function generateRoomRedesign(params: RoomRedesignParams): Promise<string> {
-  const { imageBase64, customPrompt, quality, aspectRatio } = params;
+  const { imageBase64, customPrompt, quality, aspectRatio, outputFormat = "PNG" } = params;
 
   try {
     // Use custom prompt if provided (user reviewed and edited)
@@ -30,6 +31,13 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       "Standard": "1K",
       "High Fidelity (2K)": "2K",
       "Ultra (4K)": "4K"
+    };
+
+    // Map output format to MIME type
+    const formatToMimeTypeMap: Record<string, string> = {
+      "PNG": "image/png",
+      "JPEG": "image/jpeg",
+      "WebP": "image/webp"
     };
 
     const config: any = {
@@ -49,6 +57,11 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       imageConfig.aspectRatio = aspectRatio;
     }
 
+    // Set output format
+    if (outputFormat in formatToMimeTypeMap) {
+      imageConfig.outputMimeType = formatToMimeTypeMap[outputFormat];
+    }
+
     // Add imageConfig to main config if it has any settings
     if (Object.keys(imageConfig).length > 0) {
       config.imageConfig = imageConfig;
@@ -61,6 +74,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     console.log("Image data size:", base64Data.length, "bytes");
     console.log("Quality setting:", quality);
     console.log("Aspect Ratio setting:", aspectRatio);
+    console.log("Output Format setting:", outputFormat);
     console.log("Config:", JSON.stringify(config, null, 2));
     console.log("==========================================");
 

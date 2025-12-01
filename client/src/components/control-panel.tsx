@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { roomRedesignRequestSchema, availableStyles, type RoomRedesignRequest } from "@shared/schema";
+import { roomRedesignRequestSchema, availableStyles, outputFormats, type RoomRedesignRequest } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +56,7 @@ export function ControlPanel({
       quality: "Standard",
       aspectRatio: "Original",
       creativityLevel: 50,
+      outputFormat: "PNG",
     },
   });
 
@@ -313,6 +314,34 @@ export function ControlPanel({
                   <span>Subtle Change</span>
                   <span>Total Transformation</span>
                 </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="outputFormat"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium">Output Format</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger data-testid="select-output-format">
+                      <SelectValue placeholder="Select output format" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {outputFormats.map((format) => (
+                      <SelectItem key={format} value={format}>
+                        {format}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription className="text-xs">
+                  Choose the format for the generated image
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

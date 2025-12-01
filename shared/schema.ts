@@ -18,6 +18,9 @@ export const availableStyles = [
 // Prompt types
 export const promptTypes = ["room-scene"] as const;
 
+// Output formats
+export const outputFormats = ["PNG", "JPEG", "WebP"] as const;
+
 // Room redesign request schema
 export const roomRedesignRequestSchema = z.object({
   promptType: z.enum(promptTypes).default("room-scene"),
@@ -26,6 +29,7 @@ export const roomRedesignRequestSchema = z.object({
   quality: z.enum(["Standard", "High Fidelity (2K)", "Ultra (4K)"]),
   aspectRatio: z.enum(["Original", "16:9", "1:1", "4:3"]),
   creativityLevel: z.number().min(0).max(100),
+  outputFormat: z.enum(outputFormats).default("PNG"),
 });
 
 export type RoomRedesignRequest = z.infer<typeof roomRedesignRequestSchema>;
