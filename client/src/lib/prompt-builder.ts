@@ -5,6 +5,7 @@ export interface StyleDescription {
   description: string;
 }
 
+// ... existing styleDescriptions ... 
 export const styleDescriptions: Record<string, string> = {
   "Scandinavian": "white walls, light wood tones (ash/birch), functional furniture, minimal decor, soft textiles, abundant natural light, and hygge elements",
   "Modern": "clean lines, minimal clutter, neutral color palette (white/grey/black), glass and steel accents, geometric shapes, raw concrete",
@@ -39,10 +40,15 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 Maintain the exact camera angle, field of view, and vanishing points of the original input image. The structural geometry (walls, ceiling, floor lines) must be preserved unless altered by the style change.`;
 
   if (preservedElements && preservedElements.trim().length > 0) {
-    prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
+    prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION (PRODUCT SHOWCASE):
 Strictly analyze the input image to identify the following elements: "${preservedElements}".
 You must FREEZE the pixels associated with these specific elements. They must remain 100% UNCHANGED in geometry, texture, material, and position.
-Do not modify the structural shell of the room (walls, windows, ceiling) unless explicitly required by the style change.`;
+Do not modify the structural shell of the room (walls, windows, ceiling) unless explicitly required by the style change.
+
+LIGHTING STRATEGY FOR PRODUCT SHOWCASE:
+The lighting must highlight the "${preservedElements}". 
+Use soft, diffused lighting to minimize harsh shadows on the product. 
+Ensure the color temperature of the room matches the product's native lighting to prevent it from looking "pasted on".`;
   } else {
     prompt += `\n\nINSTRUCTION: Preserve the structural shell of the room (walls, floor, ceiling, windows) and perspective.`;
   }
@@ -54,7 +60,7 @@ Replace furniture, lighting, and decor that are NOT in the preservation list.`;
 
   prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
 For the selected style, choose the single most appropriate metallic finish (e.g., brushed nickel, matte black, chrome). You MUST apply this exact finish uniformly to **ALL** visible metallic fixtures, including preserved elements, plumbing hardware, lighting fixtures, and cabinet pulls. Maintain absolute consistency of this single finish across the entire scene.`;
-  
+
   prompt += `\n\nFINAL OUTPUT & COMPOSITION:
 Ensure lighting, shadows, and reflections blend realistically between the preserved elements and the new design.
 Generate a photorealistic result.`;

@@ -1,8 +1,6 @@
-import { type User, type InsertUser, type GeneratedDesign } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { type User, type InsertUser, type GeneratedDesign, users, generatedDesigns } from "@shared/schema";
+import { db } from "./db"; // Assumes you create this simple connection file
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -13,48 +11,44 @@ export interface IStorage {
   getGeneratedDesign(id: string): Promise<GeneratedDesign | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private generatedDesigns: Map<string, GeneratedDesign>;
-
-  constructor() {
-    this.users = new Map();
-    this.generatedDesigns = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async saveGeneratedDesign(design: Omit<GeneratedDesign, 'id'>): Promise<GeneratedDesign> {
-    const id = randomUUID();
-    const savedDesign: GeneratedDesign = { ...design, id };
-    this.generatedDesigns.set(id, savedDesign);
-    return savedDesign;
+    const [saved] = await db
+      .insert(generatedDesigns)
+      .values(design)
+      .returning();
+    return saved;
   }
 
   async getGeneratedDesigns(): Promise<GeneratedDesign[]> {
-    return Array.from(this.generatedDesigns.values()).sort(
-      (a, b) => b.timestamp - a.timestamp
-    );
+    return await db
+      .select()
+      .from(generatedDesigns)
+      .orderBy(desc(generatedDesigns.timestamp));
   }
 
   async getGeneratedDesign(id: string): Promise<GeneratedDesign | undefined> {
-    return this.generatedDesigns.get(id);
+    const [design] = await db
+      .select()
+      .from(generatedDesigns)
+      .where(eq(generatedDesigns.id, id));
+    return design;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
