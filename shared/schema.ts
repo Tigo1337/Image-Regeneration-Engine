@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { pgTable, text, serial, bigint, jsonb } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 // Available styles for room redesign
 export const availableStyles = [
@@ -41,12 +43,24 @@ export interface RoomRedesignResponse {
   error?: string;
 }
 
-// Generated design for history
-export interface GeneratedDesign {
-  id: string;
-  timestamp: number;
-  originalImage: string; // base64 data URL
-  generatedImage: string; // base64 data URL
-  originalFileName: string;
-  config: RoomRedesignRequest;
-}
+// Drizzle Tables
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+  username: text("username").notNull().unique(),
+});
+
+export const generatedDesigns = pgTable("generated_designs", {
+  id: text("id").primaryKey(),
+  timestamp: bigint("timestamp", { mode: "number" }).notNull(),
+  originalImage: text("original_image").notNull(),
+  generatedImage: text("generated_image").notNull(),
+  originalFileName: text("original_file_name").notNull(),
+  config: jsonb("config").notNull(),
+});
+
+// Type definitions
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+
+export type GeneratedDesign = typeof generatedDesigns.$inferSelect;
+export type InsertGeneratedDesign = typeof generatedDesigns.$inferInsert;
