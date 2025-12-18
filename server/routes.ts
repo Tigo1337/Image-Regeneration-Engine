@@ -46,6 +46,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           aspectRatio: validatedData.aspectRatio,
           creativityLevel: validatedData.creativityLevel,
           customPrompt: prompt,
+          // FIX: Pass the output format to the generator
+          outputFormat: validatedData.outputFormat,
         })
       );
 
@@ -111,6 +113,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         aspectRatio: validatedData.aspectRatio,
         creativityLevel: validatedData.creativityLevel,
         customPrompt: prompt,
+        // FIX: Pass the output format here as well
+        outputFormat: validatedData.outputFormat,
       });
 
       res.json({
@@ -137,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Save to persistent storage (Step 6)
+      // Save to persistent storage
       const design = await storage.saveGeneratedDesign({
         timestamp: Date.now(),
         originalImage,
