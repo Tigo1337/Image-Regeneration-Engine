@@ -27,6 +27,8 @@ export const outputFormats = ["PNG", "JPEG", "WebP"] as const;
 export const roomRedesignRequestSchema = z.object({
   promptType: z.enum(promptTypes).default("room-scene"),
   preservedElements: z.string(),
+  // NEW FIELD: Optional string for adding elements
+  addedElements: z.string().optional(),
   targetStyle: z.enum(availableStyles),
   quality: z.enum(["Standard", "High Fidelity (2K)", "Ultra (4K)"]),
   aspectRatio: z.enum(["Original", "16:9", "1:1", "4:3"]),
