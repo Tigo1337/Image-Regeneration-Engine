@@ -3,55 +3,65 @@ import { createServer, type Server } from "http";
 import { roomRedesignRequestSchema } from "@shared/schema";
 import { generateRoomRedesign } from "./gemini";
 import { processImageForGemini } from "./image-utils";
-import { getImageAnalysisPrompt, buildGenerationPrompt } from "./prompt-templates";
-import { GoogleGenAI } from "@google/genai";
 import { storage } from "./storage";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_GEMINI_API_KEY!,
-});
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/generate", async (req, res) => {
     try {
-      const { imageData, prompt, ...formData } = req.body;
+      // Extract batchSize, default to 1 if not present
+      const { imageData, prompt, batchSize = 1, ...formData } = req.body;
 
-      // Validate the request
+      // Validate the request data against the schema
       const validatedData = roomRedesignRequestSchema.parse(formData);
 
       if (!imageData) {
-        return res.status(400).json({
-          success: false,
-          error: "No image data provided"
+        return res.status(400).json({ 
+          success: false, 
+          error: "No image data provided" 
         });
       }
 
       if (!prompt) {
-        return res.status(400).json({
-          success: false,
-          error: "No prompt provided"
+        return res.status(400).json({ 
+          success: false, 
+          error: "No prompt provided" 
         });
       }
 
-      // Process image to ensure it meets Gemini's requirements
+      // Process image (resize/convert) to meet Gemini requirements
       const processedImage = await processImageForGemini(imageData);
 
-      // Generate the redesigned room using Gemini with the provided prompt
-      const generatedImage = await generateRoomRedesign({
-        imageBase64: processedImage,
-        preservedElements: validatedData.preservedElements,
-        targetStyle: validatedData.targetStyle,
-        quality: validatedData.quality,
-        aspectRatio: validatedData.aspectRatio,
-        creativityLevel: validatedData.creativityLevel,
-        customPrompt: prompt,
-      });
+      // Step 4: Handle Batch Variations
+      // We run parallel requests if batchSize > 1 to generate multiple options
+      // Limit to 4 max to prevent timeouts or rate limits
+      const count = Math.min(Math.max(1, batchSize), 4);
+
+      const generationPromises = Array(count).fill(null).map(() => 
+        generateRoomRedesign({
+          imageBase64: processedImage,
+          preservedElements: validatedData.preservedElements,
+          targetStyle: validatedData.targetStyle,
+          quality: validatedData.quality,
+          aspectRatio: validatedData.aspectRatio,
+          creativityLevel: validatedData.creativityLevel,
+          customPrompt: prompt,
+        })
+      );
+
+      // Wait for all generations to complete
+      const results = await Promise.all(generationPromises);
+
+      // The first image is the main result, others are variations
+      const generatedImage = results[0];
+      const variations = results.slice(1);
 
       res.json({
         success: true,
         generatedImage,
+        variations, // Return the variations to the client
       });
+
     } catch (error) {
       console.error("Error in /api/generate:", error);
       res.status(500).json({
@@ -127,6 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Save to persistent storage (Step 6)
       const design = await storage.saveGeneratedDesign({
         timestamp: Date.now(),
         originalImage,
