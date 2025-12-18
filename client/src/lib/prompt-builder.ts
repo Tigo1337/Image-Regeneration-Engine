@@ -5,7 +5,6 @@ export interface StyleDescription {
   description: string;
 }
 
-// ... existing styleDescriptions ... 
 export const styleDescriptions: Record<string, string> = {
   "Scandinavian": "white walls, light wood tones (ash/birch), functional furniture, minimal decor, soft textiles, abundant natural light, and hygge elements",
   "Modern": "clean lines, minimal clutter, neutral color palette (white/grey/black), glass and steel accents, geometric shapes, raw concrete",
@@ -26,11 +25,13 @@ export interface PromptConfig {
   promptType: PromptType;
   style: string;
   preservedElements: string;
+  // New field
+  addedElements?: string; 
   centerPreservedElements?: boolean;
 }
 
 export function constructRoomScenePrompt(config: PromptConfig): string {
-  const { style, preservedElements, centerPreservedElements = true } = config;
+  const { style, preservedElements, addedElements, centerPreservedElements = true } = config;
 
   const specificAesthetic = styleDescriptions[style] || styleDescriptions["Scandinavian"];
 
@@ -40,17 +41,20 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 Maintain the exact camera angle, field of view, and vanishing points of the original input image. The structural geometry (walls, ceiling, floor lines) must be preserved unless altered by the style change.`;
 
   if (preservedElements && preservedElements.trim().length > 0) {
-    prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION (PRODUCT SHOWCASE):
+    prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
 Strictly analyze the input image to identify the following elements: "${preservedElements}".
 You must FREEZE the pixels associated with these specific elements. They must remain 100% UNCHANGED in geometry, texture, material, and position.
-Do not modify the structural shell of the room (walls, windows, ceiling) unless explicitly required by the style change.
-
-LIGHTING STRATEGY FOR PRODUCT SHOWCASE:
-The lighting must highlight the "${preservedElements}". 
-Use soft, diffused lighting to minimize harsh shadows on the product. 
-Ensure the color temperature of the room matches the product's native lighting to prevent it from looking "pasted on".`;
+Do not modify the structural shell of the room (walls, windows, ceiling) unless explicitly required by the style change.`;
   } else {
     prompt += `\n\nINSTRUCTION: Preserve the structural shell of the room (walls, floor, ceiling, windows) and perspective.`;
+  }
+
+  // New Section for Added Elements
+  if (addedElements && addedElements.trim().length > 0) {
+    prompt += `\n\nCRITICAL INSTRUCTION - ADDED ELEMENTS:
+Seamlessly integrate the following elements into the scene: "${addedElements}".
+Ensure they are placed logically within the 3D space of the room (e.g., on the floor, tables, or walls as appropriate).
+The style, lighting, shadows, and perspective of these added elements must perfectly match the rest of the scene so they do not look pasted on.`;
   }
 
   prompt += `\n\nTRANSFORMATION GOAL:

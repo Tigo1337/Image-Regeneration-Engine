@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, AlertCircle, FileText, Edit3 } from "lucide-react";
+import { Sparkles, AlertCircle, FileText, Edit3, PlusCircle } from "lucide-react";
 import { constructPrompt, promptTypes, type PromptType } from "@/lib/prompt-builder";
 
 interface ControlPanelProps {
@@ -52,6 +52,7 @@ export function ControlPanel({
     defaultValues: {
       promptType: "room-scene",
       preservedElements: "",
+      addedElements: "", // Default value
       targetStyle: "Modern",
       quality: "Standard",
       aspectRatio: "Original",
@@ -68,6 +69,7 @@ export function ControlPanel({
     promptType: (watchedValues.promptType as PromptType) || "room-scene",
     style: watchedValues.targetStyle || "Modern",
     preservedElements: watchedValues.preservedElements || "",
+    addedElements: watchedValues.addedElements || "", // Pass to builder
   });
 
   useEffect(() => {
@@ -212,6 +214,30 @@ export function ControlPanel({
                 </FormControl>
                 <FormDescription className="text-xs">
                   List specific objects that must remain unchanged
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="addedElements"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium flex items-center gap-1">
+                  Elements to Add <PlusCircle className="w-3 h-3 text-primary" />
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="e.g., A large persian rug, A standing lamp"
+                    {...field}
+                    value={field.value || ""}
+                    data-testid="input-added-elements"
+                  />
+                </FormControl>
+                <FormDescription className="text-xs">
+                  Objects to insert into the generated scene
                 </FormDescription>
                 <FormMessage />
               </FormItem>

@@ -1,6 +1,7 @@
 import { type User, type InsertUser, type GeneratedDesign, users, generatedDesigns } from "@shared/schema";
-import { db } from "./db"; // Assumes you create this simple connection file
+import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -30,7 +31,7 @@ export class DatabaseStorage implements IStorage {
   async saveGeneratedDesign(design: Omit<GeneratedDesign, 'id'>): Promise<GeneratedDesign> {
     const [saved] = await db
       .insert(generatedDesigns)
-      .values(design)
+      .values([{ ...design, id: nanoid() }])
       .returning();
     return saved;
   }
