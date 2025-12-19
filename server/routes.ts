@@ -8,7 +8,7 @@ import { storage } from "./storage";
 // Helper to build specific prompts that reinforce OBJECT IDENTITY
 function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" | "far"): string {
   const element = formData.preservedElements || "the main furniture";
-  const closeupTarget = formData.closeupFocus || element; // Use specific focus if provided
+  const closeupTarget = formData.closeupFocus || element; 
   const style = formData.targetStyle; 
 
   let prompt = `ROLE: Expert Architectural Photographer & Retoucher.
@@ -39,9 +39,7 @@ function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" 
     You must NOT invent a new room layout. 
     Extrapolate the EXISTING floor pattern, wall lines, and ceiling height from the left side seamlessly into the right side.
     If there is a wall on the left, continue it logically. 
-    Do not place random windows or doors that contradict the architectural logic of the visible part.
-
-    The goal is to simulate the camera panning 30 degrees to the side, revealing the side profile of the "${element}".`;
+    Do not place random windows or doors that contradict the architectural logic of the visible part.`;
   } 
   else if (variationType === "far") {
     prompt += `\n\nINPUT: This image has a white border (Zoomed Out).
@@ -73,7 +71,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetStyle: validatedData.targetStyle,
         quality: validatedData.quality,
         aspectRatio: validatedData.aspectRatio,
-        creativityLevel: validatedData.creativityLevel,
+        // [IMPORTANT] Pass the user's creativity level here
+        creativityLevel: validatedData.creativityLevel, 
         customPrompt: prompt,
         outputFormat: validatedData.outputFormat,
       });
@@ -86,42 +85,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const variationConfigs = [
           { 
-            // Image 2: Close Up (Crop Center)
             type: "closeup" as const,
             preprocess: async (img: string) => await cropImage(img)
           },
           { 
-            // Image 3: Angle (Pad Right -> Shifts object Left)
             type: "angle" as const,
             preprocess: async (img: string) => await padImage(img, 'right')
           },
           { 
-            // Image 4: Far (Pad Center -> Zooms out)
             type: "far" as const,
             preprocess: async (img: string) => await padImage(img, 'center')
           }
         ];
 
-        // Limit to requested batch size
         const variationsToRun = variationConfigs.slice(0, Math.min(batchSize - 1, 3));
 
         const variationPromises = variationsToRun.map(async (config) => {
-          // 1. Physically modify the image (Crop/Pad/Shift)
           const modifiedImage = await config.preprocess(mainImage);
-
-          // 2. Build specific prompt (Now includes closeupFocus)
           const specificPrompt = buildVariationPrompt(validatedData, config.type);
 
-          // 3. Generate
           return generateRoomRedesign({
             imageBase64: modifiedImage,
-            // Unlock pixels so it can outpaint/refine, but keep creativity low-ish
             preservedElements: "", 
             targetStyle: validatedData.targetStyle,
             quality: validatedData.quality,
             aspectRatio: validatedData.aspectRatio,
-            // Lower creativity (35) ensures it sticks to the input pixels 
-            // and only invents the "white space" or "resolution", preventing morphing.
+            // [IMPORTANT] For variations (rotations/zooms), we keep creativity lower (35)
+            // to ensure the object identity doesn't morph too much.
             creativityLevel: 35, 
             customPrompt: specificPrompt,
             outputFormat: validatedData.outputFormat,
@@ -146,7 +136,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ... (Modify and Gallery routes remain unchanged) ...
   app.post("/api/modify", async (req, res) => {
     try {
       const { imageData, referenceImage, prompt, ...formData } = req.body;
@@ -160,6 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetStyle: validatedData.targetStyle,
         quality: validatedData.quality,
         aspectRatio: validatedData.aspectRatio,
+        // Pass creativity level for modifications too
         creativityLevel: validatedData.creativityLevel,
         customPrompt: prompt,
         outputFormat: validatedData.outputFormat,
@@ -171,6 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ... (Keep existing gallery routes) ...
   app.post("/api/gallery/save", async (req, res) => {
     try {
       const { originalImage, generatedImage, originalFileName, config } = req.body;
