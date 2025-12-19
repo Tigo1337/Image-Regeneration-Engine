@@ -25,12 +25,17 @@ function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" 
   STYLE: ${style}.`;
 
   if (variationType === "closeup") {
-    prompt += `\n\nINPUT: This is a CROPPED center view.
-    TASK: Macro Close-up of: "${closeupTarget}".
-    Upscale and refine the textures of this specific area.
-    Show the hardware (handles/hinges) and material finish in extreme detail.
-    Keep the geometry 100% identical to the input.`;
-  } 
+    // === UPDATED CLOSE-UP PROMPT ===
+    // Focusing on "Upscaling" rather than "Redesigning"
+    prompt += `\n\nINPUT: This is a LOW-RESOLUTION CROP focusing on "${closeupTarget}".
+    The "${closeupTarget}" is ALREADY VISIBLE in the image.
+
+    TASK: Super-Resolution Texture Refinement.
+    1. Do NOT draw a new "${closeupTarget}". Do NOT overlay new geometry.
+    2. Your ONLY job is to SHARPEN the existing pixels (Upscale).
+    3. Enhance the definition of the materials (metal grain, reflections, textures) that are CURRENTLY THERE.
+    4. Maintain the exact position, angle, and shape of the object in the input.`;
+  }
   else if (variationType === "angle") {
     prompt += `\n\nINPUT: This image is padded on the RIGHT side.
     TASK: Outpaint the empty white space on the right to create a SIDE-ANGLE view.
@@ -71,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetStyle: validatedData.targetStyle,
         quality: validatedData.quality,
         aspectRatio: validatedData.aspectRatio,
-        // [IMPORTANT] Pass the user's creativity level here
+        // Pass the user's creativity level here
         creativityLevel: validatedData.creativityLevel, 
         customPrompt: prompt,
         outputFormat: validatedData.outputFormat,
@@ -110,9 +115,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             targetStyle: validatedData.targetStyle,
             quality: validatedData.quality,
             aspectRatio: validatedData.aspectRatio,
-            // [IMPORTANT] For variations (rotations/zooms), we keep creativity lower (35)
-            // to ensure the object identity doesn't morph too much.
-            creativityLevel: 35, 
+            // [UPDATED] Lowered from 35 to 25 (Temp 0.5) for stricter adherence to input pixels
+            creativityLevel: 25, 
             customPrompt: specificPrompt,
             outputFormat: validatedData.outputFormat,
           });
