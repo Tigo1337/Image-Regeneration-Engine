@@ -76,6 +76,8 @@ export function ControlPanel({
     addedElements: watchedValues.addedElements || "", 
     viewAngle: watchedValues.viewAngle || "Front (Original)",
     cameraZoom: watchedValues.cameraZoom || 100, // Pass zoom to prompt builder
+    creativityLevel: watchedValues.creativityLevel || 50, // Pass creativity to enable dynamic constraints
+    centerPreservedElements: true,
   });
 
   useEffect(() => {
@@ -101,7 +103,6 @@ export function ControlPanel({
   const hasPrompt = currentPrompt.trim().length > 0;
 
   if (isModificationMode) {
-    // ... (Modification mode UI remains unchanged)
     return (
         <div className="space-y-4">
           <div className="flex items-start gap-2">
@@ -146,7 +147,6 @@ export function ControlPanel({
     <Form {...form}>
       <form onSubmit={(e) => { e.preventDefault(); handleGenerate(); }} className="space-y-6">
         <Separator />
-        {/* ... (Prompt Type Section remains same) ... */}
 
         <div className="space-y-4">
           <div className="flex items-start gap-2">
@@ -220,7 +220,7 @@ export function ControlPanel({
               )}
             />
 
-            {/* NEW: CAMERA DISTANCE SLIDER */}
+            {/* CAMERA DISTANCE SLIDER */}
             <FormField
               control={form.control}
               name="cameraZoom"
@@ -277,7 +277,6 @@ export function ControlPanel({
             )}
           />
 
-          {/* ... (Quality/AspectRatio/Creativity/Batch fields remain same) ... */}
            <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -345,6 +344,9 @@ export function ControlPanel({
                     />
                   </div>
                 </FormControl>
+                <FormDescription className="text-xs">
+                  Low: Keeps layout/walls. High: Redesigns structure.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -353,7 +355,7 @@ export function ControlPanel({
 
         <Separator />
 
-        {/* Batch Mode UI (Unchanged, just ensuring it renders) */}
+        {/* Batch Mode UI */}
         <div className="flex flex-col gap-4 bg-primary/5 p-3 rounded-lg border border-primary/20">
           <div className="flex items-center justify-between">
             <div className="flex items-start gap-2">

@@ -28,7 +28,8 @@ export interface PromptConfig {
   addedElements?: string; 
   centerPreservedElements?: boolean;
   viewAngle?: string;
-  cameraZoom?: number; // [NEW] Accept Zoom level
+  cameraZoom?: number; 
+  creativityLevel?: number;
 }
 
 export function constructRoomScenePrompt(config: PromptConfig): string {
@@ -39,10 +40,15 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     addedElements, 
     centerPreservedElements = true, 
     viewAngle = "Front (Original)",
-    cameraZoom = 100 
+    cameraZoom = 100,
+    creativityLevel = 50 
   } = config;
 
   const specificAesthetic = styleDescriptions[style] || styleDescriptions["Scandinavian"];
+
+  // Logic to relax constraints based on creativity slider
+  // Creativity NOW ONLY applies to the ROOM SHELL, not the preserved object identity.
+  const isHighCreativity = creativityLevel >= 70;
 
   let prompt = `You are an expert interior designer and architectural visualizer.`;
 
@@ -67,9 +73,14 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     Do NOT create a divider, wall edge, or second room where the fade occurs. 
     The floor and ceiling lines must flow continuously from the image into the generated area.`;
   } else if (viewAngle === "Front (Original)" && cameraZoom >= 85 && cameraZoom <= 115) {
-    // Only lock perspective if we aren't doing extreme zoom or angle changes
-    prompt += `\n\nCRITICAL INSTRUCTION - PERSPECTIVE LOCK:
-    Maintain the exact camera angle, field of view, and vanishing points of the original input image. The structural geometry (walls, ceiling, floor lines) must be preserved unless altered by the style change.`;
+    if (!isHighCreativity) {
+      prompt += `\n\nCRITICAL INSTRUCTION - PERSPECTIVE LOCK:
+      Maintain the exact camera angle, field of view, and vanishing points of the original input image. The structural geometry (walls, ceiling, floor lines) must be preserved.`;
+    } else {
+      // High creativity allows room geometry changes, but we still respect the general angle
+      prompt += `\n\nINSTRUCTION - PERSPECTIVE:
+      Maintain the general camera angle and eye level of the original shot. However, you may modify the room's structural depth or wall layout to better suit the new "${style}" design.`;
+    }
   }
 
   // === OBJECT PRESERVATION ===
@@ -78,14 +89,36 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     Strictly analyze the input image to identify the following elements: "${preservedElements}".`;
 
     if (viewAngle === "Front (Original)") {
-      prompt += `\nYou must FREEZE the pixels associated with these specific elements. They must remain 100% UNCHANGED in geometry, texture, material, and position.`;
+      // [FIX] REMOVED "Creativity" relaxation for the object itself. 
+      // The object must ALWAYS be visually frozen.
+
+      if (centerPreservedElements) {
+         // If centering is active, we FREEZE APPEARANCE but ALLOW MOVEMENT.
+         prompt += `\n1. VISUAL FREEZE: You must FREEZE the visual appearance (geometry, texture, material, details) of the "${preservedElements}". It must look EXACTLY like the original.`;
+         prompt += `\n2. PERMISSION TO MOVE: You are explicitly permitted to SHIFT THE POSITION (X/Y axis) of this element on the canvas to center it within the new aspect ratio.`;
+         prompt += `\n3. RESTRICTION: Do NOT rotate, scale, or distort the object itself. Only its placement on the canvas may change.`;
+      } else {
+         // Strict freeze of everything including position.
+         prompt += `\nYou must FREEZE the pixels associated with these specific elements. They must remain 100% UNCHANGED in geometry, texture, material, and position.`;
+      }
     } else {
       prompt += `\nMaintain the IDENTITY of these elements. While the perspective may shift slightly due to the new angle, the material, finish, and design must be identical to the original.`;
     }
 
-    prompt += `\nDo not modify the structural shell of the room (walls, windows, ceiling) unless explicitly required by the style change.`;
+    // [FIX] Creativity Level now controls the ROOM SHELL (Walls/Floor/Ceiling), not the object.
+    if (!isHighCreativity) {
+      prompt += `\n\nCONSTRAINT - ROOM STRUCTURE:
+      Do not modify the structural shell of the room (walls, windows, ceiling) unless explicitly required by the style change. Keep the room layout identical.`;
+    } else {
+      prompt += `\n\nFREEDOM - ROOM STRUCTURE:
+      You have creative freedom to redesign the structural shell (walls, floor, ceiling, windows) surrounding the preserved object. You may change the room's architecture to perfectly match the "${style}" aesthetic, provided the preserved object remains intact.`;
+    }
+
   } else {
-    prompt += `\n\nINSTRUCTION: Preserve the structural shell of the room (walls, floor, ceiling, windows) and perspective.`;
+    // If nothing preserved, only strictly keep shell if low creativity
+    if (!isHighCreativity) {
+      prompt += `\n\nINSTRUCTION: Preserve the structural shell of the room (walls, floor, ceiling, windows) and perspective.`;
+    }
   }
 
   // === ADDED ELEMENTS ===
@@ -115,10 +148,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   prompt += `\n\nFINAL OUTPUT & COMPOSITION:
   Ensure lighting, shadows, and reflections blend realistically between the preserved elements and the new design.
   Generate a photorealistic result.`;
-
-  if (centerPreservedElements && preservedElements && preservedElements.trim().length > 0 && viewAngle === "Front (Original)" && cameraZoom === 100) {
-    prompt += `\nIf the input image does not naturally center the MOST prominent item from "${preservedElements}", slightly reframe the generated output to place that item centrally within the new aspect ratio, while strictly adhering to the original camera angle and perspective.`;
-  }
 
   return prompt;
 }
