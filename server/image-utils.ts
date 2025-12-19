@@ -1,15 +1,13 @@
 import sharp from "sharp";
 
-const MAX_IMAGE_SIZE_MB = 4; // Reduced slightly for safer API payloads
+const MAX_IMAGE_SIZE_MB = 4;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-const MAX_DIMENSION = 2048; // Gemini 1.5 Pro / Flash limit
+const MAX_DIMENSION = 2048;
 
 export async function processImageForGemini(base64Data: string): Promise<string> {
-  // Remove data URL prefix if present
   const base64Image = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
   const imageBuffer = Buffer.from(base64Image, 'base64');
 
-  // Check if image needs resizing
   const metadata = await sharp(imageBuffer).metadata();
   const currentSize = imageBuffer.length;
 
@@ -19,7 +17,6 @@ export async function processImageForGemini(base64Data: string): Promise<string>
     return base64Data;
   }
 
-  // Resize if needed
   let resizedBuffer = imageBuffer;
   if ((metadata.width || 0) > MAX_DIMENSION || (metadata.height || 0) > MAX_DIMENSION) {
     resizedBuffer = await sharp(imageBuffer)
@@ -31,7 +28,6 @@ export async function processImageForGemini(base64Data: string): Promise<string>
       .toBuffer();
   }
 
-  // If still too large, reduce quality
   if (resizedBuffer.length > MAX_IMAGE_SIZE_BYTES) {
     let quality = 80;
     while (resizedBuffer.length > MAX_IMAGE_SIZE_BYTES && quality > 30) {
@@ -49,10 +45,6 @@ export async function processImageForGemini(base64Data: string): Promise<string>
   return `data:image/jpeg;base64,${resizedBuffer.toString('base64')}`;
 }
 
-/**
- * Step 1: Composite the original object back onto the generated image
- * using a mask to ensure pixel-perfect preservation.
- */
 export async function compositeOriginalObject(
   originalBase64: string, 
   generatedBase64: string, 
@@ -61,17 +53,12 @@ export async function compositeOriginalObject(
   try {
     const originalBuffer = Buffer.from(originalBase64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
     const generatedBuffer = Buffer.from(generatedBase64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
-    const maskBuffer = Buffer.from(maskBase64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
 
-    // Ensure generated image matches original dimensions before compositing
     const originalMeta = await sharp(originalBuffer).metadata();
     const resizedGenerated = await sharp(generatedBuffer)
       .resize(originalMeta.width, originalMeta.height)
       .toBuffer();
 
-    // Composite: 
-    // 1. Take generated background
-    // 2. Overlay original image, using the mask as the alpha channel
     const finalImage = await sharp(resizedGenerated)
       .composite([{
         input: originalBuffer,
@@ -84,8 +71,6 @@ export async function compositeOriginalObject(
           }
         },
         blend: 'over'
-        // In a full implementation, you would use the maskBuffer here 
-        // to define opacity. For now, we perform a standard composite.
       }])
       .jpeg({ quality: 90 })
       .toBuffer();
@@ -93,6 +78,76 @@ export async function compositeOriginalObject(
     return `data:image/jpeg;base64,${finalImage.toString('base64')}`;
   } catch (error) {
     console.error("Composition error:", error);
-    return generatedBase64; // Fallback to generated image
+    return generatedBase64; 
+  }
+}
+
+// === GEOMETRIC MANIPULATION HELPERS ===
+
+// Crops to the center 50% for macro shots
+export async function cropImage(base64Data: string): Promise<string> {
+  try {
+    const buffer = Buffer.from(base64Data.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+    const metadata = await sharp(buffer).metadata();
+    const width = metadata.width || 1024;
+    const height = metadata.height || 1024;
+
+    const cropWidth = Math.floor(width * 0.5); // Tighter crop (50%)
+    const cropHeight = Math.floor(height * 0.5);
+    const left = Math.floor((width - cropWidth) / 2);
+    const top = Math.floor((height - cropHeight) / 2);
+
+    const cropped = await sharp(buffer)
+      .extract({ left, top, width: cropWidth, height: cropHeight })
+      .toBuffer();
+
+    return `data:image/jpeg;base64,${cropped.toString('base64')}`;
+  } catch (e) {
+    console.error("Crop failed", e);
+    return base64Data;
+  }
+}
+
+// Handles both "Zoom Out" (Symmetric) and "Shift/Angle" (Asymmetric)
+export async function padImage(base64Data: string, mode: 'center' | 'right' = 'center'): Promise<string> {
+  try {
+    const buffer = Buffer.from(base64Data.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+    const metadata = await sharp(buffer).metadata();
+    const width = metadata.width || 1024;
+    const height = metadata.height || 1024;
+
+    let newWidth = width;
+    let newHeight = height;
+    let leftPad = 0;
+    let topPad = 0;
+
+    if (mode === 'center') {
+      // Zoom Out: Add 50% padding on all sides
+      newWidth = Math.floor(width * 1.5);
+      newHeight = Math.floor(height * 1.5);
+      leftPad = Math.floor((newWidth - width) / 2);
+      topPad = Math.floor((newHeight - height) / 2);
+    } else if (mode === 'right') {
+      // Angle Shift: Add 50% padding ONLY to the right
+      // This forces the object to the LEFT of the frame, suggesting a right-side angle
+      newWidth = Math.floor(width * 1.5);
+      leftPad = 0; // Keep object pinned to left
+      topPad = 0;
+    }
+
+    const padded = await sharp(buffer)
+      .extend({
+        top: topPad,
+        bottom: newHeight - height - topPad,
+        left: leftPad,
+        right: newWidth - width - leftPad,
+        background: { r: 255, g: 255, b: 255, alpha: 1 } // White canvas for outpainting
+      })
+      .toBuffer();
+
+    return `data:image/jpeg;base64,${padded.toString('base64')}`;
+  } catch (e) {
+    console.error("Pad failed", e);
+    return base64Data;
   }
 }

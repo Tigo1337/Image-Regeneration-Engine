@@ -13,6 +13,8 @@ export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [originalFileName, setOriginalFileName] = useState<string>("image");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  // State to hold the batch variations
+  const [generatedVariations, setGeneratedVariations] = useState<string[]>([]);
   const [modificationPrompt, setModificationPrompt] = useState<string>("");
   const [currentFormData, setCurrentFormData] = useState<RoomRedesignRequest | null>(null);
   const { toast } = useToast();
@@ -24,25 +26,35 @@ export default function Home() {
       setOriginalFileName(fileName);
     }
     setGeneratedImage(null);
+    setGeneratedVariations([]);
     setModificationPrompt("");
   };
 
   const generateMutation = useMutation({
-    mutationFn: async (data: RoomRedesignRequest & { imageData: string; referenceImage?: string; prompt: string; isModification?: boolean }) => {
+    // Updated mutation signature to include batchSize
+    mutationFn: async (data: RoomRedesignRequest & { imageData: string; referenceImage?: string; prompt: string; isModification?: boolean; batchSize?: number }) => {
       const endpoint = data.isModification ? "/api/modify" : "/api/generate";
       const res = await apiRequest(
         "POST",
         endpoint,
         data
       );
-      return res.json() as Promise<RoomRedesignResponse>;
+      // Expect variations in the response
+      return res.json() as Promise<RoomRedesignResponse & { variations?: string[] }>;
     },
     onSuccess: async (response) => {
       if (response.success && response.generatedImage) {
         setGeneratedImage(response.generatedImage);
+
+        // Store variations if they exist
+        if (response.variations && response.variations.length > 0) {
+          setGeneratedVariations(response.variations);
+        } else {
+          setGeneratedVariations([]);
+        }
+
         setModificationPrompt("");
-        
-        // Save to gallery if this is a new generation (not a modification)
+
         if (originalImage && currentFormData && !generatedImage) {
           try {
             await apiRequest("POST", "/api/gallery/save", {
@@ -51,16 +63,15 @@ export default function Home() {
               originalFileName,
               config: currentFormData,
             });
-            // Invalidate gallery cache to show new design
             queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
           } catch (error) {
             console.error("Failed to save design to gallery:", error);
           }
         }
-        
+
         toast({
-          title: generatedImage ? "Modification applied successfully!" : "Room redesigned successfully!",
-          description: generatedImage ? "Your modifications have been applied." : "Your AI-generated design is ready.",
+          title: response.variations?.length ? "Variations Generated!" : "Room redesigned successfully!",
+          description: response.variations?.length ? "Created 4 different views." : "Your AI-generated design is ready.",
         });
       } else {
         toast({
@@ -79,7 +90,8 @@ export default function Home() {
     },
   });
 
-  const handleGenerate = (formData: RoomRedesignRequest, prompt: string) => {
+  // Updated handler to accept batchSize
+  const handleGenerate = (formData: RoomRedesignRequest, prompt: string, batchSize: number = 1) => {
     if (!originalImage) {
       toast({
         variant: "destructive",
@@ -107,6 +119,7 @@ export default function Home() {
         referenceImage: generatedImage,
         prompt: prompt,
         isModification: true,
+        batchSize: 1 
       });
     } else {
       generateMutation.mutate({
@@ -114,6 +127,8 @@ export default function Home() {
         imageData: originalImage,
         prompt: prompt,
         isModification: false,
+        // PASS THE BATCH SIZE TO THE SERVER
+        batchSize: batchSize, 
       });
     }
   };
@@ -122,13 +137,13 @@ export default function Home() {
     setOriginalImage(null);
     setOriginalFileName("image");
     setGeneratedImage(null);
+    setGeneratedVariations([]);
     setModificationPrompt("");
     setCurrentFormData(null);
   };
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
       <aside className="w-96 border-r border-border bg-card flex flex-col">
         <div className="p-6 border-b border-card-border">
           <div className="flex items-center gap-3">
@@ -167,17 +182,17 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* Main Canvas */}
       <main className="flex-1 overflow-auto">
         <ImageCanvas 
           originalImage={originalImage}
           generatedImage={generatedImage}
+          // Pass variations to the canvas
+          generatedVariations={generatedVariations}
           originalFileName={originalFileName}
           currentFormData={currentFormData || undefined}
         />
       </main>
 
-      {/* Loading Overlay */}
       {generateMutation.isPending && <LoadingOverlay />}
     </div>
   );

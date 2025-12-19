@@ -24,11 +24,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, AlertCircle, FileText, Edit3, PlusCircle } from "lucide-react";
+import { Sparkles, AlertCircle, FileText, Edit3, PlusCircle, Layers, ZoomIn } from "lucide-react";
 import { constructPrompt, promptTypes, type PromptType } from "@/lib/prompt-builder";
 
 interface ControlPanelProps {
-  onGenerate: (data: RoomRedesignRequest, prompt: string) => void;
+  onGenerate: (data: RoomRedesignRequest, prompt: string, batchSize?: number) => void;
   disabled?: boolean;
   isGenerating?: boolean;
   isModificationMode?: boolean;
@@ -46,13 +46,15 @@ export function ControlPanel({
 }: ControlPanelProps) {
   const [isManualOverride, setIsManualOverride] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
+  const [isBatchMode, setIsBatchMode] = useState(false);
 
   const form = useForm<RoomRedesignRequest>({
     resolver: zodResolver(roomRedesignRequestSchema),
     defaultValues: {
       promptType: "room-scene",
       preservedElements: "",
-      addedElements: "", // Default value
+      addedElements: "", 
+      closeupFocus: "", // Default
       targetStyle: "Modern",
       quality: "Standard",
       aspectRatio: "Original",
@@ -69,7 +71,7 @@ export function ControlPanel({
     promptType: (watchedValues.promptType as PromptType) || "room-scene",
     style: watchedValues.targetStyle || "Modern",
     preservedElements: watchedValues.preservedElements || "",
-    addedElements: watchedValues.addedElements || "", // Pass to builder
+    addedElements: watchedValues.addedElements || "", 
   });
 
   useEffect(() => {
@@ -88,7 +90,7 @@ export function ControlPanel({
   const handleGenerate = () => {
     const formData = form.getValues();
     const promptToUse = isManualOverride ? editedPrompt : generatedPrompt;
-    onGenerate(formData, promptToUse);
+    onGenerate(formData, promptToUse, isBatchMode ? 4 : 1);
   };
 
   const currentPrompt = isManualOverride ? editedPrompt : generatedPrompt;
@@ -97,6 +99,7 @@ export function ControlPanel({
   if (isModificationMode) {
     return (
       <div className="space-y-4">
+        {/* Modification UI */}
         <div className="flex items-start gap-2">
           <AlertCircle className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
           <div>
@@ -128,7 +131,7 @@ export function ControlPanel({
             className="w-full"
             size="lg"
             disabled={disabled || isGenerating}
-            onClick={() => onGenerate(form.getValues(), modificationPrompt)}
+            onClick={() => onGenerate(form.getValues(), modificationPrompt, 1)}
             data-testid="button-apply-modification"
           >
             <Sparkles className="w-5 h-5 mr-2" />
@@ -236,9 +239,6 @@ export function ControlPanel({
                     data-testid="input-added-elements"
                   />
                 </FormControl>
-                <FormDescription className="text-xs">
-                  Objects to insert into the generated scene
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -336,10 +336,6 @@ export function ControlPanel({
                     />
                   </div>
                 </FormControl>
-                <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                  <span>Subtle Change</span>
-                  <span>Total Transformation</span>
-                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -365,13 +361,59 @@ export function ControlPanel({
                     ))}
                   </SelectContent>
                 </Select>
-                <FormDescription className="text-xs">
-                  Choose the format for the generated image
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
+        </div>
+
+        <Separator />
+
+        {/* BATCH GENERATION TOGGLE */}
+        <div className="flex flex-col gap-4 bg-primary/5 p-3 rounded-lg border border-primary/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-2">
+              <Layers className="w-5 h-5 mt-1 text-primary flex-shrink-0" />
+              <div>
+                <Label htmlFor="batch-mode" className="text-sm font-semibold text-foreground cursor-pointer">
+                  Generate Variations
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Create 4 images (Front, Close-up, Angled, Far)
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="batch-mode"
+              checked={isBatchMode}
+              onCheckedChange={setIsBatchMode}
+            />
+          </div>
+
+          {/* NEW: Conditional Field for Close-up Focus */}
+          {isBatchMode && (
+            <FormField
+              control={form.control}
+              name="closeupFocus"
+              render={({ field }) => (
+                <FormItem className="animate-in fade-in slide-in-from-top-2">
+                  <FormLabel className="text-xs font-medium flex items-center gap-1 text-primary">
+                    <ZoomIn className="w-3 h-3" />
+                    Close-up Focus (Image 2)
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      className="h-8 text-xs bg-background/80"
+                      placeholder="e.g., Shower Door Handle, Faucet Details"
+                      {...field}
+                      value={field.value || ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
         <Separator />
@@ -407,7 +449,7 @@ export function ControlPanel({
               value={currentPrompt}
               onChange={(e) => setEditedPrompt(e.target.value)}
               readOnly={!isManualOverride}
-              className={`w-full h-40 p-2 text-xs bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none ${
+              className={`w-full h-24 p-2 text-xs bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none ${
                 !isManualOverride ? 'cursor-default opacity-80' : ''
               }`}
               data-testid="textarea-generated-prompt"
@@ -427,7 +469,7 @@ export function ControlPanel({
             data-testid="button-generate-redesign"
           >
             <Sparkles className="w-5 h-5 mr-2" />
-            {isGenerating ? "Generating..." : "Generate Redesign"}
+            {isGenerating ? "Generating..." : (isBatchMode ? "Generate 4 Variations" : "Generate Redesign")}
           </Button>
         </div>
       </form>

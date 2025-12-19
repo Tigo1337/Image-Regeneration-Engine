@@ -36,40 +36,29 @@ export function ImageCanvas({
     setModalOpen(true);
   };
 
-  // Helper to slugify strings (e.g. "High Fidelity (2K)" -> "high-fidelity-2k")
   const slugify = (str: string) => {
     return str
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with dashes
-      .replace(/^-+|-+$/g, '');    // Trim leading/trailing dashes
+      .replace(/[^a-z0-9]+/g, '-') 
+      .replace(/^-+|-+$/g, '');
   };
 
   const generateDownloadFileName = (): string => {
-    // If we don't have generation data, fallback to timestamp
     if (!currentFormData) return `redesign-${Date.now()}`;
-
-    // 1. Clean original filename (remove extension just in case it was passed)
-    const baseName = originalFileName.replace(/\.[^/.]+$/, "");
-
-    // 2. Format parts
+    const baseName = originalFileName?.replace(/\.[^/.]+$/, "") || "image";
     const style = slugify(currentFormData.targetStyle);
     const quality = slugify(currentFormData.quality);
     const ar = slugify(currentFormData.aspectRatio);
-
-    // 3. Construct pattern: original-style-quality-ar-1-1
     return `${baseName}-${style}-${quality}-ar-${ar}`;
   };
 
   const downloadImage = () => {
     if (!currentDisplayImage) return;
-
-    // Detect the correct extension from the data URL
     let extension = "png";
     const mimeMatch = currentDisplayImage.match(/^data:image\/(\w+);base64,/);
     if (mimeMatch && mimeMatch[1]) {
       extension = mimeMatch[1] === "jpeg" ? "jpg" : mimeMatch[1];
     }
-
     const link = document.createElement("a");
     link.href = currentDisplayImage;
     link.download = `${generateDownloadFileName()}.${extension}`;
@@ -209,6 +198,7 @@ export function ImageCanvas({
                 <div 
                   className={`w-24 h-24 flex-shrink-0 cursor-pointer rounded-md overflow-hidden border-2 transition-all ${currentDisplayImage === generatedImage ? 'border-primary ring-2 ring-primary/20 scale-105' : 'border-transparent hover:border-primary/30'}`}
                   onClick={() => setActiveVariation(generatedImage)}
+                  title="Front View (Main)"
                 >
                   <img src={generatedImage} className="w-full h-full object-cover" />
                 </div>
@@ -220,6 +210,7 @@ export function ImageCanvas({
                   key={idx}
                   className={`w-24 h-24 flex-shrink-0 cursor-pointer rounded-md overflow-hidden border-2 transition-all ${currentDisplayImage === img ? 'border-primary ring-2 ring-primary/20 scale-105' : 'border-transparent hover:border-primary/30'}`}
                   onClick={() => setActiveVariation(img)}
+                  title={`Variation ${idx + 1}`}
                 >
                   <img src={img} className="w-full h-full object-cover" />
                 </div>
