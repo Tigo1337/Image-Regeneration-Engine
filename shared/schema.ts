@@ -23,13 +23,27 @@ export const promptTypes = ["room-scene"] as const;
 // Output formats
 export const outputFormats = ["PNG", "JPEG", "WebP"] as const;
 
+// [UPDATED] View Angles are now strictly about ROTATION
+export const viewAngles = [
+  "Front (Original)",
+  "Side Angle (Left)", 
+  "Side Angle (Right)"
+] as const;
+
 // Room redesign request schema
 export const roomRedesignRequestSchema = z.object({
   promptType: z.enum(promptTypes).default("room-scene"),
   preservedElements: z.string(),
   addedElements: z.string().optional(),
-  // NEW FIELD: Focus for the close-up shot
   closeupFocus: z.string().optional(),
+
+  // Angle for Rotation
+  viewAngle: z.enum(viewAngles).default("Front (Original)"),
+
+  // [NEW] Zoom Level for Distance (50% to 200%)
+  // 100 = Original, <100 = Far/Wide, >100 = Close/Macro
+  cameraZoom: z.number().min(50).max(200).default(100),
+
   targetStyle: z.enum(availableStyles),
   quality: z.enum(["Standard", "High Fidelity (2K)", "Ultra (4K)"]),
   aspectRatio: z.enum(["Original", "16:9", "1:1", "4:3"]),
@@ -44,6 +58,7 @@ export interface RoomRedesignResponse {
   success: boolean;
   generatedImage?: string; // base64 data URL
   error?: string;
+  variations?: string[];
 }
 
 // Drizzle Tables

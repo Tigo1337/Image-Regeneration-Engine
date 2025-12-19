@@ -2,13 +2,14 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { roomRedesignRequestSchema } from "@shared/schema";
 import { generateRoomRedesign } from "./gemini";
-import { processImageForGemini, cropImage, padImage } from "./image-utils";
+import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup } from "./image-utils";
 import { storage } from "./storage";
 
-// Helper to build specific prompts that reinforce OBJECT IDENTITY
-function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" | "far"): string {
+// [UPDATED] Helper to build specific prompts
+// Now accepts 'originalPrompt' to maintain the context of the user's design instructions
+function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" | "far", originalPrompt: string): string {
   const element = formData.preservedElements || "the main furniture";
-  const closeupTarget = formData.closeupFocus || element; 
+  const closeupTarget = formData.closeupFocus || "the detail"; 
   const style = formData.targetStyle; 
 
   let prompt = `ROLE: Expert Architectural Photographer & Retoucher.
@@ -24,9 +25,17 @@ function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" 
 
   STYLE: ${style}.`;
 
+  // [NEW] Inject original context so the AI knows what room it's building
+  // This fixes the issue where "Far View" generates a completely different random room.
+  if (variationType !== "closeup") {
+    prompt += `\n\nORIGINAL ROOM CONTEXT:
+    The surrounding environment must match the specific design instructions provided by the user: "${originalPrompt}".
+    Ensure all new flooring, walls, lighting, and decor match this theme perfectly.
+    Do not invent a new room style; extend the existing one.`;
+  }
+
   if (variationType === "closeup") {
-    // === UPDATED CLOSE-UP PROMPT ===
-    // Focusing on "Upscaling" rather than "Redesigning"
+    // === RESTORATION MODE (Prevents Ghosting) ===
     prompt += `\n\nINPUT: This is a LOW-RESOLUTION CROP focusing on "${closeupTarget}".
     The "${closeupTarget}" is ALREADY VISIBLE in the image.
 
@@ -35,22 +44,30 @@ function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" 
     2. Your ONLY job is to SHARPEN the existing pixels (Upscale).
     3. Enhance the definition of the materials (metal grain, reflections, textures) that are CURRENTLY THERE.
     4. Maintain the exact position, angle, and shape of the object in the input.`;
-  }
+  } 
   else if (variationType === "angle") {
-    prompt += `\n\nINPUT: This image is padded on the RIGHT side.
-    TASK: Outpaint the empty white space on the right to create a SIDE-ANGLE view.
+    // === PANORAMIC EXTENSION MODE (Fixes "Two Rooms" / Split) ===
+    prompt += `\n\nINPUT: This image is squashed and has a GRADIENT FADE into white space.
 
-    LAYOUT CONSISTENCY RULE:
-    You must NOT invent a new room layout. 
-    Extrapolate the EXISTING floor pattern, wall lines, and ceiling height from the left side seamlessly into the right side.
-    If there is a wall on the left, continue it logically. 
-    Do not place random windows or doors that contradict the architectural logic of the visible part.`;
+    TASK: Seamless Panoramic Extension (Stitching).
+
+    CRITICAL "NO SPLIT" INSTRUCTIONS:
+    1. IGNORE THE FADE LINE: The gradient fade on the edge is NOT a physical object. It is just the image fading out.
+    2. SINGLE CONTINUOUS SPACE: You must continue the lines (floorboards, ceiling trim, wall texture) from the visible image STRAIGHT THROUGH the fade and into the white space.
+    3. MERGE THE HALVES: There should be ZERO visible seam between the original pixels and your generated pixels.
+    4. REJECT "TWO ROOMS": Do not draw a divider, column, or corner where the fade happens. The left side and right side are the EXACT SAME ROOM.`;
   } 
   else if (variationType === "far") {
-    prompt += `\n\nINPUT: This image has a white border (Zoomed Out).
-    TASK: Outpaint the surrounding environment (Floor, Ceiling, Walls).
-    Extend the existing room design seamlessly into the white border.
-    The center object is the anchor—do not touch it. Just build the room around it.`;
+    // === ENVIRONMENT EXPANSION MODE ===
+    prompt += `\n\nINPUT: This image is centered with a white border (Zoomed Out).
+
+    TASK: Outpainting / Field of View Expansion.
+
+    CRITICAL INSTRUCTION - CONTINUITY:
+    1. The center image is the "Anchor". The surrounding white space is the "Rest of the Room".
+    2. You MUST extend the visual logic of the center image outwards.
+    3. If the center has a specific floor pattern, the surroundings MUST have the same floor pattern.
+    4. Do NOT create a "Room within a room". The walls of the center image should extend seamlessly to the edges of the canvas.`;
   }
 
   return prompt;
@@ -69,14 +86,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processedImage = await processImageForGemini(imageData);
 
       // --- STEP 1: Generate Master Design (Front View) ---
-      console.log("Generating Master Design (Front View)...");
+      // [UPDATED] Apply User's selected Angle AND Zoom
+      // This allows for "Side View + Zoomed In" or "Front View + Zoomed Out"
+      const modifiedMainImage = await applyPerspectiveMockup(
+        processedImage, 
+        validatedData.viewAngle, 
+        validatedData.cameraZoom
+      );
+
+      console.log(`Generating Master Design: ${validatedData.viewAngle}, Zoom: ${validatedData.cameraZoom}%`);
+
       const mainImage = await generateRoomRedesign({
-        imageBase64: processedImage,
+        imageBase64: modifiedMainImage, 
         preservedElements: validatedData.preservedElements,
         targetStyle: validatedData.targetStyle,
         quality: validatedData.quality,
         aspectRatio: validatedData.aspectRatio,
-        // Pass the user's creativity level here
         creativityLevel: validatedData.creativityLevel, 
         customPrompt: prompt,
         outputFormat: validatedData.outputFormat,
@@ -84,22 +109,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let variations: string[] = [];
 
-      // --- STEP 2: Generate Variations (Geometric Forcing) ---
+      // --- STEP 2: Generate Variations ---
       if (batchSize > 1) {
-        console.log("Generating Variations with Geometric Forcing...");
+        console.log("Generating Variations...");
+
+        // Dynamic Creativity Levels
+        // Closeup = Low (Preserve)
+        // Angle/Far = High (Invent/Extend)
+        const variationCreativity = {
+          "closeup": 25, 
+          "angle": 65,   
+          "far": 65      
+        };
 
         const variationConfigs = [
           { 
+            // Variation 1: Extreme Close-up (Zoom 200%)
             type: "closeup" as const,
-            preprocess: async (img: string) => await cropImage(img)
+            preprocess: async (img: string) => await applyPerspectiveMockup(img, "Front (Original)", 200) 
           },
           { 
+            // Variation 2: Side Angle (Zoom 100%)
             type: "angle" as const,
-            preprocess: async (img: string) => await padImage(img, 'right')
+            preprocess: async (img: string) => await applyPerspectiveMockup(img, "Side Angle (Right)", 100)
           },
           { 
+            // Variation 3: Far/Wide View (Zoom 50%)
             type: "far" as const,
-            preprocess: async (img: string) => await padImage(img, 'center')
+            preprocess: async (img: string) => await applyPerspectiveMockup(img, "Front (Original)", 50) 
           }
         ];
 
@@ -107,7 +144,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const variationPromises = variationsToRun.map(async (config) => {
           const modifiedImage = await config.preprocess(mainImage);
-          const specificPrompt = buildVariationPrompt(validatedData, config.type);
+          // [FIX] Pass the user's original prompt string here so the variations match the theme
+          const specificPrompt = buildVariationPrompt(validatedData, config.type, prompt);
 
           return generateRoomRedesign({
             imageBase64: modifiedImage,
@@ -115,8 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             targetStyle: validatedData.targetStyle,
             quality: validatedData.quality,
             aspectRatio: validatedData.aspectRatio,
-            // [UPDATED] Lowered from 35 to 25 (Temp 0.5) for stricter adherence to input pixels
-            creativityLevel: 25, 
+            creativityLevel: variationCreativity[config.type], 
             customPrompt: specificPrompt,
             outputFormat: validatedData.outputFormat,
           });
@@ -140,6 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ... (Keep modify and gallery routes unchanged) ...
   app.post("/api/modify", async (req, res) => {
     try {
       const { imageData, referenceImage, prompt, ...formData } = req.body;
@@ -153,7 +191,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetStyle: validatedData.targetStyle,
         quality: validatedData.quality,
         aspectRatio: validatedData.aspectRatio,
-        // Pass creativity level for modifications too
         creativityLevel: validatedData.creativityLevel,
         customPrompt: prompt,
         outputFormat: validatedData.outputFormat,
@@ -165,7 +202,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ... (Keep existing gallery routes) ...
   app.post("/api/gallery/save", async (req, res) => {
     try {
       const { originalImage, generatedImage, originalFileName, config } = req.body;
