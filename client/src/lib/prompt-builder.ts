@@ -25,7 +25,6 @@ export interface PromptConfig {
   promptType: PromptType;
   style: string;
   preservedElements: string;
-  // New field
   addedElements?: string; 
   centerPreservedElements?: boolean;
 }
@@ -62,8 +61,20 @@ Redesign the rest of the room to match a "${style}" aesthetic.
 Key characteristics to apply: ${specificAesthetic}.
 Replace furniture, lighting, and decor that are NOT in the preservation list.`;
 
-  prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
-For the selected style, choose the single most appropriate metallic finish (e.g., brushed nickel, matte black, chrome). You MUST apply this exact finish uniformly to **ALL** visible metallic fixtures, including preserved elements, plumbing hardware, lighting fixtures, and cabinet pulls. Maintain absolute consistency of this single finish across the entire scene.`;
+  // === UPDATED LOGIC ===
+  // If elements are preserved, use THEM as the master reference for finish.
+  // If nothing is preserved, use the Style as the master reference.
+  if (preservedElements && preservedElements.trim().length > 0) {
+    prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE (MATCH PRESERVED ELEMENTS):
+You must explicitly analyze the material and metallic finish of the preserved "${preservedElements}".
+Use this existing finish (e.g., if the preserved item has chrome hinges, use chrome) as the 'Master Finish' for the rest of the room.
+Apply this exact matching finish to ALL NEW metallic fixtures (faucets, lighting, hardware) generated in the new design.
+DO NOT change the finish of the "${preservedElements}" itself. It must remain exactly as it is in the original image.`;
+  } else {
+    prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
+For the selected style, choose the single most appropriate metallic finish (e.g., brushed nickel, matte black, chrome). You MUST apply this exact finish uniformly to **ALL** visible metallic fixtures, including plumbing hardware, lighting fixtures, and cabinet pulls. Maintain absolute consistency of this single finish across the entire scene.`;
+  }
+  // =====================
 
   prompt += `\n\nFINAL OUTPUT & COMPOSITION:
 Ensure lighting, shadows, and reflections blend realistically between the preserved elements and the new design.
