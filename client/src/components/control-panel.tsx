@@ -34,7 +34,7 @@ interface ControlPanelProps {
   isModificationMode?: boolean;
   modificationPrompt?: string;
   onModificationPromptChange?: (prompt: string) => void;
-  // [NEW] Props from parent
+  // Props from parent
   referenceImages?: string[];
   onReferenceImagesChange?: (images: string[]) => void;
 }
@@ -46,15 +46,12 @@ export function ControlPanel({
   isModificationMode = false,
   modificationPrompt = "",
   onModificationPromptChange,
-  // [NEW] Destructure props with defaults
   referenceImages = [],
   onReferenceImagesChange,
 }: ControlPanelProps) {
   const [isManualOverride, setIsManualOverride] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
   const [isBatchMode, setIsBatchMode] = useState(false);
-
-  // Removed local referenceImages state, using props instead
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<RoomRedesignRequest>({
@@ -82,21 +79,16 @@ export function ControlPanel({
   // Handle multiple file upload
   const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
+    if (files && onReferenceImagesChange) {
       const newImages: string[] = [];
       Array.from(files).forEach(file => {
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
             newImages.push(event.target.result as string);
-            // Update when all files are read
             if (newImages.length === files.length) {
               const updatedList = [...referenceImages, ...newImages];
-              // Update parent state
-              if (onReferenceImagesChange) {
-                onReferenceImagesChange(updatedList);
-              }
-              // Sync with form for validation/submission
+              onReferenceImagesChange(updatedList);
               form.setValue("referenceImages", updatedList);
             }
           }
@@ -106,13 +98,13 @@ export function ControlPanel({
     }
   };
 
-  // [NEW] Helper to remove image
+  // Helper to remove image
   const removeReferenceImage = (indexToRemove: number) => {
-    const updatedList = referenceImages.filter((_, index) => index !== indexToRemove);
     if (onReferenceImagesChange) {
+      const updatedList = referenceImages.filter((_, index) => index !== indexToRemove);
       onReferenceImagesChange(updatedList);
+      form.setValue("referenceImages", updatedList);
     }
-    form.setValue("referenceImages", updatedList);
   };
 
   const generatedPrompt = constructPrompt({
@@ -141,7 +133,6 @@ export function ControlPanel({
 
   const handleGenerate = () => {
     const formData = form.getValues();
-    // Ensure form has the latest references from props
     formData.referenceImages = referenceImages;
     const promptToUse = isManualOverride ? editedPrompt : generatedPrompt;
     onGenerate(formData, promptToUse, isBatchMode ? 4 : 1);
@@ -242,12 +233,12 @@ export function ControlPanel({
               />
               <p className="text-xs text-muted-foreground">
                 {referenceImages.length > 0 
-                  ? "Click to add more reference angles" 
+                  ? `${referenceImages.length} images selected` 
                   : "Click to upload Side/Back views for better 3D accuracy"}
               </p>
             </div>
 
-            {/* Tiny Thumbnail Grid within Control Panel (optional, but good for UX) */}
+            {/* Thumbnail Grid */}
             {referenceImages.length > 0 && (
               <div className="grid grid-cols-4 gap-2 mt-2">
                 {referenceImages.map((img, idx) => (
@@ -285,7 +276,6 @@ export function ControlPanel({
             )}
           />
 
-          {/* VIEW ANGLE SELECTOR */}
           <div className="grid grid-cols-1 gap-4">
              <FormField
               control={form.control}
@@ -314,7 +304,6 @@ export function ControlPanel({
               )}
             />
 
-            {/* CAMERA DISTANCE SLIDER */}
             <FormField
               control={form.control}
               name="cameraZoom"
@@ -411,6 +400,29 @@ export function ControlPanel({
                       <SelectItem value="16:9">16:9</SelectItem>
                       <SelectItem value="1:1">1:1</SelectItem>
                       <SelectItem value="4:3">4:3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* [NEW] Re-added Output Format Selection */}
+            <FormField
+              control={form.control}
+              name="outputFormat"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Output Format</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select format" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {outputFormats.map((fmt) => (
+                        <SelectItem key={fmt} value={fmt}>{fmt}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
