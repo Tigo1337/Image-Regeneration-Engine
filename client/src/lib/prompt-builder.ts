@@ -76,7 +76,10 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
       if (viewAngle === "Front") prompt += `\nOrient the view to be straight-on, facing the "${preservedElements}" directly.`;
       if (viewAngle === "Side") prompt += `\nOrient the view to be a side profile of the "${preservedElements}".`;
-      if (viewAngle === "Top") prompt += `\nOrient the view to be a Top-Down / Flat-Lay view, looking directly down at the "${preservedElements}".`;
+      if (viewAngle === "Top") {
+        prompt += `\nOrient the view to be a Top-Down / Flat-Lay view, looking directly down at the "${preservedElements}".`;
+        prompt += `\n**TOP VIEW CONSTRAINT**: You must respect the object's asymmetry. If the drain/faucets are offset in the 3D structure, they MUST be offset in the top view. Do NOT auto-center internal features.`;
+      }
   }
 
   // === OBJECT PRESERVATION ===
@@ -97,6 +100,7 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       // IF ANGLE IS CHANGED: We cannot freeze pixels, must preserve Identity
       prompt += `\n1. IDENTITY PRESERVATION: Since the camera angle is changing to "${viewAngle}", you cannot freeze the pixels. Instead, you must generate a perfect 3D representation of the "${preservedElements}" from this new angle.`;
       prompt += `\n2. DESIGN CONSISTENCY: The object must have the EXACT SAME design, material, finish, and features as the original. It should look like the same physical object, just viewed from the ${viewAngle}.`;
+      prompt += `\n3. INTERNAL GEOMETRY: Pay close attention to internal curves, drain placement, and rim width. These must match the original object's technical specifications.`;
     }
 
     // ROOM STRUCTURE LOGIC
@@ -129,15 +133,18 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   // === FIXTURE COHERENCE ===
   if (preservedElements && preservedElements.trim().length > 0) {
-    prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
-    Analyze the material/finish of "${preservedElements}" and use it as the 'Master Finish' for ALL new metallic fixtures in the room.`;
+    prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE (MATCH PRESERVED ELEMENTS):
+    You must explicitly analyze the material and metallic finish of the preserved "${preservedElements}".
+    Use this existing finish (e.g., if the preserved item has chrome hinges, use chrome) as the 'Master Finish' for the rest of the room.
+    Apply this exact matching finish to ALL NEW metallic fixtures (faucets, lighting, hardware) generated in the new design.`;
   } else {
     prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
-    Apply a consistent metallic finish (e.g., brushed nickel, matte black) across all fixtures.`;
+    For the selected style, choose the single most appropriate metallic finish (e.g., brushed nickel, matte black, chrome). You MUST apply this exact finish uniformly to **ALL** visible metallic fixtures, including plumbing hardware, lighting fixtures, and cabinet pulls. Maintain absolute consistency of this single finish across the entire scene.`;
   }
 
-  prompt += `\n\nFINAL OUTPUT:
-  Ensure lighting, shadows, and reflections blend realistically. Generate a photorealistic result.`;
+  prompt += `\n\nFINAL OUTPUT & COMPOSITION:
+  Ensure lighting, shadows, and reflections blend realistically between the preserved elements and the new design.
+  Generate a photorealistic result.`;
 
   return prompt;
 }

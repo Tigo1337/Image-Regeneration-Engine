@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, type RoomRedesignRequest } from "@shared/schema";
@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, AlertCircle, FileText, Edit3, PlusCircle, Layers, ZoomIn, Camera, MoveHorizontal } from "lucide-react";
+import { Sparkles, AlertCircle, FileText, Edit3, PlusCircle, Layers, ZoomIn, Camera, MoveHorizontal, Upload } from "lucide-react";
 import { constructPrompt, promptTypes, type PromptType } from "@/lib/prompt-builder";
 
 interface ControlPanelProps {
@@ -47,6 +47,8 @@ export function ControlPanel({
   const [isManualOverride, setIsManualOverride] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
   const [isBatchMode, setIsBatchMode] = useState(false);
+  const [referenceImages, setReferenceImages] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<RoomRedesignRequest>({
     resolver: zodResolver(roomRedesignRequestSchema),
@@ -55,19 +57,43 @@ export function ControlPanel({
       preservedElements: "",
       addedElements: "", 
       closeupFocus: "", 
-      viewAngle: "Original", // [UPDATED] Default to Original
+      viewAngle: "Original",
       cameraZoom: 100, 
       targetStyle: "Modern",
       quality: "Standard",
       aspectRatio: "Original",
       creativityLevel: 50,
       outputFormat: "PNG",
+      referenceImages: [],
     },
   });
 
   const watchedValues = useWatch({
     control: form.control,
   });
+
+  // Handle multiple file upload
+  const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newImages: string[] = [];
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            newImages.push(event.target.result as string);
+            // Update local state and form
+            if (newImages.length === files.length) {
+              setReferenceImages(prev => [...prev, ...newImages]);
+              const current = form.getValues("referenceImages") || [];
+              form.setValue("referenceImages", [...current, ...newImages]);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
 
   const generatedPrompt = constructPrompt({
     promptType: (watchedValues.promptType as PromptType) || "room-scene",
@@ -103,7 +129,6 @@ export function ControlPanel({
   const hasPrompt = currentPrompt.trim().length > 0;
 
   if (isModificationMode) {
-     // ... (Modification mode UI remains unchanged)
     return (
         <div className="space-y-4">
           <div className="flex items-start gap-2">
@@ -175,6 +200,32 @@ export function ControlPanel({
               </FormItem>
             )}
           />
+
+           {/* REFERENCE IMAGE UPLOAD */}
+           <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-1">
+              Reference Images (Optional) <Upload className="w-3 h-3 text-primary" />
+            </Label>
+            <div 
+              className="border border-dashed border-input rounded-md p-3 hover:bg-muted/50 transition-colors cursor-pointer text-center"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input 
+                type="file" 
+                multiple 
+                accept="image/*" 
+                className="hidden" 
+                ref={fileInputRef} 
+                onChange={handleReferenceUpload} 
+              />
+              <p className="text-xs text-muted-foreground">
+                {referenceImages.length > 0 
+                  ? `${referenceImages.length} images selected` 
+                  : "Click to upload Side/Back views for better 3D accuracy"}
+              </p>
+            </div>
+          </div>
+
 
           <FormField
             control={form.control}

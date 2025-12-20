@@ -23,7 +23,7 @@ export const promptTypes = ["room-scene"] as const;
 // Output formats
 export const outputFormats = ["PNG", "JPEG", "WebP"] as const;
 
-// [UPDATED] View Angles - Now forcing perspective
+// View Angles
 export const viewAngles = [
   "Original",
   "Front",
@@ -38,11 +38,13 @@ export const roomRedesignRequestSchema = z.object({
   addedElements: z.string().optional(),
   closeupFocus: z.string().optional(),
 
+  // [NEW] Allow uploading multiple reference images for 3D context
+  referenceImages: z.array(z.string()).optional(),
+
   // Angle for Rotation
   viewAngle: z.enum(viewAngles).default("Original"),
 
-  // [NEW] Zoom Level for Distance (50% to 200%)
-  // 100 = Original, <100 = Far/Wide, >100 = Close/Macro
+  // Zoom Level
   cameraZoom: z.number().min(50).max(200).default(100),
 
   targetStyle: z.enum(availableStyles),
@@ -57,7 +59,7 @@ export type RoomRedesignRequest = z.infer<typeof roomRedesignRequestSchema>;
 // Room redesign response schema
 export interface RoomRedesignResponse {
   success: boolean;
-  generatedImage?: string; // base64 data URL
+  generatedImage?: string; 
   error?: string;
   variations?: string[];
 }

@@ -1,11 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { roomRedesignRequestSchema } from "@shared/schema";
-import { generateRoomRedesign, analyzeObjectStructure } from "./gemini"; // [UPDATED] Import analysis tool
+import { generateRoomRedesign, analyzeObjectStructure } from "./gemini"; 
 import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup } from "./image-utils";
 import { storage } from "./storage";
 
-// Helper to build specific prompts for variations
 function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" | "far", originalPrompt: string): string {
   const element = formData.preservedElements || "the main furniture";
   const closeupTarget = formData.closeupFocus || "the detail"; 
@@ -89,32 +88,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Generating Master Design: ${validatedData.viewAngle}, Zoom: ${validatedData.cameraZoom}%`);
 
-      // [NEW] 3D Analysis Loop for Angle Changes
-      // If the user wants a different angle, we must first understand the object's 3D structure
-      // to avoid hallucinations.
       let finalPrompt = prompt;
 
-      if (validatedData.viewAngle !== "Original" && validatedData.preservedElements) {
-        console.log("Non-standard view detected. Running 3D Structure Analysis...");
+      const hasRefs = validatedData.referenceImages && validatedData.referenceImages.length > 0;
+      const isAngleChange = validatedData.viewAngle !== "Original";
 
-        // Call the analysis tool (defined in gemini.ts)
-        const structureBrief = await analyzeObjectStructure(processedImage, validatedData.preservedElements);
+      // [UPDATED] 3D Analysis Logic (Optional/Non-Blocking)
+      // We wrap this in try/catch. If the analysis model is unavailable, we skip it
+      // and rely on the Direct Visual Reference injection below.
+      if ((isAngleChange || hasRefs) && validatedData.preservedElements) {
+        try {
+          console.log("3D Analysis Attempted (Angle Change or Reference Images detected)...");
 
-        if (structureBrief) {
-            finalPrompt += `\n\nCRITICAL CONTEXT - 3D STRUCTURE ANALYSIS:
-            Use the following technical analysis to ensure the "${validatedData.preservedElements}" is rendered correctly from the ${validatedData.viewAngle} view:
-            ${structureBrief}`;
+          const structureBrief = await analyzeObjectStructure(
+            processedImage, 
+            validatedData.referenceImages, 
+            validatedData.preservedElements
+          );
+
+          if (structureBrief) {
+              finalPrompt += `\n\nCRITICAL CONTEXT - 3D STRUCTURE ANALYSIS:
+              Use the following technical analysis to ensure the "${validatedData.preservedElements}" is rendered correctly from the ${validatedData.viewAngle} view:
+              ${structureBrief}`;
+          }
+        } catch (e) {
+           console.warn("3D Structure Analysis skipped (Model unavailable or error). Proceeding with Visual References only.");
         }
+      }
+
+      // [UPDATED] Append specific instruction about the Visual References
+      if (hasRefs) {
+        finalPrompt += `\n\nIMPORTANT: I have provided ${validatedData.referenceImages!.length} additional reference images. These show the TRUE shape and details of the "${validatedData.preservedElements}". Prioritize these visual examples over any general knowledge about the object.`;
       }
 
       const mainImage = await generateRoomRedesign({
         imageBase64: modifiedMainImage, 
+        referenceImages: validatedData.referenceImages, // [CRITICAL] Pass the visual references here
         preservedElements: validatedData.preservedElements,
         targetStyle: validatedData.targetStyle,
         quality: validatedData.quality,
         aspectRatio: validatedData.aspectRatio,
         creativityLevel: validatedData.creativityLevel, 
-        customPrompt: finalPrompt, // Pass the enhanced prompt
+        customPrompt: finalPrompt, 
         outputFormat: validatedData.outputFormat,
       });
 
@@ -181,7 +196,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ... (modify route unchanged)
   app.post("/api/modify", async (req, res) => {
     try {
       const { imageData, referenceImage, prompt, ...formData } = req.body;
