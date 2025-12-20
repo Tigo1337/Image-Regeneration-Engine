@@ -21,14 +21,19 @@ export async function uploadImageToStorage(
   const buffer = Buffer.from(base64Content, "base64");
 
   // Generate unique filename
-  const filename = `${prefix}/${nanoid()}.${extension}`;
+  const filename = `${nanoid()}.${extension}`;
   
-  // Get the bucket from the private object directory
-  const privateDir = objectStorageService.getPrivateObjectDir();
-  const bucketName = privateDir.split("/")[1]; // Extract bucket name from path
+  // Get bucket ID from environment variable (set by Replit object storage setup)
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!bucketId) {
+    throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID environment variable not set");
+  }
   
-  const bucket = objectStorageClient.bucket(bucketName);
-  const file = bucket.file(`designs/${filename}`);
+  // Use the public directory for serving images
+  const objectPath = `public/${prefix}/${filename}`;
+  
+  const bucket = objectStorageClient.bucket(bucketId);
+  const file = bucket.file(objectPath);
 
   // Upload the buffer
   await file.save(buffer, {
@@ -37,8 +42,8 @@ export async function uploadImageToStorage(
     },
   });
 
-  // Return the object path for serving
-  return `/objects/designs/${filename}`;
+  // Return the object path for serving via /objects route
+  return `/objects/${objectPath}`;
 }
 
 /**
