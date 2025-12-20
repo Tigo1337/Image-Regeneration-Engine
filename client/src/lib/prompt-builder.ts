@@ -78,9 +78,22 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       prompt += `\n\nCRITICAL INSTRUCTION - CHANGE CAMERA ANGLE:
       You must re-render the scene from a strictly "${viewAngle}" perspective.`;
 
-      if (viewAngle === "Front") prompt += `\nOrient the view to be straight-on, facing the "${preservedElements}" directly.`;
-      if (viewAngle === "Side") prompt += `\nOrient the view to be a side profile of the "${preservedElements}".`;
+      if (viewAngle === "Front") {
+        prompt += `\n**CAMERA LOCK: 0-DEGREE FRONT ELEVATION**`;
+        prompt += `\n1. Position the camera directly perpendicular to the face of the "${preservedElements}".`;
+        prompt += `\n2. Use One-Point Perspective: All horizontal lines of the object must be perfectly parallel to the image frame.`;
+        prompt += `\n3. Do not show the side panels of the object. Show ONLY the front face.`;
+      }
+
+      if (viewAngle === "Side") {
+        prompt += `\n**CAMERA LOCK: 45-DEGREE ISOMETRIC / THREE-QUARTER VIEW**`;
+        prompt += `\n1. Rotate the camera strictly 45 degrees around the "${preservedElements}".`;
+        prompt += `\n2. COMPOSITION RULE: You MUST show two distinct faces of the object (the Front Face AND the Side Face) to establish volumetric depth.`;
+        prompt += `\n3. The object should NOT look flat. It must have 3D dimensionality.`;
+      }
+
       if (viewAngle === "Top") {
+        prompt += `\n**CAMERA LOCK: 90-DEGREE OVERHEAD (FLAT LAY)**`;
         prompt += `\nOrient the view to be a Top-Down / Flat-Lay view, looking directly down at the "${preservedElements}".`;
         prompt += `\n**TOP VIEW CONSTRAINT**: You must respect the object's asymmetry. If the drain/faucets are offset in the 3D structure, they MUST be offset in the top view. Do NOT auto-center internal features.`;
       }
