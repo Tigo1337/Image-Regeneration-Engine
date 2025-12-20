@@ -9,6 +9,7 @@ const ai = new GoogleGenAI({
 interface RoomRedesignParams {
   imageBase64: string;
   referenceImages?: string[]; 
+  referenceDrawing?: string;
   preservedElements: string;
   targetStyle: string;
   quality: string;
@@ -18,10 +19,89 @@ interface RoomRedesignParams {
   outputFormat?: string;
 }
 
+// [UPDATED] Universal 3D Analysis Logic
+// Now works for ANY object (Couch, Vanity, Bathtub, Chair, etc.)
 export async function analyzeObjectStructure(mainImageBase64: string, referenceImages: string[] | undefined, objectName: string): Promise<string> {
   try {
-    return ""; 
+    const mainBase64 = mainImageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+
+    console.log(`=== Analyzing 3D Structure for: ${objectName} ===`);
+
+    // Build the prompt parts for the Vision Model
+    const promptParts: any[] = [
+      { 
+        text: `You are an Expert Industrial Designer and 3D Modeler. 
+
+        TASK: Perform a comprehensive "Design Breakdown" of the "${objectName}" shown in the images.
+        Your goal is to describe every physical detail so a renderer can reconstruct it perfectly without hallucinations.
+
+        ANALYZE THESE 4 UNIVERSAL DIMENSIONS:
+
+        1. GLOBAL GEOMETRY & SILHOUETTE:
+           - What is the primary form? (e.g., Rectangular prism, organic sphere, L-shaped sectional).
+           - Describe the edges (Sharp, chamfered, rounded, filleted?).
+           - Is the object symmetrical or asymmetrical?
+
+        2. STRUCTURAL COMPONENTS (The "Skeleton"):
+           - Break the object down into parts. 
+           - If it's furniture: Legs (tapered? block?), Arms (rolled? track?), Back (tight? loose cushion?).
+           - If it's cabinetry: Doors (shaker? slab?), Drawers (recessed? overlay?), Hardware (pulls? knobs?).
+           - If it's plumbing: Basin shape, rim thickness, faucet mounting points.
+
+        3. SURFACE TOPOGRAPHY (The "Skin"):
+           - CRITICAL: Look for relief details. Is the surface flat or textured?
+           - Identify: Paneling, fluting, tufting, piping, stitching, carving, or grooves.
+           - Describe the depth of these details (e.g., "Deep vertical grooves," "Subtle button tufting").
+
+        4. MATERIAL & FINISH:
+           - Describe the interaction with light. (Matte, High-Gloss, Satin, Brushed?).
+           - Describe the texture pattern (Wood grain direction, Fabric weave, Marble veining).
+
+        Output a precise, technical description that captures the "Soul" of the object.` 
+      },
+      // Always include the main image
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: mainBase64
+        }
+      }
+    ];
+
+    // Append all reference images to the prompt
+    if (referenceImages && referenceImages.length > 0) {
+      referenceImages.forEach((img, index) => {
+        // Simple safety check for base64
+        if (img && img.includes('base64,')) {
+          const refBase64 = img.replace(/^data:image\/[a-z]+;base64,/, '');
+          promptParts.push({ text: `\nReference Image ${index + 1}:` });
+          promptParts.push({
+            inlineData: {
+              mimeType: "image/jpeg", 
+              data: refBase64
+            }
+          });
+        }
+      });
+    }
+
+    // Use the Flash model for fast, accurate text analysis
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash-exp", 
+      contents: [
+        {
+          role: "user",
+          parts: promptParts
+        }
+      ]
+    });
+
+    const description = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("Analysis Result:", description.substring(0, 150) + "...");
+    return description;
+
   } catch (error) {
+    console.error("Analysis failed (Model unavailable or Error), skipping 3D context injection:", error);
     return ""; 
   }
 }
@@ -29,7 +109,8 @@ export async function analyzeObjectStructure(mainImageBase64: string, referenceI
 export async function generateRoomRedesign(params: RoomRedesignParams): Promise<string> {
   const { 
     imageBase64, 
-    referenceImages = [], 
+    referenceImages = [],
+    referenceDrawing,
     customPrompt, 
     quality, 
     aspectRatio, 
@@ -46,6 +127,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       { text: customPrompt || "Create a beautiful interior design image." }
     ];
 
+    // Main Canvas Image
     parts.push({
       inlineData: {
         mimeType: "image/jpeg",
@@ -53,26 +135,43 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       }
     });
 
-    // 3. Inject Reference Images (Safe Mode)
-    if (referenceImages && referenceImages.length > 0) {
-      console.log(`Injecting ${referenceImages.length} Visual Reference Images...`);
+    // 3. Inject Reference Images
+    if (referenceImages.length > 0) {
+      console.log(`Injecting ${referenceImages.length} Visual Reference Images into Generation Context...`);
 
       parts.push({ 
-        text: `\n\nCRITICAL VISUAL REFERENCES:\nThe following images are supplementary views (Side, Top, Detail) of the object to be preserved. Use them to understand the EXACT geometry, drain placement, and curves. Do not redesign the object; copy its structure from these references.` 
+        text: `\n\nCRITICAL VISUAL REFERENCES:\nThe following images show the EXACT object to be preserved. Use them to understand its geometry, material, and surface details (like paneling, tufting, or hardware) from multiple angles. Do not redesign this object.` 
       });
 
-      referenceImages.forEach((ref, index) => {
-        // [FIX] Safety check to ensure we only send valid data
-        if (ref && typeof ref === 'string' && ref.includes('base64,')) {
-            const refBase64 = ref.replace(/^data:image\/[a-z]+;base64,/, '');
-            parts.push({
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: refBase64
-              }
-            });
-        } else {
-            console.warn(`Skipping invalid reference image at index ${index}`);
+      referenceImages.forEach((ref) => {
+        if (ref && ref.includes('base64,')) {
+          const refBase64 = ref.replace(/^data:image\/[a-z]+;base64,/, '');
+          parts.push({
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: refBase64
+            }
+          });
+        }
+      });
+    }
+
+    // 4. Inject Technical Drawing
+    if (referenceDrawing) {
+      console.log("Injecting Technical Drawing into Generation Context...");
+
+      const isPdf = referenceDrawing.includes('application/pdf');
+      const mimeType = isPdf ? 'application/pdf' : 'image/jpeg';
+      const drawingBase64 = referenceDrawing.split(',')[1];
+
+      parts.push({
+        text: `\n\nTECHNICAL DRAWING REFERENCE:\nThe following input is a Technical Drawing / Blueprint. Use the dimensions, orthographic views, and scale provided in this document to ensure the object is rendered with 100% geometric accuracy. This document takes precedence over all other inputs regarding shape.`
+      });
+
+      parts.push({
+        inlineData: {
+          mimeType: mimeType,
+          data: drawingBase64
         }
       });
     }
@@ -113,8 +212,10 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     }
 
     console.log("=== Gemini Image Generation API Request ===");
+    console.log("Model: gemini-3-pro-image-preview");
     console.log("Input Parts Count:", parts.length);
     console.log("Aspect Ratio:", imageConfig.aspectRatio || "Default");
+    console.log("Has Drawing:", !!referenceDrawing);
     console.log("==========================================");
 
     const imageResponse = await ai.models.generateContent({

@@ -37,6 +37,9 @@ interface ControlPanelProps {
   // Props from parent
   referenceImages?: string[];
   onReferenceImagesChange?: (images: string[]) => void;
+  // [NEW] Props for Drawing
+  referenceDrawing?: string | null;
+  onReferenceDrawingChange?: (drawing: string | null) => void;
 }
 
 export function ControlPanel({ 
@@ -48,11 +51,14 @@ export function ControlPanel({
   onModificationPromptChange,
   referenceImages = [],
   onReferenceImagesChange,
+  referenceDrawing = null,
+  onReferenceDrawingChange,
 }: ControlPanelProps) {
   const [isManualOverride, setIsManualOverride] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
   const [isBatchMode, setIsBatchMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const drawingInputRef = useRef<HTMLInputElement>(null); // New ref for drawing
 
   const form = useForm<RoomRedesignRequest>({
     resolver: zodResolver(roomRedesignRequestSchema),
@@ -69,6 +75,7 @@ export function ControlPanel({
       creativityLevel: 50,
       outputFormat: "PNG",
       referenceImages: [],
+      referenceDrawing: undefined,
     },
   });
 
@@ -76,7 +83,7 @@ export function ControlPanel({
     control: form.control,
   });
 
-  // Handle multiple file upload
+  // Handle multiple file upload (Images)
   const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && onReferenceImagesChange) {
@@ -98,12 +105,34 @@ export function ControlPanel({
     }
   };
 
-  // Helper to remove image
+  // [NEW] Handle Drawing upload (PDF or Image)
+  const handleDrawingUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onReferenceDrawingChange) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          const result = event.target.result as string;
+          onReferenceDrawingChange(result);
+          form.setValue("referenceDrawing", result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const removeReferenceImage = (indexToRemove: number) => {
     if (onReferenceImagesChange) {
       const updatedList = referenceImages.filter((_, index) => index !== indexToRemove);
       onReferenceImagesChange(updatedList);
       form.setValue("referenceImages", updatedList);
+    }
+  };
+
+  const removeReferenceDrawing = () => {
+    if (onReferenceDrawingChange) {
+      onReferenceDrawingChange(null);
+      form.setValue("referenceDrawing", undefined);
     }
   };
 
@@ -134,6 +163,7 @@ export function ControlPanel({
   const handleGenerate = () => {
     const formData = form.getValues();
     formData.referenceImages = referenceImages;
+    formData.referenceDrawing = referenceDrawing || undefined;
     const promptToUse = isManualOverride ? editedPrompt : generatedPrompt;
     onGenerate(formData, promptToUse, isBatchMode ? 4 : 1);
   };
@@ -237,8 +267,6 @@ export function ControlPanel({
                   : "Click to upload Side/Back views for better 3D accuracy"}
               </p>
             </div>
-
-            {/* Thumbnail Grid */}
             {referenceImages.length > 0 && (
               <div className="grid grid-cols-4 gap-2 mt-2">
                 {referenceImages.map((img, idx) => (
@@ -256,6 +284,55 @@ export function ControlPanel({
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* [NEW] REFERENCE DRAWING UPLOAD */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-1">
+              Reference Drawing (PDF/Img) <FileText className="w-3 h-3 text-primary" />
+            </Label>
+            <div 
+              className="border border-dashed border-input rounded-md p-3 hover:bg-muted/50 transition-colors cursor-pointer text-center"
+              onClick={() => drawingInputRef.current?.click()}
+            >
+              <input 
+                type="file" 
+                accept=".pdf,image/*" 
+                className="hidden" 
+                ref={drawingInputRef} 
+                onChange={handleDrawingUpload} 
+              />
+              <p className="text-xs text-muted-foreground">
+                {referenceDrawing 
+                  ? "Drawing uploaded (Click to change)" 
+                  : "Upload Technical Drawing / Blueprint / PDF"}
+              </p>
+            </div>
+
+            {/* Drawing Preview Area */}
+            {referenceDrawing && (
+              <div className="relative mt-2 p-2 border border-border rounded-md bg-muted/20 flex items-center gap-3 group">
+                <div className="w-10 h-10 bg-primary/10 flex items-center justify-center rounded text-primary">
+                  {referenceDrawing.startsWith('data:application/pdf') ? <FileText className="w-6 h-6" /> : <img src={referenceDrawing} className="w-full h-full object-cover rounded" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">
+                    {referenceDrawing.startsWith('data:application/pdf') ? "Technical Drawing (PDF)" : "Technical Drawing (Image)"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">Using for dimensions & scale</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeReferenceDrawing();
+                  }}
+                  className="p-1 hover:bg-destructive/10 hover:text-destructive rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )}
           </div>
@@ -406,7 +483,6 @@ export function ControlPanel({
                 </FormItem>
               )}
             />
-            {/* [NEW] Re-added Output Format Selection */}
             <FormField
               control={form.control}
               name="outputFormat"

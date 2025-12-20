@@ -38,8 +38,11 @@ export const roomRedesignRequestSchema = z.object({
   addedElements: z.string().optional(),
   closeupFocus: z.string().optional(),
 
-  // [NEW] Allow uploading multiple reference images for 3D context
+  // Allow uploading multiple reference images for 3D context
   referenceImages: z.array(z.string()).optional(),
+
+  // [NEW] Allow uploading a single technical drawing (PDF or Image)
+  referenceDrawing: z.string().optional(),
 
   // Angle for Rotation
   viewAngle: z.enum(viewAngles).default("Original"),

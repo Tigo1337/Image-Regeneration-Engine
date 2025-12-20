@@ -17,8 +17,10 @@ export default function Home() {
   const [modificationPrompt, setModificationPrompt] = useState<string>("");
   const [currentFormData, setCurrentFormData] = useState<RoomRedesignRequest | null>(null);
 
-  // [NEW] Lifted state for reference images so they can be shared
+  // Lifted state for reference images
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
+  // [NEW] Lifted state for technical drawing
+  const [referenceDrawing, setReferenceDrawing] = useState<string | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -31,9 +33,8 @@ export default function Home() {
     setGeneratedImage(null);
     setGeneratedVariations([]);
     setModificationPrompt("");
-    // [NEW] Clear references on new image load if desired, or keep them. 
-    // Usually safer to clear to avoid mixing contexts.
     setReferenceImages([]); 
+    setReferenceDrawing(null); // Reset drawing
   };
 
   const generateMutation = useMutation({
@@ -112,13 +113,14 @@ export default function Home() {
       return;
     }
 
-    // [NEW] Ensure reference images are included in the request data
+    // [NEW] Include drawing in request
     const requestData = {
       ...formData,
-      referenceImages: referenceImages
+      referenceImages: referenceImages,
+      referenceDrawing: referenceDrawing || undefined
     };
 
-    setCurrentFormData(requestData);
+    setCurrentFormData(requestData as RoomRedesignRequest);
 
     if (generatedImage) {
       generateMutation.mutate({
@@ -147,7 +149,8 @@ export default function Home() {
     setGeneratedVariations([]);
     setModificationPrompt("");
     setCurrentFormData(null);
-    setReferenceImages([]); // Reset references
+    setReferenceImages([]);
+    setReferenceDrawing(null);
   };
 
   return (
@@ -185,9 +188,11 @@ export default function Home() {
               isModificationMode={!!generatedImage}
               modificationPrompt={modificationPrompt}
               onModificationPromptChange={setModificationPrompt}
-              // [NEW] Pass state props
               referenceImages={referenceImages}
               onReferenceImagesChange={setReferenceImages}
+              // [NEW] Pass drawing state
+              referenceDrawing={referenceDrawing}
+              onReferenceDrawingChange={setReferenceDrawing}
             />
           </div>
         </div>
@@ -200,7 +205,6 @@ export default function Home() {
           generatedVariations={generatedVariations}
           originalFileName={originalFileName}
           currentFormData={currentFormData || undefined}
-          // [NEW] Pass reference images for display
           referenceImages={referenceImages}
         />
       </main>
