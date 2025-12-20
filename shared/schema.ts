@@ -23,11 +23,12 @@ export const promptTypes = ["room-scene"] as const;
 // Output formats
 export const outputFormats = ["PNG", "JPEG", "WebP"] as const;
 
-// [UPDATED] View Angles are now strictly about ROTATION
+// [UPDATED] View Angles - Now forcing perspective
 export const viewAngles = [
-  "Front (Original)",
-  "Side Angle (Left)", 
-  "Side Angle (Right)"
+  "Original",
+  "Front",
+  "Side", 
+  "Top"
 ] as const;
 
 // Room redesign request schema
@@ -38,7 +39,7 @@ export const roomRedesignRequestSchema = z.object({
   closeupFocus: z.string().optional(),
 
   // Angle for Rotation
-  viewAngle: z.enum(viewAngles).default("Front (Original)"),
+  viewAngle: z.enum(viewAngles).default("Original"),
 
   // [NEW] Zoom Level for Distance (50% to 200%)
   // 100 = Original, <100 = Far/Wide, >100 = Close/Macro

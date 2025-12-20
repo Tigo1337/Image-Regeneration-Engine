@@ -55,8 +55,8 @@ export function ControlPanel({
       preservedElements: "",
       addedElements: "", 
       closeupFocus: "", 
-      viewAngle: "Front (Original)",
-      cameraZoom: 100, // Default to 100% (Original distance)
+      viewAngle: "Original", // [UPDATED] Default to Original
+      cameraZoom: 100, 
       targetStyle: "Modern",
       quality: "Standard",
       aspectRatio: "Original",
@@ -74,9 +74,9 @@ export function ControlPanel({
     style: watchedValues.targetStyle || "Modern",
     preservedElements: watchedValues.preservedElements || "",
     addedElements: watchedValues.addedElements || "", 
-    viewAngle: watchedValues.viewAngle || "Front (Original)",
-    cameraZoom: watchedValues.cameraZoom || 100, // Pass zoom to prompt builder
-    creativityLevel: watchedValues.creativityLevel || 50, // Pass creativity to enable dynamic constraints
+    viewAngle: watchedValues.viewAngle || "Original",
+    cameraZoom: watchedValues.cameraZoom || 100,
+    creativityLevel: watchedValues.creativityLevel || 50,
     centerPreservedElements: true,
   });
 
@@ -103,6 +103,7 @@ export function ControlPanel({
   const hasPrompt = currentPrompt.trim().length > 0;
 
   if (isModificationMode) {
+     // ... (Modification mode UI remains unchanged)
     return (
         <div className="space-y-4">
           <div className="flex items-start gap-2">

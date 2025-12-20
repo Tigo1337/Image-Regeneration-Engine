@@ -1,12 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { roomRedesignRequestSchema } from "@shared/schema";
-import { generateRoomRedesign } from "./gemini";
+import { generateRoomRedesign, analyzeObjectStructure } from "./gemini"; // [UPDATED] Import analysis tool
 import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup } from "./image-utils";
 import { storage } from "./storage";
 
-// [UPDATED] Helper to build specific prompts
-// Now accepts 'originalPrompt' to maintain the context of the user's design instructions
+// Helper to build specific prompts for variations
 function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" | "far", originalPrompt: string): string {
   const element = formData.preservedElements || "the main furniture";
   const closeupTarget = formData.closeupFocus || "the detail"; 
@@ -25,8 +24,6 @@ function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" 
 
   STYLE: ${style}.`;
 
-  // [NEW] Inject original context so the AI knows what room it's building
-  // This fixes the issue where "Far View" generates a completely different random room.
   if (variationType !== "closeup") {
     prompt += `\n\nORIGINAL ROOM CONTEXT:
     The surrounding environment must match the specific design instructions provided by the user: "${originalPrompt}".
@@ -35,7 +32,6 @@ function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" 
   }
 
   if (variationType === "closeup") {
-    // === RESTORATION MODE (Prevents Ghosting) ===
     prompt += `\n\nINPUT: This is a LOW-RESOLUTION CROP focusing on "${closeupTarget}".
     The "${closeupTarget}" is ALREADY VISIBLE in the image.
 
@@ -46,7 +42,6 @@ function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" 
     4. Maintain the exact position, angle, and shape of the object in the input.`;
   } 
   else if (variationType === "angle") {
-    // === PANORAMIC EXTENSION MODE (Fixes "Two Rooms" / Split) ===
     prompt += `\n\nINPUT: This image is squashed and has a GRADIENT FADE into white space.
 
     TASK: Seamless Panoramic Extension (Stitching).
@@ -58,7 +53,6 @@ function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" 
     4. REJECT "TWO ROOMS": Do not draw a divider, column, or corner where the fade happens. The left side and right side are the EXACT SAME ROOM.`;
   } 
   else if (variationType === "far") {
-    // === ENVIRONMENT EXPANSION MODE ===
     prompt += `\n\nINPUT: This image is centered with a white border (Zoomed Out).
 
     TASK: Outpainting / Field of View Expansion.
@@ -85,9 +79,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const processedImage = await processImageForGemini(imageData);
 
-      // --- STEP 1: Generate Master Design (Front View) ---
-      // [UPDATED] Apply User's selected Angle AND Zoom
-      // This allows for "Side View + Zoomed In" or "Front View + Zoomed Out"
+      // --- STEP 1: Generate Master Design ---
+
       const modifiedMainImage = await applyPerspectiveMockup(
         processedImage, 
         validatedData.viewAngle, 
@@ -96,6 +89,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Generating Master Design: ${validatedData.viewAngle}, Zoom: ${validatedData.cameraZoom}%`);
 
+      // [NEW] 3D Analysis Loop for Angle Changes
+      // If the user wants a different angle, we must first understand the object's 3D structure
+      // to avoid hallucinations.
+      let finalPrompt = prompt;
+
+      if (validatedData.viewAngle !== "Original" && validatedData.preservedElements) {
+        console.log("Non-standard view detected. Running 3D Structure Analysis...");
+
+        // Call the analysis tool (defined in gemini.ts)
+        const structureBrief = await analyzeObjectStructure(processedImage, validatedData.preservedElements);
+
+        if (structureBrief) {
+            finalPrompt += `\n\nCRITICAL CONTEXT - 3D STRUCTURE ANALYSIS:
+            Use the following technical analysis to ensure the "${validatedData.preservedElements}" is rendered correctly from the ${validatedData.viewAngle} view:
+            ${structureBrief}`;
+        }
+      }
+
       const mainImage = await generateRoomRedesign({
         imageBase64: modifiedMainImage, 
         preservedElements: validatedData.preservedElements,
@@ -103,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quality: validatedData.quality,
         aspectRatio: validatedData.aspectRatio,
         creativityLevel: validatedData.creativityLevel, 
-        customPrompt: prompt,
+        customPrompt: finalPrompt, // Pass the enhanced prompt
         outputFormat: validatedData.outputFormat,
       });
 
@@ -113,9 +124,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (batchSize > 1) {
         console.log("Generating Variations...");
 
-        // Dynamic Creativity Levels
-        // Closeup = Low (Preserve)
-        // Angle/Far = High (Invent/Extend)
         const variationCreativity = {
           "closeup": 25, 
           "angle": 65,   
@@ -124,17 +132,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const variationConfigs = [
           { 
-            // Variation 1: Extreme Close-up (Zoom 200%)
             type: "closeup" as const,
             preprocess: async (img: string) => await applyPerspectiveMockup(img, "Front (Original)", 200) 
           },
           { 
-            // Variation 2: Side Angle (Zoom 100%)
             type: "angle" as const,
             preprocess: async (img: string) => await applyPerspectiveMockup(img, "Side Angle (Right)", 100)
           },
           { 
-            // Variation 3: Far/Wide View (Zoom 50%)
             type: "far" as const,
             preprocess: async (img: string) => await applyPerspectiveMockup(img, "Front (Original)", 50) 
           }
@@ -144,7 +149,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const variationPromises = variationsToRun.map(async (config) => {
           const modifiedImage = await config.preprocess(mainImage);
-          // [FIX] Pass the user's original prompt string here so the variations match the theme
           const specificPrompt = buildVariationPrompt(validatedData, config.type, prompt);
 
           return generateRoomRedesign({
@@ -177,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ... (Keep modify and gallery routes unchanged) ...
+  // ... (modify route unchanged)
   app.post("/api/modify", async (req, res) => {
     try {
       const { imageData, referenceImage, prompt, ...formData } = req.body;
