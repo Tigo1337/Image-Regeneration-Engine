@@ -6,48 +6,55 @@ import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup } fr
 import { storage } from "./storage";
 import { uploadImageToStorage } from "./image-storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { z } from "zod";
 
-function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" | "far", originalPrompt: string): string {
-  const element = formData.preservedElements || "the main furniture";
-  const closeupTarget = formData.closeupFocus || "the detail"; 
-  const style = formData.targetStyle; 
+// [UPDATED] Prompt Builder with Close-up rule for Top View
+function buildVariationPrompt(formData: any, variationType: string, structureAnalysis: string = ""): string {
+  const style = formData.targetStyle || "the existing style";
 
-  let prompt = `ROLE: Expert Architectural Photographer & Retoucher.
+  let prompt = `ROLE: Expert Architectural Visualizer.
 
-  CORE TASK:
-  You are provided with a partial or manipulated image of a "${element}".
-  Your goal is to complete/refine this image into a photorealistic architectural shot.
+  TASK: Generate a new view of the room shown in the input image.
+  TARGET VIEW: ${variationType.toUpperCase()}.
 
-  CRITICAL IDENTITY RULE:
-  The "${element}" must look EXACTLY the same as it does in the input pixels and reference images.
-  Do NOT redesign it. Do NOT change the handle, finish, or material. 
-  This is the same physical object, just viewed differently.
+  STRICT PRESERVATION RULES:
+  1. The Input Image is the primary reference for the object's silhouette.
+  2. You must NOT change the furniture, decor, lighting, or materials.
+  3. Keep the "${style}" aesthetic exactly as shown.
 
-  STYLE: ${style}.`;
+  CRITICAL - HANDLING HIDDEN ANGLES:
+  The Input Image only shows the Front. You MUST use the provided "Visual Reference Images" and the "3D Structure Analysis" below to reconstruct the hidden sides.
+  `;
 
-  if (variationType !== "closeup") {
-    prompt += `\n\nORIGINAL ROOM CONTEXT:
-    The surrounding environment must match the specific design instructions provided by the user: "${originalPrompt}".
-    Ensure all new flooring, walls, lighting, and decor match this theme perfectly.`;
+  if (structureAnalysis) {
+    prompt += `\n\n=== 3D STRUCTURE ANALYSIS (GROUND TRUTH) ===
+    Use this technical description to render the details correctly:
+    ${structureAnalysis}
+    ============================================\n`;
   }
 
-  if (variationType === "closeup") {
-    prompt += `\n\nINPUT: This is a LOW-RESOLUTION CROP focusing on "${closeupTarget}".
-    TASK: Super-Resolution Texture Refinement.
-    1. Do NOT draw a new "${closeupTarget}". Do NOT overlay new geometry.
-    2. Your ONLY job is to SHARPEN the existing pixels (Upscale).
-    3. Enhance the definition of the materials (metal grain, reflections, textures).`;
+  if (variationType === "Front") {
+    prompt += `\n\nINSTRUCTION: FRONT ELEVATION.
+    - Move the camera to be directly in front of the main area/furniture.
+    - Flatten the perspective (Orthographic-like or 2-point perspective).
+    - Ensure vertical lines are perfectly straight.`;
   } 
-  else if (variationType === "angle") {
-    prompt += `\n\nINPUT: This image has a GRADIENT FADE into white space.
-    TASK: Seamless Panoramic Extension (Stitching).
-    1. Continue the lines (floorboards, ceiling trim) from the visible image STRAIGHT THROUGH the fade.
-    2. REJECT "TWO ROOMS": Do not draw a divider or column.`;
+  else if (variationType === "Side") {
+    prompt += `\n\nINSTRUCTION: ANGLE VIEW (45-Degree).
+    - Move the camera 45 degrees to the side.
+    - CRITICAL: TEXTURE CLONING. Look at the Reference Images. If the side panel has a specific pattern (e.g., fluting, beadboard, slats, or marble grain), you MUST copy that EXACT pattern.
+    - DO NOT APPROXIMATE. If the reference shows vertical slats, render vertical slats.
+    - Do NOT add a corner to the wall. Keep the back wall FLAT.`;
   } 
-  else if (variationType === "far") {
-    prompt += `\n\nINPUT: This image is centered with a white border (Zoomed Out).
-    TASK: Outpainting / Field of View Expansion.
-    1. The center image is the "Anchor". Extend the visual logic of the center image outwards.`;
+  else if (variationType === "Top") {
+    prompt += `\n\nINSTRUCTION: CLOSE-UP ARCHITECTURAL FLOOR PLAN CUTAWAY.
+    - Move the camera vertically above the center of the room looking straight down (90-degree angle).
+    - ZOOM LEVEL: Close-up. Fill the frame with the main furniture/object.
+    - FILL THE ENTIRE CANVAS. No white borders, no padding.
+    - CUTAWAY MODE: REMOVE THE CEILING. Do not render the ceiling, roof, or high-hanging lights that block the view.
+    - The view must look like a "Section Cut" looking down into the room.
+    - CRITICAL: NO PERSPECTIVE DISTORTION on the walls. Walls should look like thin lines or be invisible borders.
+    - Preserve all floor decor (rugs, mats) exactly as they are.`;
   }
 
   return prompt;
@@ -81,7 +88,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasDrawing = !!validatedData.referenceDrawing;
       const isAngleChange = validatedData.viewAngle !== "Original";
 
-      // 3D Analysis Logic (Restored and active)
       if ((isAngleChange || hasRefs) && validatedData.preservedElements) {
         try {
           console.log("3D Analysis Attempted...");
@@ -122,61 +128,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         outputFormat: validatedData.outputFormat,
       });
 
-      let variations: string[] = [];
-
-      // --- STEP 2: Generate Variations ---
-      if (batchSize > 1) {
-        console.log("Generating Variations...");
-
-        const variationCreativity = {
-          "closeup": 25, 
-          "angle": 65,   
-          "far": 65      
-        };
-
-        const variationConfigs = [
-          { 
-            type: "closeup" as const,
-            preprocess: async (img: string) => await applyPerspectiveMockup(img, "Front (Original)", 200) 
-          },
-          { 
-            type: "angle" as const,
-            preprocess: async (img: string) => await applyPerspectiveMockup(img, "Side Angle (Right)", 100)
-          },
-          { 
-            type: "far" as const,
-            preprocess: async (img: string) => await applyPerspectiveMockup(img, "Front (Original)", 50) 
-          }
-        ];
-
-        const variationsToRun = variationConfigs.slice(0, Math.min(batchSize - 1, 3));
-
-        const variationPromises = variationsToRun.map(async (config) => {
-          const modifiedImage = await config.preprocess(mainImage);
-          const specificPrompt = buildVariationPrompt(validatedData, config.type, prompt);
-
-          return generateRoomRedesign({
-            imageBase64: modifiedImage,
-            // [FIXED] Pass the Reference Images & Drawings to variations too!
-            referenceImages: validatedData.referenceImages, 
-            referenceDrawing: validatedData.referenceDrawing,
-            preservedElements: validatedData.preservedElements, 
-            targetStyle: validatedData.targetStyle,
-            quality: validatedData.quality,
-            aspectRatio: validatedData.aspectRatio,
-            creativityLevel: variationCreativity[config.type], 
-            customPrompt: specificPrompt,
-            outputFormat: validatedData.outputFormat,
-          });
-        });
-
-        variations = await Promise.all(variationPromises);
-      }
-
       res.json({
         success: true,
         generatedImage: mainImage,
-        variations: variations, 
+        variations: [],
       });
 
     } catch (error) {
@@ -188,7 +143,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ... (modify route and other routes remain standard) ...
+  app.post("/api/variations", async (req, res) => {
+    try {
+      const { imageData, prompt, selectedVariations, ...formData } = req.body;
+      const validatedData = roomRedesignRequestSchema.parse(formData);
+
+      if (!imageData) return res.status(400).json({ success: false, error: "No source image provided" });
+
+      console.log("Generating Additional Perspectives...");
+      console.log("Requested views:", selectedVariations);
+
+      // Run 3D Analysis for Variations if references exist
+      let structureAnalysis = "";
+      if (validatedData.referenceImages && validatedData.referenceImages.length > 0 && validatedData.preservedElements) {
+        try {
+            console.log("Running 3D Structure Analysis for Variations...");
+            structureAnalysis = await analyzeObjectStructure(
+              imageData, 
+              validatedData.referenceImages, 
+              validatedData.preservedElements
+            );
+        } catch (e) {
+            console.warn("Variation Analysis skipped:", e);
+        }
+      }
+
+      // [UPDATED] Set Top View zoom to 135
+      const variationConfigs = [
+        { 
+          type: "Front",
+          preprocess: async (img: string) => await applyPerspectiveMockup(img, "Front", 100) 
+        },
+        { 
+          type: "Side",
+          preprocess: async (img: string) => await applyPerspectiveMockup(img, "Side", 100)
+        },
+        { 
+          type: "Top",
+          preprocess: async (img: string) => await applyPerspectiveMockup(img, "Top", 135) 
+        }
+      ];
+
+      const variationsToRun = selectedVariations && Array.isArray(selectedVariations)
+        ? variationConfigs.filter(cfg => selectedVariations.includes(cfg.type))
+        : variationConfigs;
+
+      if (variationsToRun.length === 0) {
+         return res.json({ success: true, variations: [] });
+      }
+
+      const variationPromises = variationsToRun.map(async (config) => {
+        const modifiedImage = await config.preprocess(imageData);
+        const specificPrompt = buildVariationPrompt(validatedData, config.type, structureAnalysis);
+
+        return generateRoomRedesign({
+          imageBase64: modifiedImage,
+          referenceImages: validatedData.referenceImages, 
+          referenceDrawing: validatedData.referenceDrawing,
+          preservedElements: validatedData.preservedElements, 
+          targetStyle: validatedData.targetStyle,
+          quality: validatedData.quality,
+          aspectRatio: validatedData.aspectRatio,
+          creativityLevel: 35, 
+          customPrompt: specificPrompt,
+          outputFormat: validatedData.outputFormat,
+        });
+      });
+
+      const variations = await Promise.all(variationPromises);
+
+      res.json({
+        success: true,
+        variations: variations, 
+      });
+
+    } catch (error) {
+      console.error("Error in /api/variations:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to generate variations"
+      });
+    }
+  });
+
   app.post("/api/modify", async (req, res) => {
     try {
       const { imageData, referenceImage, prompt, ...formData } = req.body;
@@ -216,13 +253,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/gallery/save", async (req, res) => {
     try {
       const { originalImage, generatedImage, originalFileName, config } = req.body;
-      
-      // Upload images to object storage instead of storing base64 in DB
+
       const [originalImageUrl, generatedImageUrl] = await Promise.all([
         uploadImageToStorage(originalImage, "originals"),
         uploadImageToStorage(generatedImage, "generated"),
       ]);
-      
+
       const design = await storage.saveGeneratedDesign({
         timestamp: Date.now(),
         originalImageUrl,
@@ -246,7 +282,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Register object storage routes for serving uploaded images
   registerObjectStorageRoutes(app);
 
   const httpServer = createServer(app);

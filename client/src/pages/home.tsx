@@ -17,9 +17,7 @@ export default function Home() {
   const [modificationPrompt, setModificationPrompt] = useState<string>("");
   const [currentFormData, setCurrentFormData] = useState<RoomRedesignRequest | null>(null);
 
-  // Lifted state for reference images
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
-  // [NEW] Lifted state for technical drawing
   const [referenceDrawing, setReferenceDrawing] = useState<string | null>(null);
 
   const { toast } = useToast();
@@ -34,7 +32,7 @@ export default function Home() {
     setGeneratedVariations([]);
     setModificationPrompt("");
     setReferenceImages([]); 
-    setReferenceDrawing(null); // Reset drawing
+    setReferenceDrawing(null); 
   };
 
   const generateMutation = useMutation({
@@ -51,12 +49,8 @@ export default function Home() {
       if (response.success && response.generatedImage) {
         setGeneratedImage(response.generatedImage);
 
-        if (response.variations && response.variations.length > 0) {
-          setGeneratedVariations(response.variations);
-        } else {
-          setGeneratedVariations([]);
-        }
-
+        // Clear old variations on new main generation
+        setGeneratedVariations([]); 
         setModificationPrompt("");
 
         if (originalImage && currentFormData) {
@@ -74,8 +68,8 @@ export default function Home() {
         }
 
         toast({
-          title: response.variations?.length ? "Variations Generated!" : "Room redesigned successfully!",
-          description: response.variations?.length ? "Created 4 different views." : "Your AI-generated design is ready.",
+          title: "Room redesigned successfully!",
+          description: "Your AI-generated design is ready. You can now generate perspectives.",
         });
       } else {
         toast({
@@ -94,26 +88,39 @@ export default function Home() {
     },
   });
 
+  const variationsMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/variations", data);
+      return res.json();
+    },
+    onSuccess: (response) => {
+      if (response.success && response.variations) {
+        setGeneratedVariations(response.variations);
+        toast({
+          title: "Perspectives Generated!",
+          description: `Created ${response.variations.length} new views.`,
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Variation Error",
+        description: "Failed to generate perspectives.",
+      });
+    }
+  });
+
   const handleGenerate = (formData: RoomRedesignRequest, prompt: string, batchSize: number = 1) => {
     if (!originalImage) {
-      toast({
-        variant: "destructive",
-        title: "Missing image",
-        description: "Please upload an image first",
-      });
+      toast({ variant: "destructive", title: "Missing image", description: "Please upload an image first" });
       return;
     }
-
     if (!prompt) {
-      toast({
-        variant: "destructive",
-        title: "Missing prompt",
-        description: "Please provide a prompt",
-      });
+      toast({ variant: "destructive", title: "Missing prompt", description: "Please provide a prompt" });
       return;
     }
 
-    // [NEW] Include drawing in request
     const requestData = {
       ...formData,
       referenceImages: referenceImages,
@@ -137,9 +144,21 @@ export default function Home() {
         imageData: originalImage,
         prompt: prompt,
         isModification: false,
-        batchSize: batchSize, 
+        batchSize: 1, 
       });
     }
+  };
+
+  // [UPDATED] Handler now accepts selected variations from ControlPanel
+  const handleGenerateVariations = (selectedVariations: string[]) => {
+    if (!generatedImage || !currentFormData) return;
+
+    variationsMutation.mutate({
+      imageData: generatedImage, 
+      prompt: "Generate variations", 
+      selectedVariations, // Pass list of strings ["Front", "Side", ...]
+      ...currentFormData
+    });
   };
 
   const handleReset = () => {
@@ -183,14 +202,14 @@ export default function Home() {
             )}
             <ControlPanel 
               onGenerate={handleGenerate}
+              onGenerateVariations={handleGenerateVariations}
               disabled={!originalImage}
-              isGenerating={generateMutation.isPending}
+              isGenerating={generateMutation.isPending || variationsMutation.isPending}
               isModificationMode={!!generatedImage}
               modificationPrompt={modificationPrompt}
               onModificationPromptChange={setModificationPrompt}
               referenceImages={referenceImages}
               onReferenceImagesChange={setReferenceImages}
-              // [NEW] Pass drawing state
               referenceDrawing={referenceDrawing}
               onReferenceDrawingChange={setReferenceDrawing}
             />
@@ -209,7 +228,7 @@ export default function Home() {
         />
       </main>
 
-      {generateMutation.isPending && <LoadingOverlay />}
+      {(generateMutation.isPending || variationsMutation.isPending) && <LoadingOverlay />}
     </div>
   );
 }

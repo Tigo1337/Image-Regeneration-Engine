@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea"; // Import Textarea
+import { Textarea } from "@/components/ui/textarea"; 
+import { Checkbox } from "@/components/ui/checkbox"; // [NEW] Import Checkbox
 import {
   Select,
   SelectContent,
@@ -25,27 +26,27 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, AlertCircle, FileText, PlusCircle, Layers, ZoomIn, MoveHorizontal, Upload, X } from "lucide-react";
-// Import styleDescriptions so we can populate the box
+import { Sparkles, AlertCircle, FileText, PlusCircle, Layers, ZoomIn, MoveHorizontal, Upload, X, Copy } from "lucide-react";
 import { constructPrompt, type PromptType, styleDescriptions } from "@/lib/prompt-builder";
 
 interface ControlPanelProps {
   onGenerate: (data: RoomRedesignRequest, prompt: string, batchSize?: number) => void;
+  // [UPDATED] Signature to accept list of selected variations
+  onGenerateVariations?: (selected: string[]) => void;
   disabled?: boolean;
   isGenerating?: boolean;
   isModificationMode?: boolean;
   modificationPrompt?: string;
   onModificationPromptChange?: (prompt: string) => void;
-  // Props from parent
   referenceImages?: string[];
   onReferenceImagesChange?: (images: string[]) => void;
-  // Props for Drawing
   referenceDrawing?: string | null;
   onReferenceDrawingChange?: (drawing: string | null) => void;
 }
 
 export function ControlPanel({ 
-  onGenerate, 
+  onGenerate,
+  onGenerateVariations, 
   disabled, 
   isGenerating,
   isModificationMode = false,
@@ -56,10 +57,10 @@ export function ControlPanel({
   referenceDrawing = null,
   onReferenceDrawingChange,
 }: ControlPanelProps) {
-  const [isBatchMode, setIsBatchMode] = useState(false);
 
-  // [NEW] State for the editable style description
   const [styleContext, setStyleContext] = useState("");
+  // [NEW] State for variation selection
+  const [selectedVariations, setSelectedVariations] = useState<string[]>(["Front", "Side", "Top"]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawingInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +88,6 @@ export function ControlPanel({
     control: form.control,
   });
 
-  // [NEW] Sync the styleContext whenever the Target Style changes
   useEffect(() => {
     const currentStyle = watchedValues.targetStyle;
     if (currentStyle && styleDescriptions[currentStyle]) {
@@ -95,8 +95,13 @@ export function ControlPanel({
     }
   }, [watchedValues.targetStyle]);
 
+  // [NEW] Helper to toggle selection
+  const toggleVariation = (type: string) => {
+    setSelectedVariations(prev => 
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
 
-  // Handle multiple file upload (Images)
   const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && onReferenceImagesChange) {
@@ -118,7 +123,6 @@ export function ControlPanel({
     }
   };
 
-  // Handle Drawing upload (PDF or Image)
   const handleDrawingUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && onReferenceDrawingChange) {
@@ -149,7 +153,6 @@ export function ControlPanel({
     }
   };
 
-  // Construct prompt internally without exposing to UI
   const generatedPrompt = constructPrompt({
     promptType: (watchedValues.promptType as PromptType) || "room-scene",
     style: watchedValues.targetStyle || "Modern",
@@ -159,7 +162,6 @@ export function ControlPanel({
     cameraZoom: watchedValues.cameraZoom || 100,
     creativityLevel: watchedValues.creativityLevel || 50,
     centerPreservedElements: true,
-    // [NEW] Pass the edited context to the prompt builder
     customStyleDescription: styleContext,
   });
 
@@ -167,48 +169,93 @@ export function ControlPanel({
     const formData = form.getValues();
     formData.referenceImages = referenceImages;
     formData.referenceDrawing = referenceDrawing || undefined;
-    // Pass generated prompt directly
-    onGenerate(formData, generatedPrompt, isBatchMode ? 4 : 1);
+    onGenerate(formData, generatedPrompt, 1);
   };
 
   if (isModificationMode) {
-    // ... (No changes to modification mode UI)
     return (
-        <div className="space-y-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
-            <div>
-              <Label className="text-sm font-semibold text-card-foreground">
-                Request Modifications
-              </Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                Describe the changes you'd like to make to the generated image
-              </p>
+        <div className="space-y-6">
+          <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 space-y-3">
+             <div className="flex items-start gap-2">
+                <Layers className="w-5 h-5 mt-1 text-primary flex-shrink-0" />
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Additional Perspectives
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Select views to generate:
+                  </p>
+                </div>
+             </div>
+
+             {/* [NEW] Checkboxes for Selection */}
+             <div className="flex gap-4 my-2">
+               {["Front", "Side", "Top"].map((type) => (
+                 <div key={type} className="flex items-center space-x-2">
+                   <Checkbox 
+                      id={`chk-${type}`} 
+                      checked={selectedVariations.includes(type)}
+                      onCheckedChange={() => toggleVariation(type)}
+                   />
+                   <label
+                      htmlFor={`chk-${type}`}
+                      className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {type}
+                    </label>
+                 </div>
+               ))}
+             </div>
+
+             <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full border-primary/30 hover:bg-primary/10"
+                onClick={() => onGenerateVariations?.(selectedVariations)}
+                disabled={disabled || isGenerating || selectedVariations.length === 0}
+              >
+                {isGenerating ? "Processing..." : `Generate ${selectedVariations.length} View${selectedVariations.length !== 1 ? 's' : ''}`}
+             </Button>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
+              <div>
+                <Label className="text-sm font-semibold text-card-foreground">
+                  Request Modifications
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Describe specific changes to the current image
+                </p>
+              </div>
             </div>
+            <div className="bg-muted p-4 rounded-md">
+              <Label className="text-sm font-semibold text-card-foreground mb-2 block">
+                Modification Request
+              </Label>
+              <textarea
+                value={modificationPrompt}
+                onChange={(e) => onModificationPromptChange?.(e.target.value)}
+                placeholder="e.g., Change the shower door and fixtures to a matte black finish..."
+                className="w-full h-24 p-2 text-xs bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            {modificationPrompt && (
+              <Button
+                type="button"
+                className="w-full"
+                size="lg"
+                disabled={disabled || isGenerating}
+                onClick={() => onGenerate(form.getValues(), modificationPrompt, 1)}
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                {isGenerating ? "Generating..." : "Apply Modification"}
+              </Button>
+            )}
           </div>
-          <div className="bg-muted p-4 rounded-md">
-            <Label className="text-sm font-semibold text-card-foreground mb-2 block">
-              Modification Request
-            </Label>
-            <textarea
-              value={modificationPrompt}
-              onChange={(e) => onModificationPromptChange?.(e.target.value)}
-              placeholder="e.g., Change the shower door and fixtures to a matte black finish..."
-              className="w-full h-24 p-2 text-xs bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          {modificationPrompt && (
-            <Button
-              type="button"
-              className="w-full"
-              size="lg"
-              disabled={disabled || isGenerating}
-              onClick={() => onGenerate(form.getValues(), modificationPrompt, 1)}
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              {isGenerating ? "Generating..." : "Apply Modification"}
-            </Button>
-          )}
         </div>
       );
   }
@@ -245,7 +292,6 @@ export function ControlPanel({
             )}
           />
 
-           {/* REFERENCE IMAGE UPLOAD SECTIONS (No changes here) */}
            <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-1">
               Reference Images (Optional) <Upload className="w-3 h-3 text-primary" />
@@ -289,7 +335,6 @@ export function ControlPanel({
             )}
           </div>
 
-          {/* REFERENCE DRAWING UPLOAD (No changes here) */}
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-1">
               Reference Drawing (PDF/Img) <FileText className="w-3 h-3 text-primary" />
@@ -414,7 +459,6 @@ export function ControlPanel({
             />
           </div>
 
-          {/* TARGET STYLE AND EDITABLE DESCRIPTION */}
           <div className="space-y-3">
             <FormField
               control={form.control}
@@ -438,7 +482,6 @@ export function ControlPanel({
                 </FormItem>
               )}
             />
-            {/* [NEW] Editable Text Area for Style Details */}
             <div className="space-y-1">
               <Label className="text-xs font-medium text-muted-foreground">Style Characteristics (Editable)</Label>
               <Textarea 
@@ -549,51 +592,10 @@ export function ControlPanel({
         </div>
 
         <Separator />
-
-        {/* Batch Mode UI */}
-        <div className="flex flex-col gap-4 bg-primary/5 p-3 rounded-lg border border-primary/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start gap-2">
-              <Layers className="w-5 h-5 mt-1 text-primary flex-shrink-0" />
-              <div>
-                <Label htmlFor="batch-mode" className="text-sm font-semibold text-foreground cursor-pointer">
-                  Generate Variations
-                </Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Create 4 images (Front, Close-up, Angled, Far)
-                </p>
-              </div>
-            </div>
-            <Switch
-              id="batch-mode"
-              checked={isBatchMode}
-              onCheckedChange={setIsBatchMode}
-            />
-          </div>
-          {isBatchMode && (
-            <FormField
-              control={form.control}
-              name="closeupFocus"
-              render={({ field }) => (
-                <FormItem className="animate-in fade-in slide-in-from-top-2">
-                  <FormLabel className="text-xs font-medium flex items-center gap-1 text-primary">
-                    <ZoomIn className="w-3 h-3" />
-                    Close-up Focus (Image 2)
-                  </FormLabel>
-                  <FormControl>
-                    <Input className="h-8 text-xs bg-background/80" placeholder="e.g., Shower Door Handle" {...field} value={field.value || ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </div>
-        <Separator />
         <div className="space-y-3">
           <Button type="submit" className="w-full" size="lg" disabled={disabled || isGenerating}>
             <Sparkles className="w-5 h-5 mr-2" />
-            {isGenerating ? "Generating..." : (isBatchMode ? "Generate 4 Variations" : "Generate Redesign")}
+            {isGenerating ? "Generating..." : "Generate Redesign"}
           </Button>
         </div>
       </form>
