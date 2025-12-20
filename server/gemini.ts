@@ -1,7 +1,8 @@
-// Using user's own Google Gemini API key
+// server/gemini.ts
 import { GoogleGenAI, Modality } from "@google/genai";
 import sharp from "sharp";
 
+// Initialize Gemini Client
 const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_GEMINI_API_KEY!,
 });
@@ -19,47 +20,65 @@ interface RoomRedesignParams {
   outputFormat?: string;
 }
 
-// [UPDATED] Universal 3D Analysis Logic
-// Now works for ANY object (Couch, Vanity, Bathtub, Chair, etc.)
+/**
+ * 3D STRUCTURE ANALYSIS
+ * Model: gemini-3-pro-preview
+ * Updated Rules: "Forensic Geometry" to prevent style-based hallucinations.
+ */
 export async function analyzeObjectStructure(mainImageBase64: string, referenceImages: string[] | undefined, objectName: string): Promise<string> {
   try {
     const mainBase64 = mainImageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
 
     console.log(`=== Analyzing 3D Structure for: ${objectName} ===`);
+    console.log(`Model: gemini-3-pro-preview (Forensic Analysis)`);
 
-    // Build the prompt parts for the Vision Model
     const promptParts: any[] = [
       { 
-        text: `You are an Expert Industrial Designer and 3D Modeler. 
+        text: `You are a Lead Forensic 3D Modeler. 
 
-        TASK: Perform a comprehensive "Design Breakdown" of the "${objectName}" shown in the images.
-        Your goal is to describe every physical detail so a renderer can reconstruct it perfectly without hallucinations.
+        TASK: Analyze the "${objectName}" to create a "Manufacturing Spec Sheet".
+        Your text will be used to reconstruct this object with 100% geometric accuracy.
 
-        ANALYZE THESE 4 UNIVERSAL DIMENSIONS:
+        CRITICAL FAILURE AVOIDANCE: 
+        Do NOT use broad style labels (like "Beadboard", "Tufted", "Shaker") if they are not mathematically accurate. 
+        Style labels cause hallucinations. Describe the PHYSICS, not the VIBE.
 
-        1. GLOBAL GEOMETRY & SILHOUETTE:
-           - What is the primary form? (e.g., Rectangular prism, organic sphere, L-shaped sectional).
-           - Describe the edges (Sharp, chamfered, rounded, filleted?).
-           - Is the object symmetrical or asymmetrical?
+        APPLY THE "7-POINT FORENSIC" ANALYSIS RULES:
 
-        2. STRUCTURAL COMPONENTS (The "Skeleton"):
-           - Break the object down into parts. 
-           - If it's furniture: Legs (tapered? block?), Arms (rolled? track?), Back (tight? loose cushion?).
-           - If it's cabinetry: Doors (shaker? slab?), Drawers (recessed? overlay?), Hardware (pulls? knobs?).
-           - If it's plumbing: Basin shape, rim thickness, faucet mounting points.
+        1. PRIMITIVE DECOMPOSITION (The Hull):
+           - Break the object into simple solids (e.g., "Rectangular chassis, 2:1 aspect ratio").
+           - Define the silhouette boundaries.
 
-        3. SURFACE TOPOGRAPHY (The "Skin"):
-           - CRITICAL: Look for relief details. Is the surface flat or textured?
-           - Identify: Paneling, fluting, tufting, piping, stitching, carving, or grooves.
-           - Describe the depth of these details (e.g., "Deep vertical grooves," "Subtle button tufting").
+        2. EXACT QUANTIFICATION (The Count):
+           - CRITICAL: Count every repeating element. 
+           - If there are vertical planks, COUNT THEM. Do not say "slatted sides". Say "Side panel composed of EXACTLY 4 vertical boards".
+           - If there are drawers, count them. "Stack of 3 equal-height drawers".
 
-        4. MATERIAL & FINISH:
-           - Describe the interaction with light. (Matte, High-Gloss, Satin, Brushed?).
-           - Describe the texture pattern (Wood grain direction, Fabric weave, Marble veining).
+        3. SURFACE TOPOGRAPHY (The Depth):
+           - Describe the "Reveal Depth". How deep are the grooves? 
+           - Example: "The V-grooves are approx 3mm deep, creating distinct shadow lines."
+           - Contrast this with flat surfaces.
 
-        Output a precise, technical description that captures the "Soul" of the object.` 
+        4. HARDWARE MAPPING (The Anchors):
+           - Describe handle/knob geometry strictly (e.g., "Square-profile bar pulls, gold finish").
+           - State their exact position relative to the panel edges.
+
+        5. JOINTERY & SEAMS (The Construction):
+           - How do surfaces meet? Miters? Butt joints? Overlays?
+           - Identify the "Toe Kick" or base structure. Is it recessed? By how much?
+
+        6. MATERIAL PHYSICS (The Shader):
+           - Albedo: Exact color reference (e.g., "Deep Navy, close to Pantone 19-4024").
+           - Roughness: "Satin lacquer" vs "High gloss".
+           - Metalness: "Brushed brass with horizontal grain".
+
+        7. NEGATIVE SPACE (The Void):
+           - Define the empty spaces explicitly.
+           - "The space between the floor and cabinet bottom is open/solid?"
+
+        OUTPUT FORMAT:
+        Technical bullet points only. No fluff. Use engineering terminology.` 
       },
-      // Always include the main image
       {
         inlineData: {
           mimeType: "image/jpeg",
@@ -68,13 +87,12 @@ export async function analyzeObjectStructure(mainImageBase64: string, referenceI
       }
     ];
 
-    // Append all reference images to the prompt
     if (referenceImages && referenceImages.length > 0) {
       referenceImages.forEach((img, index) => {
-        // Simple safety check for base64
         if (img && img.includes('base64,')) {
           const refBase64 = img.replace(/^data:image\/[a-z]+;base64,/, '');
-          promptParts.push({ text: `\nReference Image ${index + 1}:` });
+          // Neutral label to allow AI to determine spatial orientation
+          promptParts.push({ text: `\nReference View ${index + 1}:` });
           promptParts.push({
             inlineData: {
               mimeType: "image/jpeg", 
@@ -85,9 +103,8 @@ export async function analyzeObjectStructure(mainImageBase64: string, referenceI
       });
     }
 
-    // Use the Flash model for fast, accurate text analysis
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-exp", 
+      model: "gemini-3-pro-preview", 
       contents: [
         {
           role: "user",
@@ -106,6 +123,10 @@ export async function analyzeObjectStructure(mainImageBase64: string, referenceI
   }
 }
 
+/**
+ * IMAGE REGENERATION
+ * Model: gemini-3-pro-image-preview (Nano Banana Pro)
+ */
 export async function generateRoomRedesign(params: RoomRedesignParams): Promise<string> {
   const { 
     imageBase64, 
@@ -176,6 +197,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       });
     }
 
+    // Configuration Maps
     const qualityToImageSizeMap: Record<string, string> = {
       "Standard": "1K",
       "High Fidelity (2K)": "2K",
@@ -212,7 +234,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     }
 
     console.log("=== Gemini Image Generation API Request ===");
-    console.log("Model: gemini-3-pro-image-preview");
+    console.log("Model: gemini-3-pro-image-preview (Nano Banana Pro)");
     console.log("Input Parts Count:", parts.length);
     console.log("Aspect Ratio:", imageConfig.aspectRatio || "Default");
     console.log("Has Drawing:", !!referenceDrawing);
@@ -246,6 +268,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     let imageData = imagePart.inlineData.data;
     let mimeType = imagePart.inlineData.mimeType || "image/png";
 
+    // Convert format if necessary
     const targetMimeType = formatToMimeTypeMap[outputFormat];
     if (targetMimeType && mimeType !== targetMimeType) {
       console.log("Converting image from", mimeType, "to", targetMimeType);
