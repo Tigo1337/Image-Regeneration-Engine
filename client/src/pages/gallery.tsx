@@ -1,30 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Maximize, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { ImageModal } from "@/components/image-modal";
-import type { GeneratedDesign } from "@shared/schema";
+import type { GeneratedDesign, RoomRedesignRequest } from "@shared/schema";
+
+interface DesignWithConfig extends Omit<GeneratedDesign, 'config'> {
+  config: RoomRedesignRequest;
+}
 
 export default function Gallery() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalImage, setModalImage] = useState<string | null>(null);
   const [modalTitle, setModalTitle] = useState("");
-  const [selectedDesign, setSelectedDesign] = useState<GeneratedDesign | null>(null);
+  const [selectedDesign, setSelectedDesign] = useState<DesignWithConfig | null>(null);
 
-  const { data: designs = [], isLoading } = useQuery<GeneratedDesign[]>({
+  const { data: designs = [], isLoading } = useQuery<DesignWithConfig[]>({
     queryKey: ["/api/gallery"],
   });
 
-  const openModal = (image: string, title: string, design: GeneratedDesign) => {
+  const openModal = (image: string, title: string, design: DesignWithConfig) => {
     setModalImage(image);
     setModalTitle(title);
     setSelectedDesign(design);
     setModalOpen(true);
   };
 
-  const downloadImage = (design: GeneratedDesign) => {
+  const downloadImage = (design: DesignWithConfig) => {
     const baseName = design.originalFileName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
@@ -45,7 +49,7 @@ export default function Gallery() {
       : `ar-${design.config.aspectRatio.toLowerCase().replace(/:/g, "-")}`;
 
     const link = document.createElement("a");
-    link.href = design.generatedImage;
+    link.href = design.generatedImageUrl;
     link.download = `${baseName}-${style}-${quality}-${arFormatted}.png`;
     document.body.appendChild(link);
     link.click();
@@ -86,10 +90,10 @@ export default function Gallery() {
             {designs.map((design) => (
               <Card key={design.id} className="overflow-hidden hover-elevate transition-all">
                 <div className="aspect-video bg-muted/20 flex items-center justify-center overflow-hidden cursor-pointer"
-                  onClick={() => openModal(design.generatedImage, "Generated Design", design)}
+                  onClick={() => openModal(design.generatedImageUrl, "Generated Design", design)}
                 >
                   <img
-                    src={design.generatedImage}
+                    src={design.generatedImageUrl}
                     alt={`Design for ${design.originalFileName}`}
                     className="w-full h-full object-cover"
                     data-testid={`img-gallery-design-${design.id}`}
@@ -125,7 +129,7 @@ export default function Gallery() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => openModal(design.generatedImage, "Generated Design", design)}
+                      onClick={() => openModal(design.generatedImageUrl, "Generated Design", design)}
                       data-testid={`button-view-design-${design.id}`}
                     >
                       <Maximize className="w-3 h-3 mr-1" />

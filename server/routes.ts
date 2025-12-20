@@ -4,6 +4,8 @@ import { roomRedesignRequestSchema } from "@shared/schema";
 import { generateRoomRedesign, analyzeObjectStructure } from "./gemini"; 
 import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup } from "./image-utils";
 import { storage } from "./storage";
+import { uploadImageToStorage } from "./image-storage";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 function buildVariationPrompt(formData: any, variationType: "closeup" | "angle" | "far", originalPrompt: string): string {
   const element = formData.preservedElements || "the main furniture";
@@ -214,15 +216,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/gallery/save", async (req, res) => {
     try {
       const { originalImage, generatedImage, originalFileName, config } = req.body;
+      
+      // Upload images to object storage instead of storing base64 in DB
+      const [originalImageUrl, generatedImageUrl] = await Promise.all([
+        uploadImageToStorage(originalImage, "originals"),
+        uploadImageToStorage(generatedImage, "generated"),
+      ]);
+      
       const design = await storage.saveGeneratedDesign({
         timestamp: Date.now(),
-        originalImage,
-        generatedImage,
+        originalImageUrl,
+        generatedImageUrl,
         originalFileName,
         config,
       });
       res.json({ success: true, design });
     } catch (error) {
+      console.error("Error saving design:", error);
       res.status(500).json({ success: false, error: "Failed to save" });
     }
   });
@@ -235,6 +245,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch" });
     }
   });
+
+  // Register object storage routes for serving uploaded images
+  registerObjectStorageRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

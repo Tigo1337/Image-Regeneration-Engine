@@ -76,8 +76,8 @@ export const users = pgTable("users", {
 export const generatedDesigns = pgTable("generated_designs", {
   id: text("id").primaryKey(),
   timestamp: bigint("timestamp", { mode: "number" }).notNull(),
-  originalImage: text("original_image").notNull(),
-  generatedImage: text("generated_image").notNull(),
+  originalImageUrl: text("original_image_url").notNull(),
+  generatedImageUrl: text("generated_image_url").notNull(),
   originalFileName: text("original_file_name").notNull(),
   config: jsonb("config").notNull(),
 });

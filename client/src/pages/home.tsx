@@ -59,7 +59,7 @@ export default function Home() {
 
         setModificationPrompt("");
 
-        if (originalImage && currentFormData && !generatedImage) {
+        if (originalImage && currentFormData) {
           try {
             await apiRequest("POST", "/api/gallery/save", {
               originalImage,
