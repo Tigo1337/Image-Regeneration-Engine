@@ -30,6 +30,8 @@ export interface PromptConfig {
   viewAngle?: string;
   cameraZoom?: number; 
   creativityLevel?: number;
+  // [NEW] Allow passing the editable description from UI
+  customStyleDescription?: string; 
 }
 
 export function constructRoomScenePrompt(config: PromptConfig): string {
@@ -41,10 +43,12 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     centerPreservedElements = true, 
     viewAngle = "Original",
     cameraZoom = 100,
-    creativityLevel = 50 
+    creativityLevel = 50,
+    customStyleDescription // [NEW]
   } = config;
 
-  const specificAesthetic = styleDescriptions[style] || styleDescriptions["Scandinavian"];
+  // Use the custom description if provided, otherwise fallback to the dictionary
+  const specificAesthetic = customStyleDescription || styleDescriptions[style] || styleDescriptions["Scandinavian"];
 
   // Creativity applies to the ROOM SHELL, not the preserved object identity.
   const isHighCreativity = creativityLevel >= 70;

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, type RoomRedesignRequest } from "@shared/schema";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea"; // Import Textarea
 import {
   Select,
   SelectContent,
@@ -24,8 +25,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, AlertCircle, FileText, Edit3, PlusCircle, Layers, ZoomIn, Camera, MoveHorizontal, Upload, X } from "lucide-react";
-import { constructPrompt, promptTypes, type PromptType } from "@/lib/prompt-builder";
+import { Sparkles, AlertCircle, FileText, PlusCircle, Layers, ZoomIn, MoveHorizontal, Upload, X } from "lucide-react";
+// Import styleDescriptions so we can populate the box
+import { constructPrompt, type PromptType, styleDescriptions } from "@/lib/prompt-builder";
 
 interface ControlPanelProps {
   onGenerate: (data: RoomRedesignRequest, prompt: string, batchSize?: number) => void;
@@ -37,7 +39,7 @@ interface ControlPanelProps {
   // Props from parent
   referenceImages?: string[];
   onReferenceImagesChange?: (images: string[]) => void;
-  // [NEW] Props for Drawing
+  // Props for Drawing
   referenceDrawing?: string | null;
   onReferenceDrawingChange?: (drawing: string | null) => void;
 }
@@ -54,11 +56,13 @@ export function ControlPanel({
   referenceDrawing = null,
   onReferenceDrawingChange,
 }: ControlPanelProps) {
-  const [isManualOverride, setIsManualOverride] = useState(false);
-  const [editedPrompt, setEditedPrompt] = useState("");
   const [isBatchMode, setIsBatchMode] = useState(false);
+
+  // [NEW] State for the editable style description
+  const [styleContext, setStyleContext] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const drawingInputRef = useRef<HTMLInputElement>(null); // New ref for drawing
+  const drawingInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<RoomRedesignRequest>({
     resolver: zodResolver(roomRedesignRequestSchema),
@@ -83,6 +87,15 @@ export function ControlPanel({
     control: form.control,
   });
 
+  // [NEW] Sync the styleContext whenever the Target Style changes
+  useEffect(() => {
+    const currentStyle = watchedValues.targetStyle;
+    if (currentStyle && styleDescriptions[currentStyle]) {
+      setStyleContext(styleDescriptions[currentStyle]);
+    }
+  }, [watchedValues.targetStyle]);
+
+
   // Handle multiple file upload (Images)
   const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -105,7 +118,7 @@ export function ControlPanel({
     }
   };
 
-  // [NEW] Handle Drawing upload (PDF or Image)
+  // Handle Drawing upload (PDF or Image)
   const handleDrawingUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && onReferenceDrawingChange) {
@@ -136,6 +149,7 @@ export function ControlPanel({
     }
   };
 
+  // Construct prompt internally without exposing to UI
   const generatedPrompt = constructPrompt({
     promptType: (watchedValues.promptType as PromptType) || "room-scene",
     style: watchedValues.targetStyle || "Modern",
@@ -145,33 +159,20 @@ export function ControlPanel({
     cameraZoom: watchedValues.cameraZoom || 100,
     creativityLevel: watchedValues.creativityLevel || 50,
     centerPreservedElements: true,
+    // [NEW] Pass the edited context to the prompt builder
+    customStyleDescription: styleContext,
   });
-
-  useEffect(() => {
-    if (!isManualOverride) {
-      setEditedPrompt(generatedPrompt);
-    }
-  }, [generatedPrompt, isManualOverride]);
-
-  const handleManualOverrideToggle = (enabled: boolean) => {
-    setIsManualOverride(enabled);
-    if (!enabled) {
-      setEditedPrompt(generatedPrompt);
-    }
-  };
 
   const handleGenerate = () => {
     const formData = form.getValues();
     formData.referenceImages = referenceImages;
     formData.referenceDrawing = referenceDrawing || undefined;
-    const promptToUse = isManualOverride ? editedPrompt : generatedPrompt;
-    onGenerate(formData, promptToUse, isBatchMode ? 4 : 1);
+    // Pass generated prompt directly
+    onGenerate(formData, generatedPrompt, isBatchMode ? 4 : 1);
   };
 
-  const currentPrompt = isManualOverride ? editedPrompt : generatedPrompt;
-  const hasPrompt = currentPrompt.trim().length > 0;
-
   if (isModificationMode) {
+    // ... (No changes to modification mode UI)
     return (
         <div className="space-y-4">
           <div className="flex items-start gap-2">
@@ -244,7 +245,7 @@ export function ControlPanel({
             )}
           />
 
-           {/* REFERENCE IMAGE UPLOAD */}
+           {/* REFERENCE IMAGE UPLOAD SECTIONS (No changes here) */}
            <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-1">
               Reference Images (Optional) <Upload className="w-3 h-3 text-primary" />
@@ -288,7 +289,7 @@ export function ControlPanel({
             )}
           </div>
 
-          {/* [NEW] REFERENCE DRAWING UPLOAD */}
+          {/* REFERENCE DRAWING UPLOAD (No changes here) */}
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-1">
               Reference Drawing (PDF/Img) <FileText className="w-3 h-3 text-primary" />
@@ -311,7 +312,6 @@ export function ControlPanel({
               </p>
             </div>
 
-            {/* Drawing Preview Area */}
             {referenceDrawing && (
               <div className="relative mt-2 p-2 border border-border rounded-md bg-muted/20 flex items-center gap-3 group">
                 <div className="w-10 h-10 bg-primary/10 flex items-center justify-center rounded text-primary">
@@ -414,28 +414,41 @@ export function ControlPanel({
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="targetStyle"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium">Target Style</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a style" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {availableStyles.map((style) => (
-                      <SelectItem key={style} value={style}>{style}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* TARGET STYLE AND EDITABLE DESCRIPTION */}
+          <div className="space-y-3">
+            <FormField
+              control={form.control}
+              name="targetStyle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Target Style</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a style" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableStyles.map((style) => (
+                        <SelectItem key={style} value={style}>{style}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* [NEW] Editable Text Area for Style Details */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-muted-foreground">Style Characteristics (Editable)</Label>
+              <Textarea 
+                value={styleContext}
+                onChange={(e) => setStyleContext(e.target.value)}
+                className="h-20 text-xs resize-none"
+                placeholder="Style details will appear here..."
+              />
+            </div>
+          </div>
 
            <div className="grid grid-cols-2 gap-4">
             <FormField
@@ -578,25 +591,7 @@ export function ControlPanel({
         </div>
         <Separator />
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start gap-2">
-              <Edit3 className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
-              <div>
-                <Label className="text-sm font-semibold text-card-foreground">Generated Prompt</Label>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="manual-override" className="text-xs text-muted-foreground">Edit</Label>
-              <Switch id="manual-override" checked={isManualOverride} onCheckedChange={handleManualOverrideToggle} />
-            </div>
-          </div>
-          <textarea
-            value={currentPrompt}
-            onChange={(e) => setEditedPrompt(e.target.value)}
-            readOnly={!isManualOverride}
-            className={`w-full h-24 p-2 text-xs bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none ${!isManualOverride ? 'cursor-default opacity-80' : ''}`}
-          />
-          <Button type="submit" className="w-full" size="lg" disabled={disabled || isGenerating || !hasPrompt}>
+          <Button type="submit" className="w-full" size="lg" disabled={disabled || isGenerating}>
             <Sparkles className="w-5 h-5 mr-2" />
             {isGenerating ? "Generating..." : (isBatchMode ? "Generate 4 Variations" : "Generate Redesign")}
           </Button>
