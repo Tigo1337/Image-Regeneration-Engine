@@ -13,10 +13,13 @@ export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [originalFileName, setOriginalFileName] = useState<string>("image");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  // State to hold the batch variations
   const [generatedVariations, setGeneratedVariations] = useState<string[]>([]);
   const [modificationPrompt, setModificationPrompt] = useState<string>("");
   const [currentFormData, setCurrentFormData] = useState<RoomRedesignRequest | null>(null);
+
+  // [NEW] Lifted state for reference images so they can be shared
+  const [referenceImages, setReferenceImages] = useState<string[]>([]);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -28,10 +31,12 @@ export default function Home() {
     setGeneratedImage(null);
     setGeneratedVariations([]);
     setModificationPrompt("");
+    // [NEW] Clear references on new image load if desired, or keep them. 
+    // Usually safer to clear to avoid mixing contexts.
+    setReferenceImages([]); 
   };
 
   const generateMutation = useMutation({
-    // Updated mutation signature to include batchSize
     mutationFn: async (data: RoomRedesignRequest & { imageData: string; referenceImage?: string; prompt: string; isModification?: boolean; batchSize?: number }) => {
       const endpoint = data.isModification ? "/api/modify" : "/api/generate";
       const res = await apiRequest(
@@ -39,14 +44,12 @@ export default function Home() {
         endpoint,
         data
       );
-      // Expect variations in the response
       return res.json() as Promise<RoomRedesignResponse & { variations?: string[] }>;
     },
     onSuccess: async (response) => {
       if (response.success && response.generatedImage) {
         setGeneratedImage(response.generatedImage);
 
-        // Store variations if they exist
         if (response.variations && response.variations.length > 0) {
           setGeneratedVariations(response.variations);
         } else {
@@ -90,7 +93,6 @@ export default function Home() {
     },
   });
 
-  // Updated handler to accept batchSize
   const handleGenerate = (formData: RoomRedesignRequest, prompt: string, batchSize: number = 1) => {
     if (!originalImage) {
       toast({
@@ -110,11 +112,17 @@ export default function Home() {
       return;
     }
 
-    setCurrentFormData(formData);
+    // [NEW] Ensure reference images are included in the request data
+    const requestData = {
+      ...formData,
+      referenceImages: referenceImages
+    };
+
+    setCurrentFormData(requestData);
 
     if (generatedImage) {
       generateMutation.mutate({
-        ...formData,
+        ...requestData,
         imageData: originalImage,
         referenceImage: generatedImage,
         prompt: prompt,
@@ -123,11 +131,10 @@ export default function Home() {
       });
     } else {
       generateMutation.mutate({
-        ...formData,
+        ...requestData,
         imageData: originalImage,
         prompt: prompt,
         isModification: false,
-        // PASS THE BATCH SIZE TO THE SERVER
         batchSize: batchSize, 
       });
     }
@@ -140,6 +147,7 @@ export default function Home() {
     setGeneratedVariations([]);
     setModificationPrompt("");
     setCurrentFormData(null);
+    setReferenceImages([]); // Reset references
   };
 
   return (
@@ -177,6 +185,9 @@ export default function Home() {
               isModificationMode={!!generatedImage}
               modificationPrompt={modificationPrompt}
               onModificationPromptChange={setModificationPrompt}
+              // [NEW] Pass state props
+              referenceImages={referenceImages}
+              onReferenceImagesChange={setReferenceImages}
             />
           </div>
         </div>
@@ -186,10 +197,11 @@ export default function Home() {
         <ImageCanvas 
           originalImage={originalImage}
           generatedImage={generatedImage}
-          // Pass variations to the canvas
           generatedVariations={generatedVariations}
           originalFileName={originalFileName}
           currentFormData={currentFormData || undefined}
+          // [NEW] Pass reference images for display
+          referenceImages={referenceImages}
         />
       </main>
 

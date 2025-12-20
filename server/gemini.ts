@@ -8,7 +8,7 @@ const ai = new GoogleGenAI({
 
 interface RoomRedesignParams {
   imageBase64: string;
-  referenceImages?: string[]; // [NEW] Accept raw reference images
+  referenceImages?: string[]; 
   preservedElements: string;
   targetStyle: string;
   quality: string;
@@ -18,15 +18,9 @@ interface RoomRedesignParams {
   outputFormat?: string;
 }
 
-// Keep the analysis tool as a backup, but we will rely less on it now
 export async function analyzeObjectStructure(mainImageBase64: string, referenceImages: string[] | undefined, objectName: string): Promise<string> {
   try {
-    const mainBase64 = mainImageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
-
-    // ... (rest of analysis logic remains the same, but is less critical now) ...
-    // For brevity, assuming this function exists as defined previously or can be imported.
-    // In a real refactor, we might even remove this if direct visual prompting works better.
-    return ""; // Placeholder to save space, assuming previous implementation or skipping if user prefers visual only.
+    return ""; 
   } catch (error) {
     return ""; 
   }
@@ -48,13 +42,10 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
 
     // 2. Build the Content Parts
-    // We start with the Text Prompt
     const parts: any[] = [
       { text: customPrompt || "Create a beautiful interior design image." }
     ];
 
-    // 3. Add the Main "Scene" Image (The Canvas)
-    // We label this explicitly in the prompt context if possible, but usually order matters.
     parts.push({
       inlineData: {
         mimeType: "image/jpeg",
@@ -62,24 +53,27 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       }
     });
 
-    // 4. Inject Reference Images (The "Truth")
-    // This allows the model to "see" the object from other angles directly
-    if (referenceImages.length > 0) {
-      console.log(`Injecting ${referenceImages.length} Visual Reference Images into Generation Context...`);
+    // 3. Inject Reference Images (Safe Mode)
+    if (referenceImages && referenceImages.length > 0) {
+      console.log(`Injecting ${referenceImages.length} Visual Reference Images...`);
 
-      // Add a text separator to explain what follows
       parts.push({ 
         text: `\n\nCRITICAL VISUAL REFERENCES:\nThe following images are supplementary views (Side, Top, Detail) of the object to be preserved. Use them to understand the EXACT geometry, drain placement, and curves. Do not redesign the object; copy its structure from these references.` 
       });
 
-      referenceImages.forEach((ref) => {
-        const refBase64 = ref.replace(/^data:image\/[a-z]+;base64,/, '');
-        parts.push({
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: refBase64
-          }
-        });
+      referenceImages.forEach((ref, index) => {
+        // [FIX] Safety check to ensure we only send valid data
+        if (ref && typeof ref === 'string' && ref.includes('base64,')) {
+            const refBase64 = ref.replace(/^data:image\/[a-z]+;base64,/, '');
+            parts.push({
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: refBase64
+              }
+            });
+        } else {
+            console.warn(`Skipping invalid reference image at index ${index}`);
+        }
       });
     }
 
@@ -110,7 +104,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       imageConfig.imageSize = qualityToImageSizeMap[quality];
     }
 
-    if (aspectRatio !== "Original") {
+    if (aspectRatio && aspectRatio !== "Original") {
       imageConfig.aspectRatio = aspectRatio;
     }
 
@@ -119,10 +113,8 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     }
 
     console.log("=== Gemini Image Generation API Request ===");
-    console.log("Model: gemini-3-pro-image-preview");
     console.log("Input Parts Count:", parts.length);
-    console.log("Quality:", quality);
-    console.log("Creativity:", creativityLevel);
+    console.log("Aspect Ratio:", imageConfig.aspectRatio || "Default");
     console.log("==========================================");
 
     const imageResponse = await ai.models.generateContent({
@@ -136,11 +128,9 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       config,
     });
 
-    // ... (Response handling logic remains the same) ...
     console.log("=== Gemini API Response ===");
     const candidate = imageResponse.candidates?.[0];
 
-    // Check for safety blocks or empty responses
     if (!candidate?.content?.parts?.[0]) {
        console.error("Gemini returned no content. Safety ratings:", candidate?.safetyRatings);
        throw new Error("Gemini refused to generate the image (Safety or Filter block).");

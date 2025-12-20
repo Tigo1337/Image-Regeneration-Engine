@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, AlertCircle, FileText, Edit3, PlusCircle, Layers, ZoomIn, Camera, MoveHorizontal, Upload } from "lucide-react";
+import { Sparkles, AlertCircle, FileText, Edit3, PlusCircle, Layers, ZoomIn, Camera, MoveHorizontal, Upload, X } from "lucide-react";
 import { constructPrompt, promptTypes, type PromptType } from "@/lib/prompt-builder";
 
 interface ControlPanelProps {
@@ -34,6 +34,9 @@ interface ControlPanelProps {
   isModificationMode?: boolean;
   modificationPrompt?: string;
   onModificationPromptChange?: (prompt: string) => void;
+  // [NEW] Props from parent
+  referenceImages?: string[];
+  onReferenceImagesChange?: (images: string[]) => void;
 }
 
 export function ControlPanel({ 
@@ -43,11 +46,15 @@ export function ControlPanel({
   isModificationMode = false,
   modificationPrompt = "",
   onModificationPromptChange,
+  // [NEW] Destructure props with defaults
+  referenceImages = [],
+  onReferenceImagesChange,
 }: ControlPanelProps) {
   const [isManualOverride, setIsManualOverride] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
   const [isBatchMode, setIsBatchMode] = useState(false);
-  const [referenceImages, setReferenceImages] = useState<string[]>([]);
+
+  // Removed local referenceImages state, using props instead
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<RoomRedesignRequest>({
@@ -82,17 +89,30 @@ export function ControlPanel({
         reader.onload = (event) => {
           if (event.target?.result) {
             newImages.push(event.target.result as string);
-            // Update local state and form
+            // Update when all files are read
             if (newImages.length === files.length) {
-              setReferenceImages(prev => [...prev, ...newImages]);
-              const current = form.getValues("referenceImages") || [];
-              form.setValue("referenceImages", [...current, ...newImages]);
+              const updatedList = [...referenceImages, ...newImages];
+              // Update parent state
+              if (onReferenceImagesChange) {
+                onReferenceImagesChange(updatedList);
+              }
+              // Sync with form for validation/submission
+              form.setValue("referenceImages", updatedList);
             }
           }
         };
         reader.readAsDataURL(file);
       });
     }
+  };
+
+  // [NEW] Helper to remove image
+  const removeReferenceImage = (indexToRemove: number) => {
+    const updatedList = referenceImages.filter((_, index) => index !== indexToRemove);
+    if (onReferenceImagesChange) {
+      onReferenceImagesChange(updatedList);
+    }
+    form.setValue("referenceImages", updatedList);
   };
 
   const generatedPrompt = constructPrompt({
@@ -121,6 +141,8 @@ export function ControlPanel({
 
   const handleGenerate = () => {
     const formData = form.getValues();
+    // Ensure form has the latest references from props
+    formData.referenceImages = referenceImages;
     const promptToUse = isManualOverride ? editedPrompt : generatedPrompt;
     onGenerate(formData, promptToUse, isBatchMode ? 4 : 1);
   };
@@ -220,12 +242,32 @@ export function ControlPanel({
               />
               <p className="text-xs text-muted-foreground">
                 {referenceImages.length > 0 
-                  ? `${referenceImages.length} images selected` 
+                  ? "Click to add more reference angles" 
                   : "Click to upload Side/Back views for better 3D accuracy"}
               </p>
             </div>
-          </div>
 
+            {/* Tiny Thumbnail Grid within Control Panel (optional, but good for UX) */}
+            {referenceImages.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {referenceImages.map((img, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-md overflow-hidden border border-border group">
+                    <img src={img} alt={`Ref ${idx}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeReferenceImage(idx);
+                      }}
+                      className="absolute top-0 right-0 bg-black/50 hover:bg-destructive text-white p-0.5 rounded-bl-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <FormField
             control={form.control}

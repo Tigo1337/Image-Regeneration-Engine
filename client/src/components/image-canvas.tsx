@@ -12,6 +12,8 @@ interface ImageCanvasProps {
   generatedVariations?: string[];
   originalFileName?: string;
   currentFormData?: RoomRedesignRequest;
+  // [NEW] Accept reference images
+  referenceImages?: string[];
 }
 
 export function ImageCanvas({
@@ -20,6 +22,7 @@ export function ImageCanvas({
   generatedVariations = [],
   originalFileName = "image",
   currentFormData,
+  referenceImages = [],
 }: ImageCanvasProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalImage, setModalImage] = useState<string | null>(null);
@@ -177,6 +180,20 @@ export function ImageCanvas({
             )}
           </Card>
         </div>
+
+        {/* [NEW] Reference Images Section */}
+        {referenceImages.length > 0 && (
+          <div className="flex-none mt-2">
+            <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Active References</h4>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+              {referenceImages.map((img, idx) => (
+                <div key={idx} className="w-16 h-16 flex-shrink-0 rounded-md overflow-hidden border border-border relative">
+                  <img src={img} className="w-full h-full object-cover" alt={`Reference ${idx + 1}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Batch Variations Thumbnails */}
         {(generatedVariations.length > 0 || generatedImage) && (
