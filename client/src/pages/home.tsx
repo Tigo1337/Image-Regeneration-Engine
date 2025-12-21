@@ -20,6 +20,9 @@ export default function Home() {
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [referenceDrawing, setReferenceDrawing] = useState<string | null>(null);
 
+  // State to store the expensive 3D analysis
+  const [structureAnalysis, setStructureAnalysis] = useState<string | null>(null);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -33,6 +36,7 @@ export default function Home() {
     setModificationPrompt("");
     setReferenceImages([]); 
     setReferenceDrawing(null); 
+    setStructureAnalysis(null); // Reset analysis on new image
   };
 
   const generateMutation = useMutation({
@@ -48,6 +52,12 @@ export default function Home() {
     onSuccess: async (response) => {
       if (response.success && response.generatedImage) {
         setGeneratedImage(response.generatedImage);
+
+        // [UPDATED] Store the analysis if the server returned it
+        if (response.structureAnalysis) {
+            console.log("Received 3D Structure Analysis from server, caching for variations...");
+            setStructureAnalysis(response.structureAnalysis);
+        }
 
         // Clear old variations on new main generation
         setGeneratedVariations([]); 
@@ -124,7 +134,8 @@ export default function Home() {
     const requestData = {
       ...formData,
       referenceImages: referenceImages,
-      referenceDrawing: referenceDrawing || undefined
+      referenceDrawing: referenceDrawing || undefined,
+      structureAnalysis: structureAnalysis || undefined 
     };
 
     setCurrentFormData(requestData as RoomRedesignRequest);
@@ -149,15 +160,16 @@ export default function Home() {
     }
   };
 
-  // [UPDATED] Handler now accepts selected variations from ControlPanel
+  // [UPDATED] Fixed Spread Order
   const handleGenerateVariations = (selectedVariations: string[]) => {
     if (!generatedImage || !currentFormData) return;
 
     variationsMutation.mutate({
+      ...currentFormData, // <--- SPREAD FIRST (Defaults)
       imageData: generatedImage, 
       prompt: "Generate variations", 
-      selectedVariations, // Pass list of strings ["Front", "Side", ...]
-      ...currentFormData
+      selectedVariations, 
+      structureAnalysis: structureAnalysis || undefined, // <--- OVERRIDE LAST (Specifics)
     });
   };
 
@@ -170,6 +182,7 @@ export default function Home() {
     setCurrentFormData(null);
     setReferenceImages([]);
     setReferenceDrawing(null);
+    setStructureAnalysis(null);
   };
 
   return (

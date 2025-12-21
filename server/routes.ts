@@ -8,7 +8,7 @@ import { uploadImageToStorage } from "./image-storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { z } from "zod";
 
-// [UPDATED] Prompt Builder with "Room Preservation" & "Global Consistency"
+// Prompt Builder
 function buildVariationPrompt(formData: any, variationType: string, structureAnalysis: string = ""): string {
   const style = formData.targetStyle || "the existing style";
 
@@ -67,11 +67,15 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
-  // NEW: Route to fetch history
+  // Optional: Endpoint for prompt history if you implemented it
   app.get("/api/prompts-history", async (req, res) => {
     try {
-      const logs = await storage.getPromptLogs();
-      res.json(logs);
+      if (storage.getPromptLogs) {
+        const logs = await storage.getPromptLogs();
+        res.json(logs);
+      } else {
+        res.json([]);
+      }
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch prompt logs" });
     }
@@ -99,6 +103,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let finalPrompt = prompt;
 
+      // [UPDATED] Capture analysis to return it
+      let computedStructureAnalysis = "";
+
       const hasRefs = validatedData.referenceImages && validatedData.referenceImages.length > 0;
       const hasDrawing = !!validatedData.referenceDrawing;
       const isAngleChange = validatedData.viewAngle !== "Original";
@@ -106,16 +113,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ((isAngleChange || hasRefs) && validatedData.preservedElements) {
         try {
           console.log("3D Analysis Attempted...");
-          const structureBrief = await analyzeObjectStructure(
-            processedImage, 
-            validatedData.referenceImages, 
-            validatedData.preservedElements
-          );
+          // Reuse if client somehow sent it, otherwise generate
+          if (validatedData.structureAnalysis) {
+             computedStructureAnalysis = validatedData.structureAnalysis;
+             console.log("Using provided 3D Analysis from client.");
+          } else {
+             computedStructureAnalysis = await analyzeObjectStructure(
+              processedImage, 
+              validatedData.referenceImages, 
+              validatedData.preservedElements
+             );
+          }
 
-          if (structureBrief) {
+          if (computedStructureAnalysis) {
               finalPrompt += `\n\nCRITICAL CONTEXT - 3D STRUCTURE ANALYSIS:
               Use the following technical analysis to ensure the "${validatedData.preservedElements}" is rendered correctly from the ${validatedData.viewAngle} view:
-              ${structureBrief}`;
+              ${computedStructureAnalysis}`;
           }
         } catch (e) {
            console.warn("3D Structure Analysis skipped (Model unavailable or error).");
@@ -130,16 +143,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         finalPrompt += `\n\nCRITICAL: A Technical Drawing (PDF/Image) has been provided. You MUST strictly adhere to the dimensions, orthographic views, and geometry shown in this drawing. It is the "Ground Truth".`;
       }
 
-      // LOGGING INJECTION
-      await storage.createPromptLog({
-        jobType: "generation",
-        prompt: finalPrompt,
-        parameters: {
-            style: validatedData.targetStyle,
-            view: validatedData.viewAngle,
-            creativity: validatedData.creativityLevel
-        }
-      });
+      // Log if storage supports it
+      if (storage.createPromptLog) {
+        await storage.createPromptLog({
+            jobType: "generation",
+            prompt: finalPrompt,
+            parameters: {
+                style: validatedData.targetStyle,
+                view: validatedData.viewAngle,
+                creativity: validatedData.creativityLevel
+            }
+        });
+      }
 
       const mainImage = await generateRoomRedesign({
         imageBase64: modifiedMainImage, 
@@ -158,6 +173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         generatedImage: mainImage,
         variations: [],
+        structureAnalysis: computedStructureAnalysis // [UPDATED] Return to client
       });
 
     } catch (error) {
@@ -179,11 +195,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Generating Additional Perspectives...");
       console.log("Requested views:", selectedVariations);
 
-      // Run 3D Analysis for Variations if references exist
-      let structureAnalysis = "";
-      if (validatedData.referenceImages && validatedData.referenceImages.length > 0 && validatedData.preservedElements) {
+      // [UPDATED] Smart Analysis Handling
+      let structureAnalysis = validatedData.structureAnalysis || "";
+
+      // Only run analysis if we DON'T have it yet, but we DO have references + preserved objects
+      if (!structureAnalysis && validatedData.referenceImages && validatedData.referenceImages.length > 0 && validatedData.preservedElements) {
         try {
-            console.log("Running 3D Structure Analysis for Variations...");
+            console.log("Running 3D Structure Analysis for Variations (Not provided by client)...");
             structureAnalysis = await analyzeObjectStructure(
               imageData, 
               validatedData.referenceImages, 
@@ -192,9 +210,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (e) {
             console.warn("Variation Analysis skipped:", e);
         }
+      } else if (structureAnalysis) {
+        console.log("Using cached 3D Analysis provided by client.");
       }
 
-      // [UPDATED] Set Top View zoom to 135
       const variationConfigs = [
         { 
           type: "Front",
@@ -222,15 +241,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const modifiedImage = await config.preprocess(imageData);
         const specificPrompt = buildVariationPrompt(validatedData, config.type, structureAnalysis);
 
-        // LOGGING INJECTION
-        await storage.createPromptLog({
-            jobType: `variation-${config.type.toLowerCase()}`,
-            prompt: specificPrompt,
-            parameters: {
-                parentJob: "variation",
-                view: config.type
-            }
-        });
+        if (storage.createPromptLog) {
+            await storage.createPromptLog({
+                jobType: `variation-${config.type.toLowerCase()}`,
+                prompt: specificPrompt,
+                parameters: {
+                    parentJob: "variation",
+                    view: config.type,
+                    reusedAnalysis: !!structureAnalysis
+                }
+            });
+        }
 
         return generateRoomRedesign({
           imageBase64: modifiedImage,

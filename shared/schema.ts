@@ -41,8 +41,11 @@ export const roomRedesignRequestSchema = z.object({
   // Allow uploading multiple reference images for 3D context
   referenceImages: z.array(z.string()).optional(),
 
-  // [NEW] Allow uploading a single technical drawing (PDF or Image)
+  // Allow uploading a single technical drawing (PDF or Image)
   referenceDrawing: z.string().optional(),
+
+  // [UPDATED] Use .nullish() to allow string | null | undefined
+  structureAnalysis: z.string().nullish(),
 
   // Angle for Rotation
   viewAngle: z.enum(viewAngles).default("Original"),
@@ -65,6 +68,8 @@ export interface RoomRedesignResponse {
   generatedImage?: string; 
   error?: string;
   variations?: string[];
+  // Return the analysis so the client can cache it
+  structureAnalysis?: string;
 }
 
 // Drizzle Tables
@@ -82,12 +87,12 @@ export const generatedDesigns = pgTable("generated_designs", {
   config: jsonb("config").notNull(),
 });
 
-// NEW: Prompt Logging Table
+// Prompt Logging Table
 export const promptLogs = pgTable("prompt_logs", {
   id: serial("id").primaryKey(),
-  jobType: text("job_type").notNull(), // e.g., "generation", "variation-side", "variation-top"
+  jobType: text("job_type").notNull(), 
   prompt: text("prompt").notNull(),
-  parameters: jsonb("parameters"), // Store JSON config like temperature, style, etc.
+  parameters: jsonb("parameters"), 
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
 

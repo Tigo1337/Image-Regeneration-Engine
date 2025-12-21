@@ -23,7 +23,7 @@ interface RoomRedesignParams {
 /**
  * 3D STRUCTURE ANALYSIS
  * Model: gemini-3-pro-preview
- * Updated Rules: "Forensic Geometry" to prevent style-based hallucinations.
+ * Updated Rules: "Forensic Geometry" + "Negative Space Counting"
  */
 export async function analyzeObjectStructure(mainImageBase64: string, referenceImages: string[] | undefined, objectName: string): Promise<string> {
   try {
@@ -39,33 +39,45 @@ export async function analyzeObjectStructure(mainImageBase64: string, referenceI
         TASK: Analyze the "${objectName}" to create a "Manufacturing Spec Sheet".
         Your text will be used to reconstruct this object with 100% geometric accuracy.
 
-        CRITICAL FAILURE AVOIDANCE: 
-        Do NOT use broad style labels (like "Beadboard", "Tufted", "Shaker") if they are not mathematically accurate. 
-        Style labels cause hallucinations. Describe the PHYSICS, not the VIBE.
+        *** CRITICAL INSTRUCTION: MULTI-VIEW SYNTHESIS ***
+        You are provided with a Main View and several Reference Views.
+        1. TRUST THE REFERENCES: Details visible in the Reference Images (side, back, close-up) are JUST AS IMPORTANT as the Main View. 
+        2. FILL THE GAPS: If the Main View occludes the feet, but Reference 1 shows the feet, you MUST document the feet.
+        3. MERGE DATA: Stitch all visual data into a single, complete 3D understanding.
 
-        APPLY THE "7-POINT FORENSIC" ANALYSIS RULES:
+        APPLY THE "8-POINT FORENSIC" ANALYSIS RULES:
+
+        0. ZERO-LOSS INVENTORY (The Checklist):
+           - List EVERY single sub-component visible across ALL images.
+           - Example: [Main Chassis, 4 Legs, 2 Drawer Pulls, 1 Faucet, 1 Backsplash, 1 Drain Stopper].
+           - Do not miss small items like hinges, feet, or trim.
 
         1. PRIMITIVE DECOMPOSITION (The Hull):
            - Break the object into simple solids (e.g., "Rectangular chassis, 2:1 aspect ratio").
            - Define the silhouette boundaries.
+           - Mention protrusions: Does the countertop overhang? By how much?
 
         2. EXACT QUANTIFICATION (The Count):
            - CRITICAL: Count every repeating element. 
-           - If there are vertical planks, COUNT THEM. Do not say "slatted sides". Say "Side panel composed of EXACTLY 4 vertical boards".
+           - **GROOVE COUNT (NEGATIVE SPACE):** If there are vertical lines/grooves, count the NEGATIVE SPACES (grooves) separate from the POSITIVE SPACES (planks).
+             * Incorrect: "Side panel has vertical planks."
+             * Correct: "Side panel has EXACTLY 2 vertical V-grooves, creating 3 equal-width planks."
            - If there are drawers, count them. "Stack of 3 equal-height drawers".
 
         3. SURFACE TOPOGRAPHY (The Depth):
            - Describe the "Reveal Depth". How deep are the grooves? 
-           - Example: "The V-grooves are approx 3mm deep, creating distinct shadow lines."
-           - Contrast this with flat surfaces.
+           - **SPACING RHYTHM:** Are the grooves equally spaced? State this explicitly.
+           - Example: "The V-grooves are approx 3mm deep, equally spaced 4 inches apart."
 
         4. HARDWARE MAPPING (The Anchors):
            - Describe handle/knob geometry strictly (e.g., "Square-profile bar pulls, gold finish").
            - State their exact position relative to the panel edges.
+           - Note any visible hinges or mounting plates.
 
         5. JOINTERY & SEAMS (The Construction):
            - How do surfaces meet? Miters? Butt joints? Overlays?
-           - Identify the "Toe Kick" or base structure. Is it recessed? By how much?
+           - **GROUND CONTACT:** Explicitly describe how it meets the floor. Legs? Plinth? Floating? 
+           - **WALL CONTACT:** Is there a backsplash? Side splash?
 
         6. MATERIAL PHYSICS (The Shader):
            - Albedo: Exact color reference (e.g., "Deep Navy, close to Pantone 19-4024").
@@ -91,8 +103,8 @@ export async function analyzeObjectStructure(mainImageBase64: string, referenceI
       referenceImages.forEach((img, index) => {
         if (img && img.includes('base64,')) {
           const refBase64 = img.replace(/^data:image\/[a-z]+;base64,/, '');
-          // Neutral label to allow AI to determine spatial orientation
-          promptParts.push({ text: `\nReference View ${index + 1}:` });
+          // Explicit label to force the model to look at it
+          promptParts.push({ text: `\n[REFERENCE IMAGE ${index + 1} - Look for hidden details here]:` });
           promptParts.push({
             inlineData: {
               mimeType: "image/jpeg", 
