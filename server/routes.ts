@@ -54,6 +54,7 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
     prompt += `\n\nINSTRUCTION: ARCHITECTURAL SECTION CUT (TOP VIEW).
     - Camera: 90-degree look-down, directly overhead.
     - ZOOM: Close-up on the main furniture/object. Fill the canvas.
+    - "ALIGNMENT: The object must be strictly axis-aligned with the canvas, ensuring all horizontal edges are perfectly parallel to the top and bottom of the image frame.
     - "CEILING REMOVAL": Cut away the ceiling to see inside.
     - "OBJECT PERMANENCE": 
       * EVERY small detail on surfaces (towels, soap, faucets, handles, rugs) MUST be present.
