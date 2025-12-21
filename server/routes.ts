@@ -8,7 +8,7 @@ import { uploadImageToStorage } from "./image-storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { z } from "zod";
 
-// [UPDATED] Prompt Builder with Close-up rule for Top View
+// [UPDATED] Prompt Builder with "Global Consistency Contract"
 function buildVariationPrompt(formData: any, variationType: string, structureAnalysis: string = ""): string {
   const style = formData.targetStyle || "the existing style";
 
@@ -17,13 +17,14 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
   TASK: Generate a new view of the room shown in the input image.
   TARGET VIEW: ${variationType.toUpperCase()}.
 
-  STRICT PRESERVATION RULES:
-  1. The Input Image is the primary reference for the object's silhouette.
-  2. You must NOT change the furniture, decor, lighting, or materials.
-  3. Keep the "${style}" aesthetic exactly as shown.
+  === GLOBAL CONSISTENCY CONTRACT (STRICT) ===
+  1. THE FROZEN WORLD RULE: The Input Image represents a frozen, existing physical space. You are a photographer moving through it, NOT a designer creating it.
+  2. NO REDESIGNING: You are FORBIDDEN from changing the style, furniture, decor, wall colors, flooring, or lighting. 
+  3. 1:1 MAPPING: Every single object visible in the Input Image (no matter how small) MUST exist in this new view if the angle permits.
+  4. GEOMETRIC INTEGRITY: Do not hallucinate new corners, windows, or doors that contradict the main view.
 
   CRITICAL - HANDLING HIDDEN ANGLES:
-  The Input Image only shows the Front. You MUST use the provided "Visual Reference Images" and the "3D Structure Analysis" below to reconstruct the hidden sides.
+  The Input Image only shows the Front. You MUST use the provided "Visual Reference Images" (if any) and the "3D Structure Analysis" below to reconstruct the hidden sides logically.
   `;
 
   if (structureAnalysis) {
@@ -35,26 +36,27 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
 
   if (variationType === "Front") {
     prompt += `\n\nINSTRUCTION: FRONT ELEVATION.
-    - Move the camera to be directly in front of the main area/furniture.
-    - Flatten the perspective (Orthographic-like or 2-point perspective).
-    - Ensure vertical lines are perfectly straight.`;
+    - Camera: Directly perpendicular to the main subject.
+    - Perspective: Flattened / Orthographic-like.
+    - Goal: A technical evaluation view of the front face.`;
   } 
   else if (variationType === "Side") {
     prompt += `\n\nINSTRUCTION: ANGLE VIEW (45-Degree).
-    - Move the camera 45 degrees to the side.
-    - CRITICAL: TEXTURE CLONING. Look at the Reference Images. If the side panel has a specific pattern (e.g., fluting, beadboard, slats, or marble grain), you MUST copy that EXACT pattern.
-    - DO NOT APPROXIMATE. If the reference shows vertical slats, render vertical slats.
-    - Do NOT add a corner to the wall. Keep the back wall FLAT.`;
+    - Camera: Rotate 45 degrees to the side.
+    - "TEXTURE LOCK": The texture on the side of the object (e.g., wood grain, tile pattern, fabric weave) must be CONTINUOUS with the front. Use the Reference Images to determine the side detail.
+    - "WALL CONTINUITY": The wall behind the object must remain flat if it looks flat in the main view. Do not invent corners.
+    - "ATMOSPHERE PRESERVATION": The lighting mood and shadows must match the original image exactly.`;
   } 
   else if (variationType === "Top") {
-    prompt += `\n\nINSTRUCTION: CLOSE-UP ARCHITECTURAL FLOOR PLAN CUTAWAY.
-    - Move the camera vertically above the center of the room looking straight down (90-degree angle).
-    - ZOOM LEVEL: Close-up. Fill the frame with the main furniture/object.
-    - FILL THE ENTIRE CANVAS. No white borders, no padding.
-    - CUTAWAY MODE: REMOVE THE CEILING. Do not render the ceiling, roof, or high-hanging lights that block the view.
-    - The view must look like a "Section Cut" looking down into the room.
-    - CRITICAL: NO PERSPECTIVE DISTORTION on the walls. Walls should look like thin lines or be invisible borders.
-    - Preserve all floor decor (rugs, mats) exactly as they are.`;
+    prompt += `\n\nINSTRUCTION: ARCHITECTURAL SECTION CUT (TOP VIEW).
+    - Camera: 90-degree look-down, directly overhead.
+    - ZOOM: Close-up on the main furniture/object. Fill the canvas.
+    - "CEILING REMOVAL": Cut away the ceiling to see inside.
+    - "OBJECT PERMANENCE": 
+      * EVERY small detail on surfaces (towels, soap, faucets, handles, rugs) MUST be present.
+      * Do NOT clean up the room. If there is clutter, render the clutter from above.
+      * Wall-mounted items (mirrors, sconces) must be visible as "slices" or profiles attached to the wall line.
+    - "ZERO DISTORTION": Walls must be straight lines. Floor patterns must be geometrically perfect from above.`;
   }
 
   return prompt;
