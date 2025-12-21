@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type GeneratedDesign, users, generatedDesigns } from "@shared/schema";
+import { type User, type InsertUser, type GeneratedDesign, type PromptLog, type InsertPromptLog, users, generatedDesigns, promptLogs } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -10,6 +10,10 @@ export interface IStorage {
   saveGeneratedDesign(design: Omit<GeneratedDesign, 'id'>): Promise<GeneratedDesign>;
   getGeneratedDesigns(): Promise<GeneratedDesign[]>;
   getGeneratedDesign(id: string): Promise<GeneratedDesign | undefined>;
+
+  // NEW: Log methods
+  createPromptLog(log: InsertPromptLog): Promise<PromptLog>;
+  getPromptLogs(): Promise<PromptLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -49,6 +53,21 @@ export class DatabaseStorage implements IStorage {
       .from(generatedDesigns)
       .where(eq(generatedDesigns.id, id));
     return design;
+  }
+
+  async createPromptLog(insertLog: InsertPromptLog): Promise<PromptLog> {
+    const [log] = await db
+      .insert(promptLogs)
+      .values(insertLog)
+      .returning();
+    return log;
+  }
+
+  async getPromptLogs(): Promise<PromptLog[]> {
+    return await db
+      .select()
+      .from(promptLogs)
+      .orderBy(desc(promptLogs.timestamp));
   }
 }
 

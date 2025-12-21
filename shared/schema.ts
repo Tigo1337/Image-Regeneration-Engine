@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pgTable, text, serial, bigint, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, bigint, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 // Available styles for room redesign
@@ -82,9 +82,21 @@ export const generatedDesigns = pgTable("generated_designs", {
   config: jsonb("config").notNull(),
 });
 
+// NEW: Prompt Logging Table
+export const promptLogs = pgTable("prompt_logs", {
+  id: serial("id").primaryKey(),
+  jobType: text("job_type").notNull(), // e.g., "generation", "variation-side", "variation-top"
+  prompt: text("prompt").notNull(),
+  parameters: jsonb("parameters"), // Store JSON config like temperature, style, etc.
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
 // Type definitions
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 export type GeneratedDesign = typeof generatedDesigns.$inferSelect;
 export type InsertGeneratedDesign = typeof generatedDesigns.$inferInsert;
+
+export type PromptLog = typeof promptLogs.$inferSelect;
+export type InsertPromptLog = typeof promptLogs.$inferInsert;

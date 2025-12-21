@@ -8,7 +8,7 @@ import { uploadImageToStorage } from "./image-storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { z } from "zod";
 
-// [UPDATED] Prompt Builder with "Global Consistency Contract"
+// [UPDATED] Prompt Builder with "Room Preservation" & "Global Consistency"
 function buildVariationPrompt(formData: any, variationType: string, structureAnalysis: string = ""): string {
   const style = formData.targetStyle || "the existing style";
 
@@ -21,7 +21,7 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
   1. THE FROZEN WORLD RULE: The Input Image represents a frozen, existing physical space. You are a photographer moving through it, NOT a designer creating it.
   2. NO REDESIGNING: You are FORBIDDEN from changing the style, furniture, decor, wall colors, flooring, or lighting. 
   3. 1:1 MAPPING: Every single object visible in the Input Image (no matter how small) MUST exist in this new view if the angle permits.
-  4. GEOMETRIC INTEGRITY: Do not hallucinate new corners, windows, or doors that contradict the main view.
+  4. ROOM INTEGRITY: The "Room" is a preserved object. You must not change the wall paint, the floor material, or the baseboard style.
 
   CRITICAL - HANDLING HIDDEN ANGLES:
   The Input Image only shows the Front. You MUST use the provided "Visual Reference Images" (if any) and the "3D Structure Analysis" below to reconstruct the hidden sides logically.
@@ -44,7 +44,10 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
     prompt += `\n\nINSTRUCTION: ANGLE VIEW (45-Degree).
     - Camera: Rotate 45 degrees to the side.
     - "TEXTURE LOCK": The texture on the side of the object (e.g., wood grain, tile pattern, fabric weave) must be CONTINUOUS with the front. Use the Reference Images to determine the side detail.
-    - "WALL CONTINUITY": The wall behind the object must remain flat if it looks flat in the main view. Do not invent corners.
+    - "ROOM EXTENSION (CRITICAL)": The camera rotation reveals more of the back wall. You must PREDICT this new area by strictly EXTENDING the existing wall/floor materials.
+      * If the wall is white paint, the new area must be white paint.
+      * If the floor is grey tile, the new area must be grey tile.
+      * DO NOT ADD NEW OBJECTS (No plants, no windows, no art) unless they are partially visible in the original image.
     - "ATMOSPHERE PRESERVATION": The lighting mood and shadows must match the original image exactly.`;
   } 
   else if (variationType === "Top") {
@@ -63,6 +66,16 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  // NEW: Route to fetch history
+  app.get("/api/prompts-history", async (req, res) => {
+    try {
+      const logs = await storage.getPromptLogs();
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch prompt logs" });
+    }
+  });
 
   app.post("/api/generate", async (req, res) => {
     try {
@@ -116,6 +129,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (hasDrawing) {
         finalPrompt += `\n\nCRITICAL: A Technical Drawing (PDF/Image) has been provided. You MUST strictly adhere to the dimensions, orthographic views, and geometry shown in this drawing. It is the "Ground Truth".`;
       }
+
+      // LOGGING INJECTION
+      await storage.createPromptLog({
+        jobType: "generation",
+        prompt: finalPrompt,
+        parameters: {
+            style: validatedData.targetStyle,
+            view: validatedData.viewAngle,
+            creativity: validatedData.creativityLevel
+        }
+      });
 
       const mainImage = await generateRoomRedesign({
         imageBase64: modifiedMainImage, 
@@ -197,6 +221,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const variationPromises = variationsToRun.map(async (config) => {
         const modifiedImage = await config.preprocess(imageData);
         const specificPrompt = buildVariationPrompt(validatedData, config.type, structureAnalysis);
+
+        // LOGGING INJECTION
+        await storage.createPromptLog({
+            jobType: `variation-${config.type.toLowerCase()}`,
+            prompt: specificPrompt,
+            parameters: {
+                parentJob: "variation",
+                view: config.type
+            }
+        });
 
         return generateRoomRedesign({
           imageBase64: modifiedImage,
