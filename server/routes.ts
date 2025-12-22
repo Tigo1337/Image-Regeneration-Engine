@@ -1,12 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { roomRedesignRequestSchema } from "@shared/schema";
-import { generateRoomRedesign, analyzeObjectStructure } from "./gemini"; 
+import { roomRedesignRequestSchema, smartCropRequestSchema } from "@shared/schema";
+import { generateRoomRedesign, analyzeObjectStructure, detectObjectBoundingBox } from "./gemini"; 
 import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup } from "./image-utils";
 import { storage } from "./storage";
 import { uploadImageToStorage } from "./image-storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { z } from "zod";
+import sharp from "sharp"; 
 
 // Prompt Builder
 function buildVariationPrompt(formData: any, variationType: string, structureAnalysis: string = ""): string {
@@ -179,6 +180,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // [UPDATED] Smart Crop Route with "Container Fit" Logic
+  app.post("/api/smart-crop", async (req, res) => {
+    try {
+      const { imageData, ...formData } = req.body;
+      const { objectName, fillRatio, aspectRatio } = smartCropRequestSchema.parse(formData);
+
+      if (!imageData) return res.status(400).json({ success: false, error: "No image data" });
+
+      console.log(`Processing Smart Crop: Object=${objectName}, Fill=${fillRatio}%`);
+
+      // 1. Get Coordinates
+      const box = await detectObjectBoundingBox(imageData, objectName);
+
+      if (!box) {
+          return res.status(404).json({ success: false, error: "Could not detect object specified" });
+      }
+
+      const [ymin, xmin, ymax, xmax] = box;
+      console.log(`Detection: [${ymin}, ${xmin}, ${ymax}, ${xmax}]`);
+
+      // 2. Load Image Metadata
+      const imgBuffer = Buffer.from(imageData.replace(/^data:image\/\w+;base64,/, ""), "base64");
+      const metadata = await sharp(imgBuffer).metadata();
+      const imgW = metadata.width!;
+      const imgH = metadata.height!;
+
+      // 3. Product Dimensions
+      const prodW = ((xmax - xmin) / 1000) * imgW;
+      const prodH = ((ymax - ymin) / 1000) * imgH;
+      const prodCenterX = ((xmin + xmax) / 2000) * imgW;
+      const prodCenterY = ((ymin + ymax) / 2000) * imgH;
+
+      // 4. Calculate Ideal Crop
+      let targetCropWidth = prodW / (fillRatio / 100);
+      let targetCropHeight = targetCropWidth; // Default 1:1
+
+      if (aspectRatio === "9:16") {
+          targetCropHeight = targetCropWidth * (16/9);
+      } else if (aspectRatio === "16:9") {
+          targetCropHeight = targetCropWidth * (9/16);
+      } else if (aspectRatio === "4:5") {
+          targetCropHeight = targetCropWidth * (5/4);
+      } else if (aspectRatio === "Original") {
+          const imgRatio = imgH / imgW;
+          targetCropHeight = targetCropWidth * imgRatio;
+      }
+
+      // 5. [NEW] Container Fit Logic
+      // If the calculated crop is larger than the image, shrink it to fit.
+      // We calculate a scaling factor that ensures both width and height fit inside the image.
+
+      let scaleFactor = 1.0;
+
+      if (targetCropWidth > imgW) {
+         scaleFactor = Math.min(scaleFactor, imgW / targetCropWidth);
+      }
+      if (targetCropHeight > imgH) {
+         scaleFactor = Math.min(scaleFactor, imgH / targetCropHeight);
+      }
+
+      // Apply scale (this effectively increases the fill ratio because we are force-zooming in)
+      const finalCropWidth = targetCropWidth * scaleFactor;
+      const finalCropHeight = targetCropHeight * scaleFactor;
+
+      // 6. Calculate Top/Left with Clamping
+      // Ensure the box stays within bounds [0, imgW] and [0, imgH]
+      let cropLeft = Math.round(prodCenterX - (finalCropWidth / 2));
+      let cropTop = Math.round(prodCenterY - (finalCropHeight / 2));
+      const cropWidthInt = Math.floor(finalCropWidth);
+      const cropHeightInt = Math.floor(finalCropHeight);
+
+      // Clamp Left/Top
+      cropLeft = Math.max(0, Math.min(cropLeft, imgW - cropWidthInt));
+      cropTop = Math.max(0, Math.min(cropTop, imgH - cropHeightInt));
+
+      // 7. Extract
+      // Since we enforced (width <= imgW) and clamped (left), this is safe.
+      const canvas = await sharp(imgBuffer)
+        .extract({ 
+            left: cropLeft, 
+            top: cropTop, 
+            width: cropWidthInt, 
+            height: cropHeightInt 
+        })
+        .png()
+        .toBuffer();
+
+      const finalBase64 = `data:image/png;base64,${canvas.toString("base64")}`;
+
+      res.json({ success: true, generatedImage: finalBase64 });
+
+    } catch (error) {
+      console.error("Smart crop error:", error);
+      res.status(500).json({ success: false, error: "Failed to perform smart crop" });
+    }
+  });
+
   app.post("/api/variations", async (req, res) => {
     try {
       const { imageData, prompt, selectedVariations, ...formData } = req.body;
@@ -299,7 +397,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // [UPDATED] Save design with optional variations (if known initially)
   app.post("/api/gallery/save", async (req, res) => {
     try {
       const { originalImage, generatedImage, originalFileName, config, variations = [] } = req.body;
@@ -309,7 +406,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         uploadImageToStorage(generatedImage, "generated"),
       ];
 
-      // Also upload any variations if present initially
       const variationUrls = await Promise.all(variations.map((v: string) => uploadImageToStorage(v, "generated")));
 
       const [originalImageUrl, generatedImageUrl] = await Promise.all(uploadPromises);
@@ -329,7 +425,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // [NEW] Update design with variations
   app.post("/api/gallery/update", async (req, res) => {
     try {
       const { id, variations } = req.body;
@@ -337,10 +432,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, error: "Invalid data" });
       }
 
-      // Upload new variations
       const variationUrls = await Promise.all(variations.map((v: string) => uploadImageToStorage(v, "generated")));
 
-      // Fetch existing to append (or overwrite based on your logic, appending is safer)
       const existing = await storage.getGeneratedDesign(id);
       const existingVars = (existing?.variations as string[]) || [];
       const allVariations = [...existingVars, ...variationUrls];

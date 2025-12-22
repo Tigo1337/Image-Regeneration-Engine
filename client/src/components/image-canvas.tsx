@@ -3,16 +3,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ImageIcon, Download, LayoutGrid, SlidersHorizontal } from "lucide-react";
 import { ImageModal } from "./image-modal";
-import type { RoomRedesignRequest } from "@shared/schema";
+import type { RoomRedesignRequest, SmartCropRequest } from "@shared/schema";
 import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 
 interface ImageCanvasProps {
   originalImage: string | null;
   generatedImage: string | null;
   generatedVariations?: string[];
+  generationType?: "design" | "crop" | null; // [NEW] To toggle view modes
   originalFileName?: string;
   currentFormData?: RoomRedesignRequest;
-  // [NEW] Accept reference images
+  currentSmartCropData?: SmartCropRequest; // [NEW] For crop file naming
   referenceImages?: string[];
 }
 
@@ -20,8 +21,10 @@ export function ImageCanvas({
   originalImage,
   generatedImage,
   generatedVariations = [],
+  generationType = "design",
   originalFileName = "image",
   currentFormData,
+  currentSmartCropData,
   referenceImages = [],
 }: ImageCanvasProps) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -47,12 +50,24 @@ export function ImageCanvas({
   };
 
   const generateDownloadFileName = (): string => {
-    if (!currentFormData) return `redesign-${Date.now()}`;
     const baseName = originalFileName?.replace(/\.[^/.]+$/, "") || "image";
-    const style = slugify(currentFormData.targetStyle);
-    const quality = slugify(currentFormData.quality);
-    const ar = slugify(currentFormData.aspectRatio);
-    return `${baseName}-${style}-${quality}-ar-${ar}`;
+
+    // [NEW] Logic for Smart Crop Filenames
+    if (generationType === 'crop' && currentSmartCropData) {
+        const fill = currentSmartCropData.fillRatio;
+        const ar = slugify(currentSmartCropData.aspectRatio);
+        return `${baseName}-crop-fill-${fill}-ar-${ar}`;
+    }
+
+    // Existing Logic for Design Filenames
+    if (currentFormData) {
+        const style = slugify(currentFormData.targetStyle);
+        const quality = slugify(currentFormData.quality);
+        const ar = slugify(currentFormData.aspectRatio);
+        return `${baseName}-${style}-${quality}-ar-${ar}`;
+    }
+
+    return `redesign-${Date.now()}`;
   };
 
   const downloadImage = () => {
@@ -88,6 +103,9 @@ export function ImageCanvas({
     );
   }
 
+  // Helper to determine if we show comparison tools
+  const showComparisonTools = currentDisplayImage && generationType !== 'crop';
+
   return (
     <>
       <div className="h-full p-6 flex flex-col gap-4">
@@ -95,81 +113,109 @@ export function ImageCanvas({
         {/* Header Section */}
         <div className="flex-none flex items-center justify-between">
           <h3 className="text-lg font-semibold text-foreground">
-            {currentDisplayImage ? "Comparison Preview" : "Original Image"}
+            {/* [UPDATED] Dynamic Title */}
+            {generationType === 'crop' 
+                ? "Smart Crop Result" 
+                : currentDisplayImage 
+                    ? "Comparison Preview" 
+                    : "Original Image"}
           </h3>
-          {currentDisplayImage && (
-            <div className="flex gap-2">
-               <Button
-                size="sm"
-                variant={viewMode === 'slider' ? 'secondary' : 'ghost'}
-                onClick={() => setViewMode('slider')}
-                title="Slider View"
-              >
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
-                Slider
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === 'split' ? 'secondary' : 'ghost'}
-                onClick={() => setViewMode('split')}
-                title="Split View"
-              >
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Split
-              </Button>
-              <Button size="icon" variant="ghost" onClick={downloadImage}>
-                <Download className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+
+          <div className="flex gap-2">
+             {/* [UPDATED] Only show Slider/Split if NOT crop mode */}
+             {showComparisonTools && (
+               <>
+                <Button
+                  size="sm"
+                  variant={viewMode === 'slider' ? 'secondary' : 'ghost'}
+                  onClick={() => setViewMode('slider')}
+                  title="Slider View"
+                >
+                  <SlidersHorizontal className="w-4 h-4 mr-2" />
+                  Slider
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === 'split' ? 'secondary' : 'ghost'}
+                  onClick={() => setViewMode('split')}
+                  title="Split View"
+                >
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Split
+                </Button>
+               </>
+             )}
+
+             {/* Download always visible if image exists */}
+             {currentDisplayImage && (
+                <Button size="icon" variant="ghost" onClick={downloadImage}>
+                  <Download className="w-4 h-4" />
+                </Button>
+             )}
+          </div>
         </div>
 
         {/* Main Canvas Area */}
         <div className="flex-1 w-full min-h-0">
           <Card className="w-full h-full bg-muted/20 overflow-hidden relative border-2 border-border/50 flex items-center justify-center">
             {currentDisplayImage ? (
-              viewMode === 'slider' ? (
-                <div className="w-full h-full">
-                  <ReactCompareSlider
-                    itemOne={
-                      <ReactCompareSliderImage 
-                        src={originalImage} 
-                        alt="Original" 
-                        style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
-                      />
-                    }
-                    itemTwo={
-                      <ReactCompareSliderImage 
-                        src={currentDisplayImage} 
-                        alt="Generated" 
-                        style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
-                      />
-                    }
-                    className="w-full h-full"
-                    style={{ width: '100%', height: '100%' }}
-                  />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 w-full h-full gap-1">
-                  <div className="h-full bg-background flex items-center justify-center p-2 overflow-hidden">
-                    <img 
-                      src={originalImage} 
-                      className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity" 
-                      alt="Original"
-                      onClick={() => openModal(originalImage, "Original Image")}
-                    />
-                  </div>
-                  <div className="h-full bg-background flex items-center justify-center p-2 overflow-hidden">
+              // [UPDATED] Logic for Crop View vs Design View
+              generationType === 'crop' ? (
+                 // Simple Single Image View for Crops
+                 <div className="w-full h-full flex items-center justify-center p-4">
                     <img 
                       src={currentDisplayImage} 
-                      className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity" 
-                      alt="Generated"
-                      onClick={() => openModal(currentDisplayImage, "Generated Design")}
+                      className="max-w-full max-h-full object-contain shadow-lg rounded-sm cursor-pointer" 
+                      alt="Smart Crop Result"
+                      onClick={() => openModal(currentDisplayImage, "Smart Crop Result")}
+                    />
+                 </div>
+              ) : (
+                // Comparison View for Designs
+                viewMode === 'slider' ? (
+                  <div className="w-full h-full">
+                    <ReactCompareSlider
+                      itemOne={
+                        <ReactCompareSliderImage 
+                          src={originalImage} 
+                          alt="Original" 
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                        />
+                      }
+                      itemTwo={
+                        <ReactCompareSliderImage 
+                          src={currentDisplayImage} 
+                          alt="Generated" 
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                        />
+                      }
+                      className="w-full h-full"
+                      style={{ width: '100%', height: '100%' }}
                     />
                   </div>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-2 w-full h-full gap-1">
+                    <div className="h-full bg-background flex items-center justify-center p-2 overflow-hidden">
+                      <img 
+                        src={originalImage} 
+                        className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity" 
+                        alt="Original"
+                        onClick={() => openModal(originalImage, "Original Image")}
+                      />
+                    </div>
+                    <div className="h-full bg-background flex items-center justify-center p-2 overflow-hidden">
+                      <img 
+                        src={currentDisplayImage} 
+                        className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity" 
+                        alt="Generated"
+                        onClick={() => openModal(currentDisplayImage, "Generated Design")}
+                      />
+                    </div>
+                  </div>
+                )
               )
             ) : (
+              // Fallback: Show Original only
               <div className="w-full h-full flex items-center justify-center p-4">
                 <img 
                   src={originalImage} 
@@ -181,7 +227,7 @@ export function ImageCanvas({
           </Card>
         </div>
 
-        {/* [NEW] Reference Images Section */}
+        {/* Reference Images Section */}
         {referenceImages.length > 0 && (
           <div className="flex-none mt-2">
             <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Active References</h4>
@@ -195,12 +241,11 @@ export function ImageCanvas({
           </div>
         )}
 
-        {/* Batch Variations Thumbnails */}
-        {(generatedVariations.length > 0 || generatedImage) && (
+        {/* Batch Variations Thumbnails - Only for Designs */}
+        {(generatedVariations.length > 0 || generatedImage) && generationType === 'design' && (
           <div className="flex-none mt-2">
             <h4 className="text-sm font-semibold mb-3">Variations</h4>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
-              {/* Original */}
               <div 
                 className="w-24 h-24 flex-shrink-0 cursor-pointer rounded-md overflow-hidden border-2 border-transparent hover:border-primary/50 relative group"
                 onClick={() => setActiveVariation(null)} 
@@ -210,7 +255,6 @@ export function ImageCanvas({
                 <span className="absolute bottom-1 left-1 text-[10px] bg-black/60 text-white px-1 rounded">Orig</span>
               </div>
 
-              {/* Main Generated */}
               {generatedImage && (
                 <div 
                   className={`w-24 h-24 flex-shrink-0 cursor-pointer rounded-md overflow-hidden border-2 transition-all ${currentDisplayImage === generatedImage ? 'border-primary ring-2 ring-primary/20 scale-105' : 'border-transparent hover:border-primary/30'}`}
@@ -221,7 +265,6 @@ export function ImageCanvas({
                 </div>
               )}
 
-              {/* Extra Variations */}
               {generatedVariations.map((img, idx) => (
                 <div 
                   key={idx}

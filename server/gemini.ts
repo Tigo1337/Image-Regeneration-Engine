@@ -20,6 +20,49 @@ interface RoomRedesignParams {
   outputFormat?: string;
 }
 
+// [NEW] Object Detection for Smart Cropping
+export async function detectObjectBoundingBox(imageBase64: string, objectName: string): Promise<number[] | null> {
+  try {
+    const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+
+    console.log(`=== Smart Crop Detection: ${objectName} ===`);
+
+    // We ask for normalized coordinates (0-1000)
+    const prompt = `Return the bounding box for the "${objectName}" in this image. 
+    Format: [ymin, xmin, ymax, xmax] 
+    Values should be normalized (0-1000). 
+    Return ONLY the JSON array. Do not include markdown code blocks.`;
+
+    // Use Flash model for speed/cost if available
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview", 
+      contents: [{
+        role: "user",
+        parts: [
+            { text: prompt }, 
+            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+        ]
+      }]
+    });
+
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("Detection Raw Output:", text);
+
+    // Clean and Parse the array (e.g., "[200, 100, 800, 900]")
+    const match = text.match(/\[(.*?)\]/);
+    if (match) {
+        const coords = JSON.parse(match[0]);
+        if (Array.isArray(coords) && coords.length === 4) {
+             return coords;
+        }
+    }
+    return null;
+  } catch (e) {
+    console.error("Detection failed:", e);
+    return null;
+  }
+}
+
 /**
  * 3D STRUCTURE ANALYSIS
  * Model: gemini-3-pro-preview

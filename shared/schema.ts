@@ -60,7 +60,15 @@ export const roomRedesignRequestSchema = z.object({
   outputFormat: z.enum(outputFormats).default("PNG"),
 });
 
+// [NEW] Smart Crop Schema
+export const smartCropRequestSchema = z.object({
+  objectName: z.string().min(1, "Object name is required"),
+  fillRatio: z.number().min(10).max(100).default(80), // Percentage of width
+  aspectRatio: z.enum(["1:1", "9:16", "16:9", "4:5", "Original"]),
+});
+
 export type RoomRedesignRequest = z.infer<typeof roomRedesignRequestSchema>;
+export type SmartCropRequest = z.infer<typeof smartCropRequestSchema>;
 
 // Room redesign response schema
 export interface RoomRedesignResponse {
