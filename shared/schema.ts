@@ -44,8 +44,8 @@ export const roomRedesignRequestSchema = z.object({
   // Allow uploading a single technical drawing (PDF or Image)
   referenceDrawing: z.string().optional(),
 
-  // [UPDATED] Use .nullish() to allow string | null | undefined
-  structureAnalysis: z.string().nullish(),
+  // Allow passing existing analysis to avoid re-generation
+  structureAnalysis: z.string().nullish(), // .nullish() allows null/undefined
 
   // Angle for Rotation
   viewAngle: z.enum(viewAngles).default("Original"),
@@ -68,7 +68,6 @@ export interface RoomRedesignResponse {
   generatedImage?: string; 
   error?: string;
   variations?: string[];
-  // Return the analysis so the client can cache it
   structureAnalysis?: string;
 }
 
@@ -85,6 +84,8 @@ export const generatedDesigns = pgTable("generated_designs", {
   generatedImageUrl: text("generated_image_url").notNull(),
   originalFileName: text("original_file_name").notNull(),
   config: jsonb("config").notNull(),
+  // [NEW] Store variations as a JSON array of strings (URLs)
+  variations: jsonb("variations").$type<string[]>().default([]),
 });
 
 // Prompt Logging Table

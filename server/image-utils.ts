@@ -1,12 +1,15 @@
 import sharp from "sharp";
 
-// Helper to convert base64 to buffer
+// [FIXED] Robust Base64 decoder that handles spaces/newlines/different headers safely
 function decodeBase64(dataString: string) {
-  const matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-  if (!matches || matches.length !== 3) {
-    return Buffer.from(dataString, 'base64');
+  // If it contains a comma, it's a Data URL (e.g. "data:image/png;base64,....")
+  // We just want the part AFTER the comma.
+  if (dataString.includes(',')) {
+    const parts = dataString.split(',');
+    return Buffer.from(parts[1], 'base64');
   }
-  return Buffer.from(matches[2], 'base64');
+  // Otherwise, assume it's already a raw base64 string
+  return Buffer.from(dataString, 'base64');
 }
 
 export async function processImageForGemini(imageData: string): Promise<string> {
@@ -127,9 +130,6 @@ export async function applyPerspectiveMockup(
 
     return `data:image/jpeg;base64,${finalBuffer.toString('base64')}`;
   }
-
-  // [UPDATED] Removed padding logic for Top view. 
-  // It now just returns the zoomed/cropped image directly to prevent white bars.
 
   // Default / Front / Top (Clean passthrough)
   const output = await pipeline.toBuffer();

@@ -8,10 +8,11 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   saveGeneratedDesign(design: Omit<GeneratedDesign, 'id'>): Promise<GeneratedDesign>;
+  // [NEW] Method to update a design (e.g. add variations)
+  updateGeneratedDesign(id: string, updates: Partial<GeneratedDesign>): Promise<GeneratedDesign | undefined>;
   getGeneratedDesigns(): Promise<GeneratedDesign[]>;
   getGeneratedDesign(id: string): Promise<GeneratedDesign | undefined>;
 
-  // NEW: Log methods
   createPromptLog(log: InsertPromptLog): Promise<PromptLog>;
   getPromptLogs(): Promise<PromptLog[]>;
 }
@@ -38,6 +39,16 @@ export class DatabaseStorage implements IStorage {
       .values([{ ...design, id: nanoid() }])
       .returning();
     return saved;
+  }
+
+  // [NEW] Implementation
+  async updateGeneratedDesign(id: string, updates: Partial<GeneratedDesign>): Promise<GeneratedDesign | undefined> {
+    const [updated] = await db
+      .update(generatedDesigns)
+      .set(updates)
+      .where(eq(generatedDesigns.id, id))
+      .returning();
+    return updated;
   }
 
   async getGeneratedDesigns(): Promise<GeneratedDesign[]> {

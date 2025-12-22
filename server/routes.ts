@@ -54,7 +54,7 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
     prompt += `\n\nINSTRUCTION: ARCHITECTURAL SECTION CUT (TOP VIEW).
     - Camera: 90-degree look-down, directly overhead.
     - ZOOM: Close-up on the main furniture/object. Fill the canvas.
-    - "ALIGNMENT: The object must be strictly axis-aligned with the canvas, ensuring all horizontal edges are perfectly parallel to the top and bottom of the image frame.
+    - "ALIGNMENT": The object must be strictly axis-aligned with the canvas, ensuring all horizontal edges are perfectly parallel to the top and bottom of the image frame.
     - "CEILING REMOVAL": Cut away the ceiling to see inside.
     - "OBJECT PERMANENCE": 
       * EVERY small detail on surfaces (towels, soap, faucets, handles, rugs) MUST be present.
@@ -68,7 +68,6 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
-  // Optional: Endpoint for prompt history if you implemented it
   app.get("/api/prompts-history", async (req, res) => {
     try {
       if (storage.getPromptLogs) {
@@ -92,8 +91,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const processedImage = await processImageForGemini(imageData);
 
-      // --- STEP 1: Generate Master Design ---
-
       const modifiedMainImage = await applyPerspectiveMockup(
         processedImage, 
         validatedData.viewAngle, 
@@ -103,8 +100,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Generating Master Design: ${validatedData.viewAngle}, Zoom: ${validatedData.cameraZoom}%`);
 
       let finalPrompt = prompt;
-
-      // [UPDATED] Capture analysis to return it
       let computedStructureAnalysis = "";
 
       const hasRefs = validatedData.referenceImages && validatedData.referenceImages.length > 0;
@@ -114,7 +109,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ((isAngleChange || hasRefs) && validatedData.preservedElements) {
         try {
           console.log("3D Analysis Attempted...");
-          // Reuse if client somehow sent it, otherwise generate
           if (validatedData.structureAnalysis) {
              computedStructureAnalysis = validatedData.structureAnalysis;
              console.log("Using provided 3D Analysis from client.");
@@ -144,7 +138,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         finalPrompt += `\n\nCRITICAL: A Technical Drawing (PDF/Image) has been provided. You MUST strictly adhere to the dimensions, orthographic views, and geometry shown in this drawing. It is the "Ground Truth".`;
       }
 
-      // Log if storage supports it
       if (storage.createPromptLog) {
         await storage.createPromptLog({
             jobType: "generation",
@@ -174,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         generatedImage: mainImage,
         variations: [],
-        structureAnalysis: computedStructureAnalysis // [UPDATED] Return to client
+        structureAnalysis: computedStructureAnalysis 
       });
 
     } catch (error) {
@@ -196,10 +189,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Generating Additional Perspectives...");
       console.log("Requested views:", selectedVariations);
 
-      // [UPDATED] Smart Analysis Handling
       let structureAnalysis = validatedData.structureAnalysis || "";
 
-      // Only run analysis if we DON'T have it yet, but we DO have references + preserved objects
       if (!structureAnalysis && validatedData.referenceImages && validatedData.referenceImages.length > 0 && validatedData.preservedElements) {
         try {
             console.log("Running 3D Structure Analysis for Variations (Not provided by client)...");
@@ -308,14 +299,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // [UPDATED] Save design with optional variations (if known initially)
   app.post("/api/gallery/save", async (req, res) => {
     try {
-      const { originalImage, generatedImage, originalFileName, config } = req.body;
+      const { originalImage, generatedImage, originalFileName, config, variations = [] } = req.body;
 
-      const [originalImageUrl, generatedImageUrl] = await Promise.all([
+      const uploadPromises = [
         uploadImageToStorage(originalImage, "originals"),
         uploadImageToStorage(generatedImage, "generated"),
-      ]);
+      ];
+
+      // Also upload any variations if present initially
+      const variationUrls = await Promise.all(variations.map((v: string) => uploadImageToStorage(v, "generated")));
+
+      const [originalImageUrl, generatedImageUrl] = await Promise.all(uploadPromises);
 
       const design = await storage.saveGeneratedDesign({
         timestamp: Date.now(),
@@ -323,11 +320,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         generatedImageUrl,
         originalFileName,
         config,
+        variations: variationUrls,
       });
       res.json({ success: true, design });
     } catch (error) {
       console.error("Error saving design:", error);
       res.status(500).json({ success: false, error: "Failed to save" });
+    }
+  });
+
+  // [NEW] Update design with variations
+  app.post("/api/gallery/update", async (req, res) => {
+    try {
+      const { id, variations } = req.body;
+      if (!id || !variations || !Array.isArray(variations)) {
+        return res.status(400).json({ success: false, error: "Invalid data" });
+      }
+
+      // Upload new variations
+      const variationUrls = await Promise.all(variations.map((v: string) => uploadImageToStorage(v, "generated")));
+
+      // Fetch existing to append (or overwrite based on your logic, appending is safer)
+      const existing = await storage.getGeneratedDesign(id);
+      const existingVars = (existing?.variations as string[]) || [];
+      const allVariations = [...existingVars, ...variationUrls];
+
+      const updated = await storage.updateGeneratedDesign(id, { variations: allVariations });
+      res.json({ success: true, design: updated });
+    } catch (error) {
+      console.error("Error updating design:", error);
+      res.status(500).json({ success: false, error: "Failed to update" });
     }
   });
 

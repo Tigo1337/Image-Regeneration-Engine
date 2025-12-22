@@ -23,6 +23,9 @@ export default function Home() {
   // State to store the expensive 3D analysis
   const [structureAnalysis, setStructureAnalysis] = useState<string | null>(null);
 
+  // [NEW] Track the ID of the saved design so we can attach variations later
+  const [savedDesignId, setSavedDesignId] = useState<string | null>(null);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -36,7 +39,8 @@ export default function Home() {
     setModificationPrompt("");
     setReferenceImages([]); 
     setReferenceDrawing(null); 
-    setStructureAnalysis(null); // Reset analysis on new image
+    setStructureAnalysis(null); 
+    setSavedDesignId(null);
   };
 
   const generateMutation = useMutation({
@@ -53,7 +57,6 @@ export default function Home() {
       if (response.success && response.generatedImage) {
         setGeneratedImage(response.generatedImage);
 
-        // [UPDATED] Store the analysis if the server returned it
         if (response.structureAnalysis) {
             console.log("Received 3D Structure Analysis from server, caching for variations...");
             setStructureAnalysis(response.structureAnalysis);
@@ -65,12 +68,17 @@ export default function Home() {
 
         if (originalImage && currentFormData) {
           try {
-            await apiRequest("POST", "/api/gallery/save", {
+            const saveRes = await apiRequest("POST", "/api/gallery/save", {
               originalImage,
               generatedImage: response.generatedImage,
               originalFileName,
               config: currentFormData,
             });
+            // [NEW] Capture ID
+            const savedData = await saveRes.json();
+            if (savedData.success && savedData.design?.id) {
+               setSavedDesignId(savedData.design.id);
+            }
             queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
           } catch (error) {
             console.error("Failed to save design to gallery:", error);
@@ -103,9 +111,23 @@ export default function Home() {
       const res = await apiRequest("POST", "/api/variations", data);
       return res.json();
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       if (response.success && response.variations) {
         setGeneratedVariations(response.variations);
+
+        // [NEW] Save variations to the gallery if we have a parent design
+        if (savedDesignId) {
+            try {
+                await apiRequest("POST", "/api/gallery/update", {
+                    id: savedDesignId,
+                    variations: response.variations
+                });
+                toast({ title: "Gallery Updated", description: "Variations saved to gallery." });
+            } catch(e) {
+                console.error("Failed to save variations:", e);
+            }
+        }
+
         toast({
           title: "Perspectives Generated!",
           description: `Created ${response.variations.length} new views.`,
@@ -160,16 +182,15 @@ export default function Home() {
     }
   };
 
-  // [UPDATED] Fixed Spread Order
   const handleGenerateVariations = (selectedVariations: string[]) => {
     if (!generatedImage || !currentFormData) return;
 
     variationsMutation.mutate({
-      ...currentFormData, // <--- SPREAD FIRST (Defaults)
+      ...currentFormData, 
       imageData: generatedImage, 
       prompt: "Generate variations", 
       selectedVariations, 
-      structureAnalysis: structureAnalysis || undefined, // <--- OVERRIDE LAST (Specifics)
+      structureAnalysis: structureAnalysis || undefined, 
     });
   };
 
@@ -183,6 +204,7 @@ export default function Home() {
     setReferenceImages([]);
     setReferenceDrawing(null);
     setStructureAnalysis(null);
+    setSavedDesignId(null);
   };
 
   return (
