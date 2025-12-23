@@ -1,21 +1,17 @@
 import sharp from "sharp";
 
-// [FIXED] Robust Base64 decoder that handles spaces/newlines/different headers safely
+// Robust Base64 decoder
 function decodeBase64(dataString: string) {
-  // If it contains a comma, it's a Data URL (e.g. "data:image/png;base64,....")
-  // We just want the part AFTER the comma.
   if (dataString.includes(',')) {
     const parts = dataString.split(',');
     return Buffer.from(parts[1], 'base64');
   }
-  // Otherwise, assume it's already a raw base64 string
   return Buffer.from(dataString, 'base64');
 }
 
 export async function processImageForGemini(imageData: string): Promise<string> {
   const buffer = decodeBase64(imageData);
 
-  // Resize to max 1024x1024 to avoid token limits, preserve aspect ratio
   const processedBuffer = await sharp(buffer)
     .resize(1024, 1024, {
       fit: 'inside',
@@ -54,10 +50,83 @@ export async function padImage(imageData: string, padding: number): Promise<stri
   return `data:image/jpeg;base64,${processedBuffer.toString('base64')}`;
 }
 
-/**
- * Applies a perspective distortion to simulate different camera angles.
- * Used to "hint" the AI about the desired 3D view before generation.
- */
+// [NEW] Logic to prepare input image for Room Design based on detected object size
+export async function applySmartObjectZoom(
+  imageData: string,
+  box: number[], // [ymin, xmin, ymax, xmax] (0-1000)
+  targetFillRatio: number // e.g., 80%
+): Promise<string> {
+  const buffer = decodeBase64(imageData);
+  const metadata = await sharp(buffer).metadata();
+  const imgW = metadata.width!;
+  const imgH = metadata.height!;
+
+  const [ymin, xmin, ymax, xmax] = box;
+
+  // 1. Calculate Product Dimensions in Pixels
+  const prodW = ((xmax - xmin) / 1000) * imgW;
+  const prodH = ((ymax - ymin) / 1000) * imgH;
+  const prodCenterX = ((xmin + xmax) / 2000) * imgW;
+  const prodCenterY = ((ymin + ymax) / 2000) * imgH;
+
+  // 2. Calculate Target Canvas Size based on Fill Ratio
+  // If we want product to be 80% of width: TargetW = ProdW / 0.8
+  const targetCanvasW = prodW / (targetFillRatio / 100);
+
+  // Maintain original aspect ratio for the generation input
+  const aspect = imgW / imgH;
+  const targetCanvasH = targetCanvasW / aspect;
+
+  // 3. Define Extraction Region (Virtual)
+  const cropLeft = Math.round(prodCenterX - (targetCanvasW / 2));
+  const cropTop = Math.round(prodCenterY - (targetCanvasH / 2));
+  const cropW = Math.round(targetCanvasW);
+  const cropH = Math.round(targetCanvasH);
+
+  // 4. Handle Zoom In vs Zoom Out
+  // If targetCanvas < img (Zoom In), we crop.
+  // If targetCanvas > img (Zoom Out), we pad.
+
+  // We use the same composite logic as Smart Crop to handle both safely
+  // but we extract intersection first to be efficient
+
+  const srcLeft = Math.max(0, cropLeft);
+  const srcTop = Math.max(0, cropTop);
+  const srcRight = Math.min(imgW, cropLeft + cropW);
+  const srcBottom = Math.min(imgH, cropTop + cropH);
+
+  const srcWidth = srcRight - srcLeft;
+  const srcHeight = srcBottom - srcTop;
+
+  // Fallback if calculation fails
+  if (srcWidth <= 0 || srcHeight <= 0) return imageData;
+
+  const extractedPiece = await sharp(buffer)
+    .extract({ left: srcLeft, top: srcTop, width: srcWidth, height: srcHeight })
+    .toBuffer();
+
+  const destLeft = srcLeft - cropLeft;
+  const destTop = srcTop - cropTop;
+
+  const canvas = await sharp({
+    create: {
+      width: cropW,
+      height: cropH,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 1 } // White padding for outpainting
+    }
+  })
+  .composite([{
+    input: extractedPiece,
+    top: Math.max(0, destTop),
+    left: Math.max(0, destLeft)
+  }])
+  .jpeg()
+  .toBuffer();
+
+  return `data:image/jpeg;base64,${canvas.toString('base64')}`;
+}
+
 export async function applyPerspectiveMockup(
   imageData: string, 
   viewAngle: "Original" | "Front" | "Side" | "Top", 
@@ -74,9 +143,8 @@ export async function applyPerspectiveMockup(
 
   let pipeline = image;
 
-  // 1. Handle Zoom (Crop center)
   if (zoomLevel > 100) {
-    const factor = 100 / zoomLevel; // e.g. 0.5 for 200% zoom
+    const factor = 100 / zoomLevel; 
     const newW = Math.round(w * factor);
     const newH = Math.round(h * factor);
     const left = Math.round((w - newW) / 2);
@@ -85,8 +153,7 @@ export async function applyPerspectiveMockup(
     pipeline = pipeline.extract({ left, top, width: newW, height: newH }).resize(w, h);
   } 
   else if (zoomLevel < 100) {
-    // Zoom out = Pad with white
-    const factor = 100 / zoomLevel; // e.g. 2.0 for 50% zoom
+    const factor = 100 / zoomLevel;
     const targetW = Math.round(w * factor);
     const targetH = Math.round(h * factor);
     const padX = Math.round((targetW - w) / 2);
@@ -98,20 +165,15 @@ export async function applyPerspectiveMockup(
     });
   }
 
-  // 2. Handle Perspective Mockups (Composite over background)
   if (viewAngle === "Side") {
-    // Create a white canvas 20% wider
     const canvasW = Math.round(w * 1.2);
     const canvasH = h;
-
-    // Resize image to be slightly narrower to simulate angle
     const skewedW = Math.round(w * 0.85); 
 
     const skewedImage = await pipeline
       .resize(skewedW, h)
       .toBuffer();
 
-    // Composite: Place image to the right to imply looking from the left
     const finalBuffer = await sharp({
       create: {
         width: canvasW,
@@ -122,7 +184,7 @@ export async function applyPerspectiveMockup(
     })
     .composite([{
       input: skewedImage,
-      left: canvasW - skewedW, // Align right
+      left: canvasW - skewedW, 
       top: 0
     }])
     .jpeg()
@@ -131,7 +193,6 @@ export async function applyPerspectiveMockup(
     return `data:image/jpeg;base64,${finalBuffer.toString('base64')}`;
   }
 
-  // Default / Front / Top (Clean passthrough)
   const output = await pipeline.toBuffer();
   return `data:image/jpeg;base64,${output.toString('base64')}`;
 }

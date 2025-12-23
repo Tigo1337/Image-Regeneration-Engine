@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { roomRedesignRequestSchema, smartCropRequestSchema } from "@shared/schema";
 import { generateRoomRedesign, analyzeObjectStructure, detectObjectBoundingBox } from "./gemini"; 
-import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup } from "./image-utils";
+import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup, applySmartObjectZoom } from "./image-utils"; //
 import { storage } from "./storage";
 import { uploadImageToStorage } from "./image-storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
@@ -92,15 +92,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const processedImage = await processImageForGemini(imageData);
 
-      const modifiedMainImage = await applyPerspectiveMockup(
-        processedImage, 
-        validatedData.viewAngle, 
-        validatedData.cameraZoom
-      );
-
-      console.log(`Generating Master Design: ${validatedData.viewAngle}, Zoom: ${validatedData.cameraZoom}%`);
-
+      let modifiedMainImage = processedImage;
       let finalPrompt = prompt;
+
+      // [UPDATED] Check for Smart Zoom vs Manual Zoom
+      if (validatedData.useSmartZoom && validatedData.smartZoomObject && validatedData.smartFillRatio) {
+         console.log(`Applying Smart Object Zoom on "${validatedData.smartZoomObject}" at ${validatedData.smartFillRatio}%`);
+
+         const box = await detectObjectBoundingBox(processedImage, validatedData.smartZoomObject);
+         if (box) {
+            modifiedMainImage = await applySmartObjectZoom(
+                processedImage, 
+                box, 
+                validatedData.smartFillRatio
+            );
+
+            // [NEW] Inject Explicit Size Instruction into Prompt
+            finalPrompt += `\n\n=== COMPOSITION CONSTRAINT (STRICT) ===
+            The input image has been strictly cropped so that the "${validatedData.smartZoomObject}" occupies exactly ${validatedData.smartFillRatio}% of the canvas width.
+            1. LOCK CAMERA DISTANCE: You are FORBIDDEN from zooming in or out. Maintain this exact frame.
+            2. PRESERVE SCALE: The edges of the ${validatedData.smartZoomObject} must align perfectly with the input image. 
+            3. FILL RATIO: Ensure the object remains ${validatedData.smartFillRatio}% of the image width in your final generation.`;
+
+         } else {
+            console.warn("Smart Zoom: Object not found, falling back to original.");
+         }
+      } else {
+         // Fallback to manual slider zoom
+         modifiedMainImage = await applyPerspectiveMockup(
+            processedImage, 
+            validatedData.viewAngle, 
+            validatedData.cameraZoom
+         );
+      }
+
+      console.log(`Generating Master Design: ${validatedData.viewAngle}`);
+
       let computedStructureAnalysis = "";
 
       const hasRefs = validatedData.referenceImages && validatedData.referenceImages.length > 0;
@@ -152,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const mainImage = await generateRoomRedesign({
-        imageBase64: modifiedMainImage, 
+        imageBase64: modifiedMainImage, // Now potentially smart-zoomed
         referenceImages: validatedData.referenceImages,
         referenceDrawing: validatedData.referenceDrawing,
         preservedElements: validatedData.preservedElements,
@@ -180,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // [UPDATED] Smart Crop Route with "Container Fit" Logic
+  // [Smart Crop Route - Preserved]
   app.post("/api/smart-crop", async (req, res) => {
     try {
       const { imageData, ...formData } = req.body;
@@ -190,7 +217,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Processing Smart Crop: Object=${objectName}, Fill=${fillRatio}%`);
 
-      // 1. Get Coordinates
       const box = await detectObjectBoundingBox(imageData, objectName);
 
       if (!box) {
@@ -198,23 +224,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const [ymin, xmin, ymax, xmax] = box;
-      console.log(`Detection: [${ymin}, ${xmin}, ${ymax}, ${xmax}]`);
 
-      // 2. Load Image Metadata
       const imgBuffer = Buffer.from(imageData.replace(/^data:image\/\w+;base64,/, ""), "base64");
       const metadata = await sharp(imgBuffer).metadata();
       const imgW = metadata.width!;
       const imgH = metadata.height!;
 
-      // 3. Product Dimensions
       const prodW = ((xmax - xmin) / 1000) * imgW;
       const prodH = ((ymax - ymin) / 1000) * imgH;
       const prodCenterX = ((xmin + xmax) / 2000) * imgW;
       const prodCenterY = ((ymin + ymax) / 2000) * imgH;
 
-      // 4. Calculate Ideal Crop
       let targetCropWidth = prodW / (fillRatio / 100);
-      let targetCropHeight = targetCropWidth; // Default 1:1
+      let targetCropHeight = targetCropWidth; 
 
       if (aspectRatio === "9:16") {
           targetCropHeight = targetCropWidth * (16/9);
@@ -227,45 +249,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
           targetCropHeight = targetCropWidth * imgRatio;
       }
 
-      // 5. [NEW] Container Fit Logic
-      // If the calculated crop is larger than the image, shrink it to fit.
-      // We calculate a scaling factor that ensures both width and height fit inside the image.
-
       let scaleFactor = 1.0;
+      if (targetCropWidth > imgW) scaleFactor = Math.min(scaleFactor, imgW / targetCropWidth);
+      if (targetCropHeight > imgH) scaleFactor = Math.min(scaleFactor, imgH / targetCropHeight);
 
-      if (targetCropWidth > imgW) {
-         scaleFactor = Math.min(scaleFactor, imgW / targetCropWidth);
-      }
-      if (targetCropHeight > imgH) {
-         scaleFactor = Math.min(scaleFactor, imgH / targetCropHeight);
-      }
-
-      // Apply scale (this effectively increases the fill ratio because we are force-zooming in)
       const finalCropWidth = targetCropWidth * scaleFactor;
       const finalCropHeight = targetCropHeight * scaleFactor;
 
-      // 6. Calculate Top/Left with Clamping
-      // Ensure the box stays within bounds [0, imgW] and [0, imgH]
       let cropLeft = Math.round(prodCenterX - (finalCropWidth / 2));
       let cropTop = Math.round(prodCenterY - (finalCropHeight / 2));
       const cropWidthInt = Math.floor(finalCropWidth);
       const cropHeightInt = Math.floor(finalCropHeight);
 
-      // Clamp Left/Top
       cropLeft = Math.max(0, Math.min(cropLeft, imgW - cropWidthInt));
       cropTop = Math.max(0, Math.min(cropTop, imgH - cropHeightInt));
 
-      // 7. Extract
-      // Since we enforced (width <= imgW) and clamped (left), this is safe.
-      const canvas = await sharp(imgBuffer)
-        .extract({ 
-            left: cropLeft, 
-            top: cropTop, 
-            width: cropWidthInt, 
-            height: cropHeightInt 
-        })
-        .png()
+      const srcLeft = Math.max(0, cropLeft);
+      const srcTop = Math.max(0, cropTop);
+      const srcRight = Math.min(imgW, cropLeft + cropWidthInt);
+      const srcBottom = Math.min(imgH, cropTop + cropHeightInt);
+
+      const srcWidth = srcRight - srcLeft;
+      const srcHeight = srcBottom - srcTop;
+
+      if (srcWidth <= 0 || srcHeight <= 0) {
+        throw new Error("Crop region is completely outside the image bounds.");
+      }
+
+      const extractedPiece = await sharp(imgBuffer)
+        .extract({ left: srcLeft, top: srcTop, width: srcWidth, height: srcHeight })
         .toBuffer();
+
+      const destLeft = srcLeft - cropLeft; 
+      const destTop = srcTop - cropTop;
+
+      const canvas = await sharp({
+        create: {
+          width: cropWidthInt,
+          height: cropHeightInt,
+          channels: 4,
+          background: { r: 255, g: 255, b: 255, alpha: 0 } 
+        }
+      })
+      .composite([{
+        input: extractedPiece,
+        top: destTop,
+        left: destLeft
+      }])
+      .png()
+      .toBuffer();
 
       const finalBase64 = `data:image/png;base64,${canvas.toString("base64")}`;
 

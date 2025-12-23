@@ -9,7 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea"; 
 import { Checkbox } from "@/components/ui/checkbox"; 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // [NEW] Tabs
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -27,13 +27,22 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, AlertCircle, FileText, PlusCircle, Layers, ZoomIn, MoveHorizontal, Upload, X, Copy, Crop, ScanEye } from "lucide-react";
+import { 
+  Sparkles, AlertCircle, FileText, PlusCircle, Layers, 
+  ZoomIn, MoveHorizontal, Upload, X, Crop, ScanEye, Info 
+} from "lucide-react";
 import { constructPrompt, type PromptType, styleDescriptions } from "@/lib/prompt-builder";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ControlPanelProps {
   onGenerate: (data: RoomRedesignRequest, prompt: string, batchSize?: number) => void;
   onGenerateVariations?: (selected: string[]) => void;
-  onSmartCrop: (data: SmartCropRequest) => void; // [NEW] Handler
+  onSmartCrop: (data: SmartCropRequest) => void;
   disabled?: boolean;
   isGenerating?: boolean;
   isModificationMode?: boolean;
@@ -62,9 +71,9 @@ export function ControlPanel({
 
   const [styleContext, setStyleContext] = useState("");
   const [selectedVariations, setSelectedVariations] = useState<string[]>(["Front", "Side", "Top"]);
-  const [activeTab, setActiveTab] = useState("design"); // [NEW] Tab State
+  const [activeTab, setActiveTab] = useState("design"); 
 
-  // [NEW] Smart Crop Local State
+  // Local state for Smart Crop Tab
   const [cropObject, setCropObject] = useState("");
   const [cropFill, setCropFill] = useState(80);
   const [cropRatio, setCropRatio] = useState<"1:1" | "9:16" | "16:9" | "4:5">("1:1");
@@ -88,12 +97,17 @@ export function ControlPanel({
       outputFormat: "PNG",
       referenceImages: [],
       referenceDrawing: undefined,
+      useSmartZoom: false,
+      smartZoomObject: "",
+      smartFillRatio: 60,
     },
   });
 
   const watchedValues = useWatch({
     control: form.control,
   });
+
+  const useSmartZoom = watchedValues.useSmartZoom;
 
   useEffect(() => {
     const currentStyle = watchedValues.targetStyle;
@@ -273,6 +287,7 @@ export function ControlPanel({
           <TabsTrigger value="crop">Smart Crop</TabsTrigger>
         </TabsList>
 
+        {/* --- DESIGN TAB --- */}
         <TabsContent value="design" className="mt-4">
           <Form {...form}>
             <form onSubmit={(e) => { e.preventDefault(); handleGenerate(); }} className="space-y-6">
@@ -304,6 +319,7 @@ export function ControlPanel({
                   )}
                 />
 
+                {/* Reference Images */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-1">
                     Reference Images (Optional) <Upload className="w-3 h-3 text-primary" />
@@ -347,6 +363,7 @@ export function ControlPanel({
                   )}
                 </div>
 
+                {/* Drawing */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-1">
                     Reference Drawing (PDF/Img) <FileText className="w-3 h-3 text-primary" />
@@ -437,37 +454,121 @@ export function ControlPanel({
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="cameraZoom"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex justify-between items-center">
-                          <FormLabel className="text-sm font-medium flex items-center gap-1">
-                            Distance / Zoom <ZoomIn className="w-3 h-3 text-primary" />
-                          </FormLabel>
-                          <span className="text-xs text-muted-foreground">
-                            {field.value < 100 ? "Far (Wide)" : field.value > 100 ? "Close-up" : "Original"} ({field.value}%)
-                          </span>
-                        </div>
-                        <FormControl>
-                          <div className="pt-2">
-                            <Slider
-                              min={50}
-                              max={200}
-                              step={10}
-                              value={[field.value]}
-                              onValueChange={(value) => field.onChange(value[0])}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormDescription className="text-xs">
-                          Lower for wide shots, Higher for detail shots.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Smart Zoom Toggle Area */}
+                  <div className="bg-muted/30 p-3 rounded-md border border-border/50 space-y-3">
+                    <FormField
+                        control={form.control}
+                        name="useSmartZoom"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg p-0 space-y-0">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-sm font-medium flex items-center gap-1">
+                                Smart Scale & Zoom <ScanEye className="w-3 h-3 text-primary" />
+                              </FormLabel>
+                              <FormDescription className="text-[10px]">
+                                Automatically resize product before generation.
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {useSmartZoom ? (
+                        <>
+                          <FormField
+                            control={form.control}
+                            name="smartZoomObject"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input placeholder="Target Object (e.g. Bathtub)" {...field} className="h-8 text-xs" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="smartFillRatio"
+                            render={({ field }) => (
+                              <FormItem>
+                                <div className="flex justify-between items-center mb-1">
+                                  <div className="flex items-center gap-1">
+                                      <Label className="text-xs font-medium">Fill Ratio</Label>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger type="button"><Info className="w-3 h-3 text-muted-foreground" /></TooltipTrigger>
+                                          <TooltipContent className="max-w-[200px] text-xs">
+                                            <p>Percentage of the image width occupied by the product.</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                  </div>
+                                  <span className="text-xs font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                                      {field.value}%
+                                  </span>
+                                </div>
+
+                                <FormControl>
+                                  <Slider
+                                    min={20}
+                                    max={100}
+                                    step={5}
+                                    value={[field.value || 60]}
+                                    onValueChange={(val) => field.onChange(val[0])}
+                                    className="py-1"
+                                  />
+                                </FormControl>
+
+                                <div className="flex justify-between text-[10px] text-muted-foreground font-medium mt-1 px-1">
+                                  <span>Wide Shot (Small)</span>
+                                  <span>Close-up (Large)</span>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </>
+                      ) : (
+                        <FormField
+                          control={form.control}
+                          name="cameraZoom"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="flex justify-between items-center">
+                                <Label className="text-xs flex items-center gap-1">
+                                  Manual Zoom <ZoomIn className="w-3 h-3 text-primary" />
+                                </Label>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {field.value}%
+                                </span>
+                              </div>
+                              <FormControl>
+                                <div className="pt-2">
+                                  <Slider
+                                    min={50}
+                                    max={200}
+                                    step={10}
+                                    value={[field.value]}
+                                    onValueChange={(value) => field.onChange(value[0])}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormDescription className="text-[10px]">
+                                Simple center crop (100% = Original).
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -613,7 +714,7 @@ export function ControlPanel({
           </Form>
         </TabsContent>
 
-        {/* --- NEW SMART CROP FORM --- */}
+        {/* --- SMART CROP TAB --- */}
         <TabsContent value="crop" className="space-y-6 mt-4">
            <div className="bg-muted/50 p-4 rounded-lg border border-border space-y-4">
              <div className="flex items-start gap-2">

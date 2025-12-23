@@ -45,13 +45,18 @@ export const roomRedesignRequestSchema = z.object({
   referenceDrawing: z.string().optional(),
 
   // Allow passing existing analysis to avoid re-generation
-  structureAnalysis: z.string().nullish(), // .nullish() allows null/undefined
+  structureAnalysis: z.string().nullish(), 
 
   // Angle for Rotation
   viewAngle: z.enum(viewAngles).default("Original"),
 
-  // Zoom Level
+  // Standard Zoom Level (Legacy/Simple)
   cameraZoom: z.number().min(50).max(200).default(100),
+
+  // [NEW] Smart Object Zoom parameters
+  useSmartZoom: z.boolean().default(false),
+  smartZoomObject: z.string().optional(),
+  smartFillRatio: z.number().min(20).max(100).optional(), // % of width
 
   targetStyle: z.enum(availableStyles),
   quality: z.enum(["Standard", "High Fidelity (2K)", "Ultra (4K)"]),
@@ -60,10 +65,10 @@ export const roomRedesignRequestSchema = z.object({
   outputFormat: z.enum(outputFormats).default("PNG"),
 });
 
-// [NEW] Smart Crop Schema
+// Smart Crop Schema (unchanged)
 export const smartCropRequestSchema = z.object({
   objectName: z.string().min(1, "Object name is required"),
-  fillRatio: z.number().min(10).max(100).default(80), // Percentage of width
+  fillRatio: z.number().min(10).max(100).default(80), 
   aspectRatio: z.enum(["1:1", "9:16", "16:9", "4:5", "Original"]),
 });
 
@@ -92,7 +97,6 @@ export const generatedDesigns = pgTable("generated_designs", {
   generatedImageUrl: text("generated_image_url").notNull(),
   originalFileName: text("original_file_name").notNull(),
   config: jsonb("config").notNull(),
-  // [NEW] Store variations as a JSON array of strings (URLs)
   variations: jsonb("variations").$type<string[]>().default([]),
 });
 
