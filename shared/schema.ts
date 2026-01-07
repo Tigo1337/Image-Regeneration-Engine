@@ -16,6 +16,11 @@ export const availableStyles = [
   "Maximalist",
 ] as const;
 
+// [NEW] Dimension Position Options
+export const heightPositions = ["Left", "Right"] as const;
+export const widthPositions = ["Top", "Bottom"] as const;
+export const depthPositions = ["Left", "Right"] as const;
+
 // [NEW] Updated Product Types for Dimensional Tool
 export const productTypes = [
   "Bathtub",
@@ -47,8 +52,11 @@ export const roomRedesignRequestSchema = z.object({
   // Dimensional Fields
   productType: z.enum(productTypes).optional(),
   productHeight: z.string().optional(),
+  productHeightPosition: z.enum(heightPositions).default("Right").optional(), // [NEW]
   productWidth: z.string().optional(),
+  productWidthPosition: z.enum(widthPositions).default("Bottom").optional(), // [NEW]
   productDepth: z.string().optional(),
+  productDepthPosition: z.enum(depthPositions).default("Right").optional(), // [NEW]
   showTopLegend: z.boolean().default(true),
   showBottomDisclaimer: z.boolean().default(true),
 

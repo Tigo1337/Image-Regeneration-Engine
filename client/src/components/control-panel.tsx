@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, productTypes, type RoomRedesignRequest, type SmartCropRequest } from "@shared/schema";
+import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, productTypes, heightPositions, widthPositions, depthPositions, type RoomRedesignRequest, type SmartCropRequest } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,8 +102,11 @@ export function ControlPanel({
       smartFillRatio: 60,
       productType: "Shower",
       productHeight: "74 3/8\"",
+      productHeightPosition: "Right",
       productWidth: "29 3/4\"",
+      productWidthPosition: "Bottom",
       productDepth: "32\"",
+      productDepthPosition: "Right",
       showTopLegend: true,
       showBottomDisclaimer: true,
     },
@@ -777,37 +780,115 @@ export function ControlPanel({
                   )}
                 />
 
-                <div className="grid grid-cols-3 gap-2">
-                  <FormField
-                    control={form.control}
-                    name="productHeight"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Height</FormLabel>
-                        <FormControl><Input {...field} placeholder="74 3/8\" className="h-8 text-xs" /></FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="productWidth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Width</FormLabel>
-                        <FormControl><Input {...field} placeholder="29 3/4\" className="h-8 text-xs" /></FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="productDepth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Depth</FormLabel>
-                        <FormControl><Input {...field} placeholder="32\" className="h-8 text-xs" /></FormControl>
-                      </FormItem>
-                    )}
-                  />
+                {/* HEIGHT ROW */}
+                <div className="grid grid-cols-6 gap-2 items-end">
+                  <div className="col-span-4">
+                    <FormField
+                      control={form.control}
+                      name="productHeight"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Height</FormLabel>
+                          <FormControl><Input {...field} placeholder="74 3/8\" className="h-8 text-xs" /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                     <FormField
+                      control={form.control}
+                      name="productHeightPosition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] text-muted-foreground">Position</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {heightPositions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* WIDTH ROW */}
+                <div className="grid grid-cols-6 gap-2 items-end">
+                  <div className="col-span-4">
+                    <FormField
+                      control={form.control}
+                      name="productWidth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Width</FormLabel>
+                          <FormControl><Input {...field} placeholder="29 3/4\" className="h-8 text-xs" /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                     <FormField
+                      control={form.control}
+                      name="productWidthPosition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] text-muted-foreground">Position</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {widthPositions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* DEPTH ROW */}
+                <div className="grid grid-cols-6 gap-2 items-end">
+                  <div className="col-span-4">
+                     <FormField
+                      control={form.control}
+                      name="productDepth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Depth</FormLabel>
+                          <FormControl><Input {...field} placeholder="32\" className="h-8 text-xs" /></FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                     <FormField
+                      control={form.control}
+                      name="productDepthPosition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] text-muted-foreground">Position</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {depthPositions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 <Separator />

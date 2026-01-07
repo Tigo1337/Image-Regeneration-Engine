@@ -33,8 +33,11 @@ export interface PromptConfig {
   customStyleDescription?: string; 
   productType?: string;
   productHeight?: string;
+  productHeightPosition?: string; // [NEW]
   productWidth?: string;
+  productWidthPosition?: string;  // [NEW]
   productDepth?: string;
+  productDepthPosition?: string;  // [NEW]
   showTopLegend?: boolean;
   showBottomDisclaimer?: boolean;
 }
@@ -45,28 +48,37 @@ export function constructDimensionalPrompt(config: PromptConfig): string {
     productHeight, 
     productWidth, 
     productDepth,
+    productHeightPosition = "Right",
+    productWidthPosition = "Bottom",
+    productDepthPosition = "Left",
     showTopLegend = true, 
     showBottomDisclaimer = true 
   } = config;
 
-  let annotationLogic = "";
+let annotationLogic = "";
+
+  // Helper text to make the prompt instruction clear
+  const hPos = productHeightPosition.toUpperCase(); // LEFT or RIGHT
+  const wPos = productWidthPosition.toUpperCase();  // TOP or BOTTOM
+  const dPos = productDepthPosition.toUpperCase();  // LEFT or RIGHT
 
   if (productType === "Shower" || productType === "Tub Shower") {
-    annotationLogic = `- HEIGHT: Draw a vertical line matching the total vertical bounds of the enclosure. Label: '${productHeight}'.
-  - WIDTH: Draw a horizontal line across the front threshold or base. Label: '${productWidth}'.
-  - DEPTH: Draw a line along the side wall/glass panel following depth perspective. Label: '${productDepth}'.`;
+    annotationLogic = `- HEIGHT: Draw a vertical line matching the total vertical bounds on the ${hPos} side of the enclosure. Label: '${productHeight}'.
+  - WIDTH: Draw a horizontal line across the ${wPos} (threshold or header) of the unit. Label: '${productWidth}'.
+  - DEPTH: Draw a line along the ${dPos} side wall/glass panel following depth perspective. Label: '${productDepth}'.`;
   } else if (productType === "Shower Base") {
-    annotationLogic = `- WIDTH: Draw a line across the longest horizontal footprint edge. Label: '${productWidth}'.
-  - DEPTH: Draw a line along the perpendicular horizontal footprint edge (depth). Label: '${productDepth}'.
+    annotationLogic = `- WIDTH: Draw a line across the ${wPos} horizontal footprint edge. Label: '${productWidth}'.
+  - DEPTH: Draw a line along the ${dPos} horizontal footprint edge (depth). Label: '${productDepth}'.
   - HEIGHT (LIP): Draw a small vertical callout line at the front threshold/lip. Label: '${productHeight}'.`;
   } else if (productType === "Shower Door") {
-    annotationLogic = `- HEIGHT: Draw a vertical line matching the glass pane height. Label: '${productHeight}'.
-  - WIDTH: Draw a horizontal line across the total door span. Label: '${productWidth}'.
+    annotationLogic = `- HEIGHT: Draw a vertical line on the ${hPos} side matching the glass pane height. Label: '${productHeight}'.
+  - WIDTH: Draw a horizontal line across the ${wPos} of the total door span. Label: '${productWidth}'.
   - DEPTH: Draw a small horizontal callout for the frame/glass thickness. Label: '${productDepth}'.`;
   } else {
-    annotationLogic = `- HEIGHT: Draw a vertical line for the total exterior height. Label: '${productHeight}'.
-  - WIDTH: Draw a horizontal line for the total exterior width across the front. Label: '${productWidth}'.
-  - DEPTH: Draw a line following depth perspective for the exterior side. Label: '${productDepth}'.`;
+    // Standard Volumetric
+    annotationLogic = `- HEIGHT: Draw a vertical line for the total exterior height on the ${hPos} side. Label: '${productHeight}'.
+  - WIDTH: Draw a horizontal line for the total exterior width across the ${wPos}. Label: '${productWidth}'.
+  - DEPTH: Draw a line following depth perspective for the exterior ${dPos} side. Label: '${productDepth}'.`;
   }
 
   return `Act as an expert Image Compositor and Technical Editor. Do NOT act as a 3D renderer. 
@@ -79,12 +91,13 @@ export function constructDimensionalPrompt(config: PromptConfig): string {
   - LINE WEIGHT: All dimension lines and arrows must be exactly 2px thick.
   - STYLE: No bold, no italics. Lines must be solid and clean.
 
-  2. DIMENSION VALUES (CRITICAL - STRICT ADHERENCE):
-  - You MUST use the exact text strings provided below. Do NOT add, remove, or convert units (", in, mm).
-  - Use EXACTLY these labels:
-  * HEIGHT LABEL: '${productHeight}'
-  * WIDTH LABEL: '${productWidth}'
-  * DEPTH LABEL: '${productDepth}'
+  2. DIMENSION VALUES & PLACEMENT (CRITICAL):
+  - You MUST use the exact text strings provided below.
+  - You MUST place the lines exactly where specified relative to the product.
+
+  * HEIGHT LABEL: '${productHeight}' -> Position: ${hPos} of product.
+  * WIDTH LABEL: '${productWidth}' -> Position: ${wPos} of product.
+  * DEPTH LABEL: '${productDepth}' -> Position: ${dPos} side of product.
 
   3. IMAGE PRESERVATION & COMPOSITION:
   - Pixel Freeze: Strictly preserve the angle, perspective, lighting, and texture of the original product.
@@ -97,7 +110,7 @@ export function constructDimensionalPrompt(config: PromptConfig): string {
   - Ensure all lines follow the vanishing points/perspective of the original photo.
   - PADDING RULE: All corner text (Legend/Disclaimer) MUST be placed exactly 40 pixels from the canvas edges.
 
-  5. ANNOTATION PLACEMENT:
+  5. ANNOTATION PLACEMENT INSTRUCTIONS:
   ${annotationLogic}
 
   ${showTopLegend ? `
@@ -114,7 +127,7 @@ export function constructDimensionalPrompt(config: PromptConfig): string {
 
   8. NEGATIVE CONSTRAINTS:
   - No colors other than #000000.
-  - No serif fonts (e.g., Times New Roman).
+  - No serif fonts.
   - No line weights other than 2px.
   - No text sizes other than 12px.
   - No bold fonts.
