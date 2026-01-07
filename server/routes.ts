@@ -443,6 +443,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("=== Dimensional Image Generation ===");
       console.log(`Product Type: ${validatedData.productType}`);
       console.log(`Dimensions: H=${validatedData.productHeight}, W=${validatedData.productWidth}, D=${validatedData.productDepth}`);
+      console.log(`Placements: H=${validatedData.heightPlacement}, W=${validatedData.widthPlacement}, D=${validatedData.depthPlacement}`);
+      console.log(`Fill Ratio: ${validatedData.productFillRatio}%`);
 
       const processedImage = await processImageForGemini(imageData);
       const dimensionalPrompt = constructDimensionalPrompt(validatedData);
@@ -463,6 +465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               width: validatedData.widthPlacement,
               depth: validatedData.depthPlacement,
             },
+            productFillRatio: validatedData.productFillRatio,
             showLegend: validatedData.showTopLegend,
             showDisclaimer: validatedData.showBottomDisclaimer,
           },

@@ -108,6 +108,7 @@ export const dimensionalImageRequestSchema = z.object({
   heightPlacement: z.enum(heightPlacements).default("Left Side (Vertical)"),
   widthPlacement: z.enum(widthPlacements).default("Front Bottom"),
   depthPlacement: z.enum(depthPlacements).default("Left Side (Perspective)"),
+  productFillRatio: z.number().min(20).max(90).default(60),
   showTopLegend: z.boolean().default(true),
   showBottomDisclaimer: z.boolean().default(true),
 });

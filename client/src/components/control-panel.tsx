@@ -89,6 +89,7 @@ export function ControlPanel({
   const [dimHeightPlacement, setDimHeightPlacement] = useState<typeof heightPlacements[number]>("Left Side (Vertical)");
   const [dimWidthPlacement, setDimWidthPlacement] = useState<typeof widthPlacements[number]>("Front Bottom");
   const [dimDepthPlacement, setDimDepthPlacement] = useState<typeof depthPlacements[number]>("Left Side (Perspective)");
+  const [dimFillRatio, setDimFillRatio] = useState(60);
   const [dimShowLegend, setDimShowLegend] = useState(true);
   const [dimShowDisclaimer, setDimShowDisclaimer] = useState(true);
 
@@ -917,6 +918,25 @@ export function ControlPanel({
                    </div>
                 </div>
 
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Product Fill Ratio</Label>
+                    <span className="text-sm font-mono text-primary">{dimFillRatio}%</span>
+                  </div>
+                  <Slider
+                    value={[dimFillRatio]}
+                    onValueChange={(v) => setDimFillRatio(v[0])}
+                    min={20}
+                    max={90}
+                    step={5}
+                    className="my-2"
+                    data-testid="slider-dim-fill-ratio"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Controls how much space the product occupies in the final image (20% = more margin, 90% = fills frame)
+                  </p>
+                </div>
+
                 <div className="space-y-3 pt-2">
                    <div className="flex items-center justify-between">
                      <div className="space-y-0.5">
@@ -959,6 +979,7 @@ export function ControlPanel({
                         heightPlacement: dimHeightPlacement,
                         widthPlacement: dimWidthPlacement,
                         depthPlacement: dimDepthPlacement,
+                        productFillRatio: dimFillRatio,
                         showTopLegend: dimShowLegend,
                         showBottomDisclaimer: dimShowDisclaimer,
                       }).substring(0, 500)}...
@@ -980,6 +1001,7 @@ export function ControlPanel({
                  heightPlacement: dimHeightPlacement,
                  widthPlacement: dimWidthPlacement,
                  depthPlacement: dimDepthPlacement,
+                 productFillRatio: dimFillRatio,
                  showTopLegend: dimShowLegend,
                  showBottomDisclaimer: dimShowDisclaimer,
                })}
