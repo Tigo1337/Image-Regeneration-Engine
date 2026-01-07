@@ -17,8 +17,11 @@ export const availableStyles = [
   "Maximalist",
 ] as const;
 
-// Prompt types
-export const promptTypes = ["room-scene"] as const;
+// [NEW] Product Types for Dimensional Tool
+export const productTypes = ["Shower Unit", "Shower Base"] as const;
+
+// Prompt types - UPDATED
+export const promptTypes = ["room-scene", "dimensional"] as const;
 
 // Output formats
 export const outputFormats = ["PNG", "JPEG", "WebP"] as const;
@@ -31,9 +34,18 @@ export const viewAngles = [
   "Top"
 ] as const;
 
-// Room redesign request schema
+// Room redesign request schema - UPDATED
 export const roomRedesignRequestSchema = z.object({
   promptType: z.enum(promptTypes).default("room-scene"),
+
+  // Dimensional Fields [NEW]
+  productType: z.enum(productTypes).optional(),
+  productHeight: z.string().optional(),
+  productWidth: z.string().optional(),
+  productDepth: z.string().optional(),
+  showTopLegend: z.boolean().default(true),
+  showBottomDisclaimer: z.boolean().default(true),
+  
   preservedElements: z.string(),
   addedElements: z.string().optional(),
   closeupFocus: z.string().optional(),

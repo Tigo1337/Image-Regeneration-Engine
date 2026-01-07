@@ -1,4 +1,4 @@
-export type PromptType = "room-scene";
+export type PromptType = "room-scene" | "dimensional";
 
 export interface StyleDescription {
   name: string;
@@ -30,8 +30,70 @@ export interface PromptConfig {
   viewAngle?: string;
   cameraZoom?: number; 
   creativityLevel?: number;
-  // [NEW] Allow passing the editable description from UI
   customStyleDescription?: string; 
+  // [NEW] Dimensional Tool Fields
+  productType?: string;
+  productHeight?: string;
+  productWidth?: string;
+  productDepth?: string;
+  showTopLegend?: boolean;
+  showBottomDisclaimer?: boolean;
+}
+
+export function constructDimensionalPrompt(config: PromptConfig): string {
+  const { 
+    productType, 
+    productHeight, 
+    productWidth, 
+    productDepth,
+    showTopLegend = true, 
+    showBottomDisclaimer = true 
+  } = config;
+
+  return `Act as an expert Image Compositor and Technical Editor. Do NOT act as a 3D renderer. 
+Your goal is to add technical annotations to the attached image while preserving the original product photography exactly.
+
+1. DIMENSION VALUES (CRITICAL - STRICT ADHERENCE):
+- You MUST use the exact text strings provided below. Do NOT add, remove, or convert units (", in, mm).
+- Use EXACTLY these labels:
+  * HEIGHT LABEL: '${productHeight}'
+  * WIDTH LABEL: '${productWidth}'
+  * DEPTH LABEL: '${productDepth}'
+
+2. IMAGE PRESERVATION & COMPOSITION:
+- Pixel Freeze: Strictly preserve the angle, perspective, lighting, and texture of the original product. Do not re-render.
+- Target Size: The product should occupy exactly 60% of the vertical space of the final image.
+- Outpainting: Zoom Out by adding a wide, seamless white border. The final output must be 1:1 (Square).
+
+3. SPATIAL ANALYSIS & PADDING:
+- Identify the 3D bounding box of the product. 
+- Dimension lines must be 'offset' (distanced) from the product by roughly 10% of the product's width.
+- Ensure all lines follow the vanishing points/perspective of the original photo.
+- PADDING RULE: All corner text (Legend/Disclaimer) MUST be placed exactly 40 pixels from the canvas edges.
+
+4. ANNOTATION PLACEMENT:
+${productType === "Shower Unit" ? `
+- HEIGHT: Draw a vertical line matching the total vertical bounds. Label: '${productHeight}'.
+- WIDTH: Draw a horizontal line across the front threshold. Label: '${productWidth}'.
+- DEPTH: Draw a line along the side profile following perspective. Label: '${productDepth}'.` : `
+- WIDTH: Draw a line across the longest horizontal footprint edge. Label: '${productWidth}'.
+- DEPTH: Draw a line along the perpendicular horizontal footprint edge. Label: '${productDepth}'.
+- HEIGHT (LIP): Draw a small vertical callout line at the front threshold/lip. Label: '${productHeight}'.`}
+
+${showTopLegend ? `
+5. TOP LEGEND (Fixed Layout):
+- Text: 'Dimensions in inches (in.)' / 'Dimensions en pouces (po)'
+- Position: Top-Right corner (Exactly 40 pixels padding from Top and Right edges).` : ''}
+
+${showBottomDisclaimer ? `
+6. BOTTOM DISCLAIMER (Fixed Layout):
+- Text: 'All dimensions are approximate. Structure measurements must be verified against the unit to ensure proper fit. Please see the detailed technical drawing for additional measurements.' / 'Toutes ces dimensions sont approximatives. Afin d’assurer une installation parfaite, les dimensions de la structure doivent être vérifiées à partir de l’unité. Référez-vous au dessin technique pour les mesures supplémentaires.'
+- Position: Bottom-Left corner (Exactly 40 pixels padding from Bottom and Left edges).` : ''}
+
+7. NEGATIVE CONSTRAINTS:
+- No bold fonts.
+- Do not change camera angle.
+- Do not write margin numbers (e.g., '40px') on the canvas.`;
 }
 
 export function constructRoomScenePrompt(config: PromptConfig): string {
@@ -168,8 +230,9 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
 export function constructPrompt(config: PromptConfig): string {
   switch (config.promptType) {
+    case "dimensional":
+      return constructDimensionalPrompt(config);
     case "room-scene":
-      return constructRoomScenePrompt(config);
     default:
       return constructRoomScenePrompt(config);
   }
@@ -181,4 +244,9 @@ export const promptTypes: { value: PromptType; label: string; description: strin
     label: "Room Scene",
     description: "Transform the room design while preserving specific elements",
   },
+  {
+    value: "dimensional",
+    label: "Dimensional Image",
+    description: "Add technical dimension annotations to a product image",
+  }
 ];

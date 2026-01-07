@@ -95,6 +95,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let modifiedMainImage = processedImage;
       let finalPrompt = prompt;
 
+      // Check if this is a Dimensional prompt to log correctly
+      const isDimensional = validatedData.promptType === "dimensional";
+
       // [UPDATED] Check for Smart Zoom vs Manual Zoom
       if (validatedData.useSmartZoom && validatedData.smartZoomObject && validatedData.smartFillRatio) {
          console.log(`Applying Smart Object Zoom on "${validatedData.smartZoomObject}" at ${validatedData.smartFillRatio}%`);
@@ -126,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
          );
       }
 
-      console.log(`Generating Master Design: ${validatedData.viewAngle}`);
+      console.log(`Generating Master Design: ${validatedData.viewAngle} (Type: ${validatedData.promptType})`);
 
       let computedStructureAnalysis = "";
 
@@ -134,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasDrawing = !!validatedData.referenceDrawing;
       const isAngleChange = validatedData.viewAngle !== "Original";
 
-      if ((isAngleChange || hasRefs) && validatedData.preservedElements) {
+      if (!isDimensional && (isAngleChange || hasRefs) && validatedData.preservedElements) {
         try {
           console.log("3D Analysis Attempted...");
           if (validatedData.structureAnalysis) {
@@ -159,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (hasRefs) {
-        finalPrompt += `\n\nIMPORTANT: I have provided ${validatedData.referenceImages!.length} additional reference images. These show the TRUE shape and details of the "${validatedData.preservedElements}". Prioritize these visual examples.`;
+        finalPrompt += `\n\nIMPORTANT: I have provided ${validatedData.referenceImages!.length} additional reference images. These show the TRUE shape and details of the "${validatedData.preservedElements || 'main object'}". Prioritize these visual examples.`;
       }
 
       if (hasDrawing) {
@@ -168,12 +171,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (storage.createPromptLog) {
         await storage.createPromptLog({
-            jobType: "generation",
+            jobType: isDimensional ? "dimensional" : "generation",
             prompt: finalPrompt,
             parameters: {
                 style: validatedData.targetStyle,
                 view: validatedData.viewAngle,
-                creativity: validatedData.creativityLevel
+                creativity: validatedData.creativityLevel,
+                productType: validatedData.productType
             }
         });
       }
