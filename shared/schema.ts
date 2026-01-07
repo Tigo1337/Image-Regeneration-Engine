@@ -80,12 +80,34 @@ export const productTypes = [
   "Other",
 ] as const;
 
+// Dimension Line Placement Options
+export const heightPlacements = [
+  "Left Side (Vertical)",
+  "Right Side (Vertical)",
+  "Left Panel Edge",
+] as const;
+
+export const widthPlacements = [
+  "Front Bottom",
+  "Front Top",
+  "Below Product",
+] as const;
+
+export const depthPlacements = [
+  "Left Side (Perspective)",
+  "Right Side (Perspective)",
+  "Top Edge (Perspective)",
+] as const;
+
 // Dimensional Image Request Schema
 export const dimensionalImageRequestSchema = z.object({
   productType: z.enum(productTypes),
   productHeight: z.string().min(1, "Height is required"),
   productWidth: z.string().min(1, "Width is required"),
   productDepth: z.string().min(1, "Depth is required"),
+  heightPlacement: z.enum(heightPlacements).default("Left Side (Vertical)"),
+  widthPlacement: z.enum(widthPlacements).default("Front Bottom"),
+  depthPlacement: z.enum(depthPlacements).default("Left Side (Perspective)"),
   showTopLegend: z.boolean().default(true),
   showBottomDisclaimer: z.boolean().default(true),
 });

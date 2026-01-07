@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, productTypes, type RoomRedesignRequest, type SmartCropRequest, type DimensionalImageRequest } from "@shared/schema";
+import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, productTypes, heightPlacements, widthPlacements, depthPlacements, type RoomRedesignRequest, type SmartCropRequest, type DimensionalImageRequest } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,6 +86,9 @@ export function ControlPanel({
   const [dimHeight, setDimHeight] = useState("");
   const [dimWidth, setDimWidth] = useState("");
   const [dimDepth, setDimDepth] = useState("");
+  const [dimHeightPlacement, setDimHeightPlacement] = useState<typeof heightPlacements[number]>("Left Side (Vertical)");
+  const [dimWidthPlacement, setDimWidthPlacement] = useState<typeof widthPlacements[number]>("Front Bottom");
+  const [dimDepthPlacement, setDimDepthPlacement] = useState<typeof depthPlacements[number]>("Left Side (Perspective)");
   const [dimShowLegend, setDimShowLegend] = useState(true);
   const [dimShowDisclaimer, setDimShowDisclaimer] = useState(true);
 
@@ -834,36 +837,83 @@ export function ControlPanel({
                    </Select>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                   <div className="space-y-1">
-                     <Label className="text-xs font-medium">Height</Label>
-                     <Input 
-                       placeholder='e.g., 1 1/4"' 
-                       value={dimHeight}
-                       onChange={(e) => setDimHeight(e.target.value)}
-                       className="bg-background text-sm"
-                       data-testid="input-dim-height"
-                     />
+                <div className="space-y-3">
+                   <div className="grid grid-cols-2 gap-3 items-end">
+                     <div className="space-y-1">
+                       <Label className="text-xs font-medium">Height Value</Label>
+                       <Input 
+                         placeholder='e.g., 75 1/2"' 
+                         value={dimHeight}
+                         onChange={(e) => setDimHeight(e.target.value)}
+                         className="bg-background text-sm"
+                         data-testid="input-dim-height"
+                       />
+                     </div>
+                     <div className="space-y-1">
+                       <Label className="text-xs font-medium">Height Line Position</Label>
+                       <Select value={dimHeightPlacement} onValueChange={(v: any) => setDimHeightPlacement(v)}>
+                         <SelectTrigger className="bg-background text-xs" data-testid="select-height-placement">
+                           <SelectValue />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {heightPlacements.map((p) => (
+                             <SelectItem key={p} value={p}>{p}</SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                     </div>
                    </div>
-                   <div className="space-y-1">
-                     <Label className="text-xs font-medium">Width</Label>
-                     <Input 
-                       placeholder='e.g., 48 1/8"' 
-                       value={dimWidth}
-                       onChange={(e) => setDimWidth(e.target.value)}
-                       className="bg-background text-sm"
-                       data-testid="input-dim-width"
-                     />
+
+                   <div className="grid grid-cols-2 gap-3 items-end">
+                     <div className="space-y-1">
+                       <Label className="text-xs font-medium">Width Value</Label>
+                       <Input 
+                         placeholder='e.g., 48 1/8"' 
+                         value={dimWidth}
+                         onChange={(e) => setDimWidth(e.target.value)}
+                         className="bg-background text-sm"
+                         data-testid="input-dim-width"
+                       />
+                     </div>
+                     <div className="space-y-1">
+                       <Label className="text-xs font-medium">Width Line Position</Label>
+                       <Select value={dimWidthPlacement} onValueChange={(v: any) => setDimWidthPlacement(v)}>
+                         <SelectTrigger className="bg-background text-xs" data-testid="select-width-placement">
+                           <SelectValue />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {widthPlacements.map((p) => (
+                             <SelectItem key={p} value={p}>{p}</SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                     </div>
                    </div>
-                   <div className="space-y-1">
-                     <Label className="text-xs font-medium">Depth</Label>
-                     <Input 
-                       placeholder='e.g., 32"' 
-                       value={dimDepth}
-                       onChange={(e) => setDimDepth(e.target.value)}
-                       className="bg-background text-sm"
-                       data-testid="input-dim-depth"
-                     />
+
+                   <div className="grid grid-cols-2 gap-3 items-end">
+                     <div className="space-y-1">
+                       <Label className="text-xs font-medium">Depth Value</Label>
+                       <Input 
+                         placeholder='e.g., 32"' 
+                         value={dimDepth}
+                         onChange={(e) => setDimDepth(e.target.value)}
+                         className="bg-background text-sm"
+                         data-testid="input-dim-depth"
+                       />
+                     </div>
+                     <div className="space-y-1">
+                       <Label className="text-xs font-medium">Depth Line Position</Label>
+                       <Select value={dimDepthPlacement} onValueChange={(v: any) => setDimDepthPlacement(v)}>
+                         <SelectTrigger className="bg-background text-xs" data-testid="select-depth-placement">
+                           <SelectValue />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {depthPlacements.map((p) => (
+                             <SelectItem key={p} value={p}>{p}</SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                     </div>
                    </div>
                 </div>
 
@@ -906,9 +956,12 @@ export function ControlPanel({
                         productHeight: dimHeight,
                         productWidth: dimWidth,
                         productDepth: dimDepth,
+                        heightPlacement: dimHeightPlacement,
+                        widthPlacement: dimWidthPlacement,
+                        depthPlacement: dimDepthPlacement,
                         showTopLegend: dimShowLegend,
                         showBottomDisclaimer: dimShowDisclaimer,
-                      }).substring(0, 400)}...
+                      }).substring(0, 500)}...
                     </p>
                   </div>
                 )}
@@ -924,6 +977,9 @@ export function ControlPanel({
                  productHeight: dimHeight,
                  productWidth: dimWidth,
                  productDepth: dimDepth,
+                 heightPlacement: dimHeightPlacement,
+                 widthPlacement: dimWidthPlacement,
+                 depthPlacement: dimDepthPlacement,
                  showTopLegend: dimShowLegend,
                  showBottomDisclaimer: dimShowDisclaimer,
                })}
