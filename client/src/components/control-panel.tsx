@@ -194,8 +194,11 @@ export function ControlPanel({
     customStyleDescription: styleContext,
     productType: watchedValues.productType,
     productHeight: watchedValues.productHeight,
+    productHeightPosition: watchedValues.productHeightPosition,
     productWidth: watchedValues.productWidth,
+    productWidthPosition: watchedValues.productWidthPosition,
     productDepth: watchedValues.productDepth,
+    productDepthPosition: watchedValues.productDepthPosition,
     showTopLegend: watchedValues.showTopLegend,
     showBottomDisclaimer: watchedValues.showBottomDisclaimer,
   });
