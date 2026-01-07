@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, productTypes, heightPositions, widthPositions, depthPositions, type RoomRedesignRequest, type SmartCropRequest } from "@shared/schema";
+import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, type RoomRedesignRequest, type SmartCropRequest } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +29,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { 
   Sparkles, AlertCircle, FileText, PlusCircle, Layers, 
-  ZoomIn, MoveHorizontal, Upload, X, Crop, ScanEye, Info, Ruler 
+  ZoomIn, MoveHorizontal, Upload, X, Crop, ScanEye, Info 
 } from "lucide-react";
 import { constructPrompt, type PromptType, styleDescriptions } from "@/lib/prompt-builder";
 import {
@@ -100,15 +100,6 @@ export function ControlPanel({
       useSmartZoom: false,
       smartZoomObject: "",
       smartFillRatio: 60,
-      productType: "Shower",
-      productHeight: "74 3/8\"",
-      productHeightPosition: "Right",
-      productWidth: "29 3/4\"",
-      productWidthPosition: "Bottom",
-      productDepth: "32\"",
-      productDepthPosition: "Right",
-      showTopLegend: true,
-      showBottomDisclaimer: true,
     },
   });
 
@@ -192,28 +183,12 @@ export function ControlPanel({
     creativityLevel: watchedValues.creativityLevel || 50,
     centerPreservedElements: true,
     customStyleDescription: styleContext,
-    productType: watchedValues.productType,
-    productHeight: watchedValues.productHeight,
-    productHeightPosition: watchedValues.productHeightPosition,
-    productWidth: watchedValues.productWidth,
-    productWidthPosition: watchedValues.productWidthPosition,
-    productDepth: watchedValues.productDepth,
-    productDepthPosition: watchedValues.productDepthPosition,
-    showTopLegend: watchedValues.showTopLegend,
-    showBottomDisclaimer: watchedValues.showBottomDisclaimer,
   });
 
   const handleGenerate = () => {
     const formData = form.getValues();
     formData.referenceImages = referenceImages;
     formData.referenceDrawing = referenceDrawing || undefined;
-
-    // Overrides for Dimensional jobs: Always 1:1 and 2K resolution
-    if (formData.promptType === "dimensional") {
-      formData.aspectRatio = "1:1";
-      formData.quality = "High Fidelity (2K)";
-    }
-
     onGenerate(formData, generatedPrompt, 1);
   };
 
@@ -307,10 +282,9 @@ export function ControlPanel({
   return (
     <div className="space-y-4">
       <Tabs defaultValue="design" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="design">Design</TabsTrigger>
-          <TabsTrigger value="dimensional">Dimensions</TabsTrigger>
-          <TabsTrigger value="crop">Crop</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="design">Room Design</TabsTrigger>
+          <TabsTrigger value="crop">Smart Crop</TabsTrigger>
         </TabsList>
 
         {/* --- DESIGN TAB --- */}
@@ -736,204 +710,6 @@ export function ControlPanel({
                   {isGenerating ? "Generating..." : "Generate Redesign"}
                 </Button>
               </div>
-            </form>
-          </Form>
-        </TabsContent>
-
-        {/* --- DIMENSIONAL TAB --- */}
-        <TabsContent value="dimensional" className="space-y-6 mt-4">
-          <Form {...form}>
-            <form onSubmit={(e) => { e.preventDefault(); handleGenerate(); }} className="space-y-6">
-              <div className="bg-muted/50 p-4 rounded-lg border border-border space-y-4">
-                <div className="flex items-start gap-2">
-                  <Ruler className="w-5 h-5 mt-1 text-primary" />
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">Technical Dimensions</h3>
-                    <p className="text-xs text-muted-foreground">Add perspective-aware dimension lines.</p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <FormField
-                  control={form.control}
-                  name="productType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium">Product Category</FormLabel>
-                      <Select 
-                        onValueChange={(val) => {
-                          field.onChange(val);
-                          form.setValue("promptType", "dimensional");
-                        }} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {productTypes.map((type) => (
-                            <SelectItem key={type} value={type}>{type}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-
-                {/* HEIGHT ROW */}
-                <div className="grid grid-cols-6 gap-2 items-end">
-                  <div className="col-span-4">
-                    <FormField
-                      control={form.control}
-                      name="productHeight"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Height</FormLabel>
-                          <FormControl><Input {...field} placeholder="74 3/8\" className="h-8 text-xs" /></FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                     <FormField
-                      control={form.control}
-                      name="productHeightPosition"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-[10px] text-muted-foreground">Position</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {heightPositions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* WIDTH ROW */}
-                <div className="grid grid-cols-6 gap-2 items-end">
-                  <div className="col-span-4">
-                    <FormField
-                      control={form.control}
-                      name="productWidth"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Width</FormLabel>
-                          <FormControl><Input {...field} placeholder="29 3/4\" className="h-8 text-xs" /></FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                     <FormField
-                      control={form.control}
-                      name="productWidthPosition"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-[10px] text-muted-foreground">Position</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {widthPositions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* DEPTH ROW */}
-                <div className="grid grid-cols-6 gap-2 items-end">
-                  <div className="col-span-4">
-                     <FormField
-                      control={form.control}
-                      name="productDepth"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Depth</FormLabel>
-                          <FormControl><Input {...field} placeholder="32\" className="h-8 text-xs" /></FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                     <FormField
-                      control={form.control}
-                      name="productDepthPosition"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-[10px] text-muted-foreground">Position</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {depthPositions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <FormField
-                    control={form.control}
-                    name="showTopLegend"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between space-y-0">
-                        <FormLabel className="text-xs">Include Top Legend</FormLabel>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="showBottomDisclaimer"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between space-y-0">
-                        <FormLabel className="text-xs">Include Bottom Disclaimer</FormLabel>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" className="w-full" size="lg" disabled={disabled || isGenerating}>
-                <Ruler className="w-5 h-5 mr-2" />
-                {isGenerating ? "Processing..." : "Generate Technical View"}
-              </Button>
             </form>
           </Form>
         </TabsContent>

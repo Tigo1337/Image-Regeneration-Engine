@@ -8,7 +8,6 @@ import Gallery from "@/pages/gallery";
 import NotFound from "@/pages/not-found";
 // Import the new page
 import PromptsHistory from "@/pages/prompts-history";
-import Dimensional from "@/pages/dimensional";
 
 function Router() {
   return (
@@ -17,7 +16,6 @@ function Router() {
       <Route path="/gallery" component={Gallery} />
       {/* New Route */}
       <Route path="/prompts-history" component={PromptsHistory} />
-      <Route path="/dimensional" component={Dimensional} />
       <Route component={NotFound} />
     </Switch>
   );
