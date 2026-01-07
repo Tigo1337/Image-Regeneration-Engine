@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, type RoomRedesignRequest, type SmartCropRequest } from "@shared/schema";
+import { roomRedesignRequestSchema, availableStyles, outputFormats, viewAngles, productTypes, type RoomRedesignRequest, type SmartCropRequest, type DimensionalImageRequest } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,9 +29,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { 
   Sparkles, AlertCircle, FileText, PlusCircle, Layers, 
-  ZoomIn, MoveHorizontal, Upload, X, Crop, ScanEye, Info 
+  ZoomIn, MoveHorizontal, Upload, X, Crop, ScanEye, Info, Ruler 
 } from "lucide-react";
 import { constructPrompt, type PromptType, styleDescriptions } from "@/lib/prompt-builder";
+import { constructDimensionalPrompt } from "@/lib/dimensional-prompt";
 import {
   Tooltip,
   TooltipContent,
@@ -43,6 +44,7 @@ interface ControlPanelProps {
   onGenerate: (data: RoomRedesignRequest, prompt: string, batchSize?: number) => void;
   onGenerateVariations?: (selected: string[]) => void;
   onSmartCrop: (data: SmartCropRequest) => void;
+  onGenerateDimensional: (data: DimensionalImageRequest) => void;
   disabled?: boolean;
   isGenerating?: boolean;
   isModificationMode?: boolean;
@@ -58,6 +60,7 @@ export function ControlPanel({
   onGenerate,
   onGenerateVariations, 
   onSmartCrop,
+  onGenerateDimensional,
   disabled, 
   isGenerating,
   isModificationMode = false,
@@ -77,6 +80,14 @@ export function ControlPanel({
   const [cropObject, setCropObject] = useState("");
   const [cropFill, setCropFill] = useState(80);
   const [cropRatio, setCropRatio] = useState<"1:1" | "9:16" | "16:9" | "4:5">("1:1");
+
+  // Local state for Dimensional Tab
+  const [dimProductType, setDimProductType] = useState<typeof productTypes[number]>("Shower Base");
+  const [dimHeight, setDimHeight] = useState("");
+  const [dimWidth, setDimWidth] = useState("");
+  const [dimDepth, setDimDepth] = useState("");
+  const [dimShowLegend, setDimShowLegend] = useState(true);
+  const [dimShowDisclaimer, setDimShowDisclaimer] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawingInputRef = useRef<HTMLInputElement>(null);
@@ -282,9 +293,10 @@ export function ControlPanel({
   return (
     <div className="space-y-4">
       <Tabs defaultValue="design" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="design">Room Design</TabsTrigger>
-          <TabsTrigger value="crop">Smart Crop</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="design">Design</TabsTrigger>
+          <TabsTrigger value="crop">Crop</TabsTrigger>
+          <TabsTrigger value="dimensional">Dimensions</TabsTrigger>
         </TabsList>
 
         {/* --- DESIGN TAB --- */}
@@ -788,6 +800,138 @@ export function ControlPanel({
              >
                <Crop className="w-5 h-5 mr-2" />
                {isGenerating ? "Processing..." : "Generate Smart Crop"}
+             </Button>
+           </div>
+        </TabsContent>
+
+        {/* --- DIMENSIONAL TAB --- */}
+        <TabsContent value="dimensional" className="space-y-6 mt-4">
+           <div className="bg-muted/50 p-4 rounded-lg border border-border space-y-4">
+             <div className="flex items-start gap-2">
+                <Ruler className="w-5 h-5 mt-1 text-primary" />
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Dimensional Images</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Add technical dimension annotations to product photos.
+                  </p>
+                </div>
+             </div>
+
+             <Separator />
+
+             <div className="space-y-4">
+                <div className="space-y-2">
+                   <Label className="text-sm font-medium">Product Type</Label>
+                   <Select value={dimProductType} onValueChange={(v: any) => setDimProductType(v)}>
+                      <SelectTrigger className="bg-background" data-testid="select-product-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productTypes.map((type) => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                   </Select>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                   <div className="space-y-1">
+                     <Label className="text-xs font-medium">Height</Label>
+                     <Input 
+                       placeholder='e.g., 1 1/4"' 
+                       value={dimHeight}
+                       onChange={(e) => setDimHeight(e.target.value)}
+                       className="bg-background text-sm"
+                       data-testid="input-dim-height"
+                     />
+                   </div>
+                   <div className="space-y-1">
+                     <Label className="text-xs font-medium">Width</Label>
+                     <Input 
+                       placeholder='e.g., 48 1/8"' 
+                       value={dimWidth}
+                       onChange={(e) => setDimWidth(e.target.value)}
+                       className="bg-background text-sm"
+                       data-testid="input-dim-width"
+                     />
+                   </div>
+                   <div className="space-y-1">
+                     <Label className="text-xs font-medium">Depth</Label>
+                     <Input 
+                       placeholder='e.g., 32"' 
+                       value={dimDepth}
+                       onChange={(e) => setDimDepth(e.target.value)}
+                       className="bg-background text-sm"
+                       data-testid="input-dim-depth"
+                     />
+                   </div>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                   <div className="flex items-center justify-between">
+                     <div className="space-y-0.5">
+                       <Label className="text-sm font-medium">Top Legend</Label>
+                       <p className="text-[10px] text-muted-foreground">
+                         "Dimensions in inches (in.) / Dimensions en pouces (po)"
+                       </p>
+                     </div>
+                     <Switch 
+                       checked={dimShowLegend}
+                       onCheckedChange={setDimShowLegend}
+                       data-testid="switch-legend"
+                     />
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <div className="space-y-0.5">
+                       <Label className="text-sm font-medium">Bottom Disclaimer</Label>
+                       <p className="text-[10px] text-muted-foreground">
+                         Bilingual disclaimer about approximate dimensions
+                       </p>
+                     </div>
+                     <Switch 
+                       checked={dimShowDisclaimer}
+                       onCheckedChange={setDimShowDisclaimer}
+                       data-testid="switch-disclaimer"
+                     />
+                   </div>
+                </div>
+
+                {/* Prompt Preview */}
+                {dimHeight && dimWidth && dimDepth && (
+                  <div className="bg-background/50 p-3 rounded-md border border-border/50 mt-2">
+                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">Generated Prompt Preview</Label>
+                    <p className="text-[10px] text-muted-foreground font-mono whitespace-pre-wrap max-h-24 overflow-y-auto">
+                      {constructDimensionalPrompt({
+                        productType: dimProductType,
+                        productHeight: dimHeight,
+                        productWidth: dimWidth,
+                        productDepth: dimDepth,
+                        showTopLegend: dimShowLegend,
+                        showBottomDisclaimer: dimShowDisclaimer,
+                      }).substring(0, 400)}...
+                    </p>
+                  </div>
+                )}
+             </div>
+
+             <Separator />
+
+             <Button 
+               className="w-full" 
+               size="lg"
+               onClick={() => onGenerateDimensional({ 
+                 productType: dimProductType,
+                 productHeight: dimHeight,
+                 productWidth: dimWidth,
+                 productDepth: dimDepth,
+                 showTopLegend: dimShowLegend,
+                 showBottomDisclaimer: dimShowDisclaimer,
+               })}
+               disabled={disabled || isGenerating || !dimHeight || !dimWidth || !dimDepth}
+               data-testid="button-generate-dimensional"
+             >
+               <Ruler className="w-5 h-5 mr-2" />
+               {isGenerating ? "Generating..." : "Generate Dimensional Image"}
              </Button>
            </div>
         </TabsContent>

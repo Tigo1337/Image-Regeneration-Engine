@@ -1,13 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { roomRedesignRequestSchema, smartCropRequestSchema } from "@shared/schema";
+import { roomRedesignRequestSchema, smartCropRequestSchema, dimensionalImageRequestSchema } from "@shared/schema";
 import { generateRoomRedesign, analyzeObjectStructure, detectObjectBoundingBox } from "./gemini"; 
-import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup, applySmartObjectZoom } from "./image-utils"; //
+import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup, applySmartObjectZoom } from "./image-utils";
 import { storage } from "./storage";
 import { uploadImageToStorage } from "./image-storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { z } from "zod";
-import sharp from "sharp"; 
+import sharp from "sharp";
+import { constructDimensionalPrompt } from "./dimensional-prompt"; 
 
 // Prompt Builder
 function buildVariationPrompt(formData: any, variationType: string, structureAnalysis: string = ""): string {
@@ -426,6 +427,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, generatedImage });
     } catch (error) {
       res.status(500).json({ success: false, error: "Failed" });
+    }
+  });
+
+  // Dimensional Images - Add dimension annotations to product photos
+  app.post("/api/generate-dimensional", async (req, res) => {
+    try {
+      const { imageData, ...formData } = req.body;
+      const validatedData = dimensionalImageRequestSchema.parse(formData);
+
+      if (!imageData) {
+        return res.status(400).json({ success: false, error: "No image data provided" });
+      }
+
+      console.log("=== Dimensional Image Generation ===");
+      console.log(`Product Type: ${validatedData.productType}`);
+      console.log(`Dimensions: H=${validatedData.productHeight}, W=${validatedData.productWidth}, D=${validatedData.productDepth}`);
+
+      const processedImage = await processImageForGemini(imageData);
+      const dimensionalPrompt = constructDimensionalPrompt(validatedData);
+
+      if (storage.createPromptLog) {
+        await storage.createPromptLog({
+          jobType: "dimensional",
+          prompt: dimensionalPrompt,
+          parameters: {
+            productType: validatedData.productType,
+            dimensions: {
+              height: validatedData.productHeight,
+              width: validatedData.productWidth,
+              depth: validatedData.productDepth,
+            },
+            showLegend: validatedData.showTopLegend,
+            showDisclaimer: validatedData.showBottomDisclaimer,
+          },
+        });
+      }
+
+      const generatedImage = await generateRoomRedesign({
+        imageBase64: processedImage,
+        preservedElements: "the entire product",
+        targetStyle: "Technical Documentation",
+        quality: "High Fidelity (2K)",
+        aspectRatio: "1:1",
+        creativityLevel: 10,
+        customPrompt: dimensionalPrompt,
+        outputFormat: "PNG",
+      });
+
+      res.json({
+        success: true,
+        generatedImage,
+        prompt: dimensionalPrompt,
+      });
+
+    } catch (error) {
+      console.error("Error in /api/generate-dimensional:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to generate dimensional image",
+      });
     }
   });
 

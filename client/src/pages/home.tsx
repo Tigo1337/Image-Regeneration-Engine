@@ -5,7 +5,7 @@ import { ImageCanvas } from "@/components/image-canvas";
 import { LoadingOverlay } from "@/components/loading-overlay";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import type { RoomRedesignRequest, RoomRedesignResponse, SmartCropRequest } from "@shared/schema";
+import type { RoomRedesignRequest, RoomRedesignResponse, SmartCropRequest, DimensionalImageRequest } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles } from "lucide-react";
 
@@ -15,7 +15,7 @@ export default function Home() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
   // Track what kind of generation produced the current result
-  const [generationType, setGenerationType] = useState<"design" | "crop" | null>(null);
+  const [generationType, setGenerationType] = useState<"design" | "crop" | "dimensional" | null>(null);
   // Store the source for cropping so we don't crop the crop recursively
   const [cropSourceImage, setCropSourceImage] = useState<string | null>(null);
 
@@ -24,8 +24,10 @@ export default function Home() {
 
   // Track request data for file naming
   const [currentFormData, setCurrentFormData] = useState<RoomRedesignRequest | null>(null);
-  // [NEW] Track Smart Crop data for file naming
+  // Track Smart Crop data for file naming
   const [currentSmartCropData, setCurrentSmartCropData] = useState<SmartCropRequest | null>(null);
+  // Track Dimensional data for file naming
+  const [currentDimensionalData, setCurrentDimensionalData] = useState<DimensionalImageRequest | null>(null);
 
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [referenceDrawing, setReferenceDrawing] = useState<string | null>(null);
@@ -45,8 +47,9 @@ export default function Home() {
     setCropSourceImage(null); 
     setGeneratedVariations([]);
     setModificationPrompt("");
-    setCurrentFormData(null); // Reset design data
-    setCurrentSmartCropData(null); // [NEW] Reset crop data
+    setCurrentFormData(null);
+    setCurrentSmartCropData(null);
+    setCurrentDimensionalData(null);
     setReferenceImages([]); 
     setReferenceDrawing(null); 
     setStructureAnalysis(null); 
@@ -181,6 +184,36 @@ export default function Home() {
     }
   });
 
+  const dimensionalMutation = useMutation({
+    mutationFn: async (data: DimensionalImageRequest & { imageData: string }) => {
+        const res = await apiRequest("POST", "/api/generate-dimensional", data);
+        return res.json();
+    },
+    onSuccess: (response) => {
+        if (response.success && response.generatedImage) {
+            setGeneratedImage(response.generatedImage);
+            setGenerationType("dimensional"); 
+            toast({
+                title: "Dimensional Image Generated",
+                description: "Technical annotations have been added to your product photo.",
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Generation Failed",
+                description: response.error || "Could not generate dimensional image.",
+            });
+        }
+    },
+    onError: (error) => {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: error instanceof Error ? error.message : "Failed to generate dimensional image.",
+        });
+    }
+  });
+
   const handleGenerate = (formData: RoomRedesignRequest, prompt: string, batchSize: number = 1) => {
     if (!originalImage) {
       toast({ variant: "destructive", title: "Missing image", description: "Please upload an image first" });
@@ -233,7 +266,6 @@ export default function Home() {
   };
 
   const handleSmartCrop = (data: SmartCropRequest) => {
-      // Save data for file naming
       setCurrentSmartCropData(data);
 
       let source = cropSourceImage;
@@ -256,6 +288,20 @@ export default function Home() {
       });
   };
 
+  const handleGenerateDimensional = (data: DimensionalImageRequest) => {
+      if (!originalImage) {
+          toast({ variant: "destructive", title: "No image", description: "Please upload an image first." });
+          return;
+      }
+
+      setCurrentDimensionalData(data);
+
+      dimensionalMutation.mutate({
+          ...data,
+          imageData: originalImage
+      });
+  };
+
   const handleReset = () => {
     setOriginalImage(null);
     setOriginalFileName("image");
@@ -266,6 +312,7 @@ export default function Home() {
     setModificationPrompt("");
     setCurrentFormData(null);
     setCurrentSmartCropData(null);
+    setCurrentDimensionalData(null);
     setReferenceImages([]);
     setReferenceDrawing(null);
     setStructureAnalysis(null);
@@ -304,9 +351,10 @@ export default function Home() {
             <ControlPanel 
               onGenerate={handleGenerate}
               onGenerateVariations={handleGenerateVariations}
-              onSmartCrop={handleSmartCrop} 
+              onSmartCrop={handleSmartCrop}
+              onGenerateDimensional={handleGenerateDimensional}
               disabled={!originalImage}
-              isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending}
+              isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending}
               isModificationMode={!!generatedImage && generationType === "design"}
               modificationPrompt={modificationPrompt}
               onModificationPromptChange={setModificationPrompt}
@@ -332,7 +380,7 @@ export default function Home() {
         />
       </main>
 
-      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending) && <LoadingOverlay />}
+      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending) && <LoadingOverlay />}
     </div>
   );
 }

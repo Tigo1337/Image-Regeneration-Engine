@@ -72,8 +72,27 @@ export const smartCropRequestSchema = z.object({
   aspectRatio: z.enum(["1:1", "9:16", "16:9", "4:5", "Original"]),
 });
 
+// Dimensional Images - Product Types
+export const productTypes = [
+  "Shower",
+  "Tub Shower", 
+  "Shower Base",
+  "Other",
+] as const;
+
+// Dimensional Image Request Schema
+export const dimensionalImageRequestSchema = z.object({
+  productType: z.enum(productTypes),
+  productHeight: z.string().min(1, "Height is required"),
+  productWidth: z.string().min(1, "Width is required"),
+  productDepth: z.string().min(1, "Depth is required"),
+  showTopLegend: z.boolean().default(true),
+  showBottomDisclaimer: z.boolean().default(true),
+});
+
 export type RoomRedesignRequest = z.infer<typeof roomRedesignRequestSchema>;
 export type SmartCropRequest = z.infer<typeof smartCropRequestSchema>;
+export type DimensionalImageRequest = z.infer<typeof dimensionalImageRequestSchema>;
 
 // Room redesign response schema
 export interface RoomRedesignResponse {

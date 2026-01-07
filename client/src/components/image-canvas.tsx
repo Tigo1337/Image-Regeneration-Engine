@@ -10,7 +10,7 @@ interface ImageCanvasProps {
   originalImage: string | null;
   generatedImage: string | null;
   generatedVariations?: string[];
-  generationType?: "design" | "crop" | null; // [NEW] To toggle view modes
+  generationType?: "design" | "crop" | "dimensional" | null;
   originalFileName?: string;
   currentFormData?: RoomRedesignRequest;
   currentSmartCropData?: SmartCropRequest; // [NEW] For crop file naming
@@ -33,8 +33,8 @@ export function ImageCanvas({
   const [activeVariation, setActiveVariation] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'split' | 'slider'>('slider');
 
-  // [NEW] Helper to identify Dimensional jobs
-  const isDimensional = currentFormData?.promptType === 'dimensional';
+  // Helper to identify Dimensional jobs
+  const isDimensional = generationType === 'dimensional';
 
   // Use active variation if selected, otherwise default generated image
   const currentDisplayImage = activeVariation || generatedImage;
