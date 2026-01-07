@@ -458,6 +458,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               width: validatedData.productWidth,
               depth: validatedData.productDepth,
             },
+            placements: {
+              height: validatedData.heightPlacement,
+              width: validatedData.widthPlacement,
+              depth: validatedData.depthPlacement,
+            },
             showLegend: validatedData.showTopLegend,
             showDisclaimer: validatedData.showBottomDisclaimer,
           },
