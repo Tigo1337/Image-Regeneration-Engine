@@ -31,7 +31,6 @@ export interface PromptConfig {
   cameraZoom?: number; 
   creativityLevel?: number;
   customStyleDescription?: string; 
-  // [NEW] Dimensional Tool Fields
   productType?: string;
   productHeight?: string;
   productWidth?: string;
@@ -50,50 +49,78 @@ export function constructDimensionalPrompt(config: PromptConfig): string {
     showBottomDisclaimer = true 
   } = config;
 
-  return `Act as an expert Image Compositor and Technical Editor. Do NOT act as a 3D renderer. 
-Your goal is to add technical annotations to the attached image while preserving the original product photography exactly.
+  let annotationLogic = "";
 
-1. DIMENSION VALUES (CRITICAL - STRICT ADHERENCE):
-- You MUST use the exact text strings provided below. Do NOT add, remove, or convert units (", in, mm).
-- Use EXACTLY these labels:
+  if (productType === "Shower" || productType === "Tub Shower") {
+    annotationLogic = `- HEIGHT: Draw a vertical line matching the total vertical bounds of the enclosure. Label: '${productHeight}'.
+  - WIDTH: Draw a horizontal line across the front threshold or base. Label: '${productWidth}'.
+  - DEPTH: Draw a line along the side wall/glass panel following depth perspective. Label: '${productDepth}'.`;
+  } else if (productType === "Shower Base") {
+    annotationLogic = `- WIDTH: Draw a line across the longest horizontal footprint edge. Label: '${productWidth}'.
+  - DEPTH: Draw a line along the perpendicular horizontal footprint edge (depth). Label: '${productDepth}'.
+  - HEIGHT (LIP): Draw a small vertical callout line at the front threshold/lip. Label: '${productHeight}'.`;
+  } else if (productType === "Shower Door") {
+    annotationLogic = `- HEIGHT: Draw a vertical line matching the glass pane height. Label: '${productHeight}'.
+  - WIDTH: Draw a horizontal line across the total door span. Label: '${productWidth}'.
+  - DEPTH: Draw a small horizontal callout for the frame/glass thickness. Label: '${productDepth}'.`;
+  } else {
+    annotationLogic = `- HEIGHT: Draw a vertical line for the total exterior height. Label: '${productHeight}'.
+  - WIDTH: Draw a horizontal line for the total exterior width across the front. Label: '${productWidth}'.
+  - DEPTH: Draw a line following depth perspective for the exterior side. Label: '${productDepth}'.`;
+  }
+
+  return `Act as an expert Image Compositor and Technical Editor. Do NOT act as a 3D renderer. 
+  Your goal is to add technical annotations to the attached image while preserving the original product photography exactly.
+
+  1. DIMENSION STYLE (LABELS & LINES):
+  - FONT: Use "Arial" for all dimension labels.
+  - SIZE: All dimension labels must be exactly 12px.
+  - COLOR: All labels and lines must be Hex #000000 (Pure Black).
+  - LINE WEIGHT: All dimension lines and arrows must be exactly 2px thick.
+  - STYLE: No bold, no italics. Lines must be solid and clean.
+
+  2. DIMENSION VALUES (CRITICAL - STRICT ADHERENCE):
+  - You MUST use the exact text strings provided below. Do NOT add, remove, or convert units (", in, mm).
+  - Use EXACTLY these labels:
   * HEIGHT LABEL: '${productHeight}'
   * WIDTH LABEL: '${productWidth}'
   * DEPTH LABEL: '${productDepth}'
 
-2. IMAGE PRESERVATION & COMPOSITION:
-- Pixel Freeze: Strictly preserve the angle, perspective, lighting, and texture of the original product. Do not re-render.
-- Target Size: The product should occupy exactly 60% of the vertical space of the final image.
-- Outpainting: Zoom Out by adding a wide, seamless white border. The final output must be 1:1 (Square).
+  3. IMAGE PRESERVATION & COMPOSITION:
+  - Pixel Freeze: Strictly preserve the angle, perspective, lighting, and texture of the original product.
+  - Target Size: The product should occupy exactly 60% of the vertical space.
+  - Outpainting: Zoom Out by adding a wide, seamless white border. The final output must be 1:1 (Square).
 
-3. SPATIAL ANALYSIS & PADDING:
-- Identify the 3D bounding box of the product. 
-- Dimension lines must be 'offset' (distanced) from the product by roughly 10% of the product's width.
-- Ensure all lines follow the vanishing points/perspective of the original photo.
-- PADDING RULE: All corner text (Legend/Disclaimer) MUST be placed exactly 40 pixels from the canvas edges.
+  4. SPATIAL ANALYSIS & PADDING:
+  - Identify the 3D bounding box of the product. 
+  - Dimension lines must be 'offset' (distanced) from the product by roughly 10% of the product's width.
+  - Ensure all lines follow the vanishing points/perspective of the original photo.
+  - PADDING RULE: All corner text (Legend/Disclaimer) MUST be placed exactly 40 pixels from the canvas edges.
 
-4. ANNOTATION PLACEMENT:
-${productType === "Shower Unit" ? `
-- HEIGHT: Draw a vertical line matching the total vertical bounds. Label: '${productHeight}'.
-- WIDTH: Draw a horizontal line across the front threshold. Label: '${productWidth}'.
-- DEPTH: Draw a line along the side profile following perspective. Label: '${productDepth}'.` : `
-- WIDTH: Draw a line across the longest horizontal footprint edge. Label: '${productWidth}'.
-- DEPTH: Draw a line along the perpendicular horizontal footprint edge. Label: '${productDepth}'.
-- HEIGHT (LIP): Draw a small vertical callout line at the front threshold/lip. Label: '${productHeight}'.`}
+  5. ANNOTATION PLACEMENT:
+  ${annotationLogic}
 
-${showTopLegend ? `
-5. TOP LEGEND (Fixed Layout):
-- Text: 'Dimensions in inches (in.)' / 'Dimensions en pouces (po)'
-- Position: Top-Right corner (Exactly 40 pixels padding from Top and Right edges).` : ''}
+  ${showTopLegend ? `
+  6. TOP LEGEND (Fixed Layout):
+  - Text: 'Dimensions in inches (in.) / Dimensions en pouces (po)'
+  - Style: Font Arial, Size 12px, Color #000000, No Bold.
+  - Position: Top-Right corner (Exactly 40 pixels padding from Top and Right edges).` : ''}
 
-${showBottomDisclaimer ? `
-6. BOTTOM DISCLAIMER (Fixed Layout):
-- Text: 'All dimensions are approximate. Structure measurements must be verified against the unit to ensure proper fit. Please see the detailed technical drawing for additional measurements.' / 'Toutes ces dimensions sont approximatives. Afin d’assurer une installation parfaite, les dimensions de la structure doivent être vérifiées à partir de l’unité. Référez-vous au dessin technique pour les mesures supplémentaires.'
-- Position: Bottom-Left corner (Exactly 40 pixels padding from Bottom and Left edges).` : ''}
+  ${showBottomDisclaimer ? `
+  7. BOTTOM DISCLAIMER (Fixed Layout):
+  - Text: 'All dimensions are approximate. Structure measurements must be verified against the unit to ensure proper fit. Please see the detailed technical drawing for additional measurements.' / 'Toutes ces dimensions sont approximatives. Afin d’assurer une installation parfaite, les dimensions de la structure doivent être vérifiées à partir de l’unité. Référez-vous au dessin technique pour les mesures supplémentaires.'
+  - Style: Font Arial, Size 12px, Color #000000, No Bold.
+  - Position: Bottom-Left corner (Exactly 40 pixels padding from Bottom and Left edges).` : ''}
 
-7. NEGATIVE CONSTRAINTS:
-- No bold fonts.
-- Do not change camera angle.
-- Do not write margin numbers (e.g., '40px') on the canvas.`;
+  8. NEGATIVE CONSTRAINTS:
+  - No colors other than #000000.
+  - No serif fonts (e.g., Times New Roman).
+  - No line weights other than 2px.
+  - No text sizes other than 12px.
+  - No bold fonts.
+  - Do not change camera angle.
+  - Do not duplicate the dimensions.
+  - Do not write margin/padding numbers (e.g., '40px' or '12px') on the actual image.`;
 }
 
 export function constructRoomScenePrompt(config: PromptConfig): string {

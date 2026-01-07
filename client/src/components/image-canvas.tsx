@@ -33,6 +33,9 @@ export function ImageCanvas({
   const [activeVariation, setActiveVariation] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'split' | 'slider'>('slider');
 
+  // [NEW] Helper to identify Dimensional jobs
+  const isDimensional = currentFormData?.promptType === 'dimensional';
+
   // Use active variation if selected, otherwise default generated image
   const currentDisplayImage = activeVariation || generatedImage;
 
@@ -51,6 +54,11 @@ export function ImageCanvas({
 
   const generateDownloadFileName = (): string => {
     const baseName = originalFileName?.replace(/\.[^/.]+$/, "") || "image";
+
+    // [NEW] Logic for Dimensional Image Filenames
+    if (isDimensional) {
+        return `${baseName}-dimensional-ar-1-1`;
+    }
 
     // [NEW] Logic for Smart Crop Filenames
     if (generationType === 'crop' && currentSmartCropData) {
@@ -103,8 +111,8 @@ export function ImageCanvas({
     );
   }
 
-  // Helper to determine if we show comparison tools
-  const showComparisonTools = currentDisplayImage && generationType !== 'crop';
+  // [UPDATED] Helper to determine if we show comparison tools (hide for crop AND dimensional)
+  const showComparisonTools = currentDisplayImage && generationType !== 'crop' && !isDimensional;
 
   return (
     <>
@@ -113,16 +121,18 @@ export function ImageCanvas({
         {/* Header Section */}
         <div className="flex-none flex items-center justify-between">
           <h3 className="text-lg font-semibold text-foreground">
-            {/* [UPDATED] Dynamic Title */}
+            {/* [UPDATED] Dynamic Title logic */}
             {generationType === 'crop' 
                 ? "Smart Crop Result" 
-                : currentDisplayImage 
-                    ? "Comparison Preview" 
-                    : "Original Image"}
+                : isDimensional
+                    ? "Dimensional Image Result"
+                    : currentDisplayImage 
+                        ? "Comparison Preview" 
+                        : "Original Image"}
           </h3>
 
           <div className="flex gap-2">
-             {/* [UPDATED] Only show Slider/Split if NOT crop mode */}
+             {/* [UPDATED] Only show Slider/Split if NOT crop mode and NOT dimensional */}
              {showComparisonTools && (
                <>
                 <Button
@@ -159,15 +169,15 @@ export function ImageCanvas({
         <div className="flex-1 w-full min-h-0">
           <Card className="w-full h-full bg-muted/20 overflow-hidden relative border-2 border-border/50 flex items-center justify-center">
             {currentDisplayImage ? (
-              // [UPDATED] Logic for Crop View vs Design View
-              generationType === 'crop' ? (
-                 // Simple Single Image View for Crops
+              // [UPDATED] Logic for Crop/Dimensional View vs Design View
+              (generationType === 'crop' || isDimensional) ? (
+                 // Simple Single Image View for Crops and Dimensional images
                  <div className="w-full h-full flex items-center justify-center p-4">
                     <img 
                       src={currentDisplayImage} 
                       className="max-w-full max-h-full object-contain shadow-lg rounded-sm cursor-pointer" 
-                      alt="Smart Crop Result"
-                      onClick={() => openModal(currentDisplayImage, "Smart Crop Result")}
+                      alt={isDimensional ? "Dimensional Result" : "Smart Crop Result"}
+                      onClick={() => openModal(currentDisplayImage, isDimensional ? "Dimensional Result" : "Smart Crop Result")}
                     />
                  </div>
               ) : (
@@ -241,8 +251,8 @@ export function ImageCanvas({
           </div>
         )}
 
-        {/* Batch Variations Thumbnails - Only for Designs */}
-        {(generatedVariations.length > 0 || generatedImage) && generationType === 'design' && (
+        {/* Batch Variations Thumbnails - Hide for Dimensional jobs */}
+        {(generatedVariations.length > 0 || generatedImage) && generationType === 'design' && !isDimensional && (
           <div className="flex-none mt-2">
             <h4 className="text-sm font-semibold mb-3">Variations</h4>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">

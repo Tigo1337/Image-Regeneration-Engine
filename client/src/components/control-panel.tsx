@@ -100,7 +100,7 @@ export function ControlPanel({
       useSmartZoom: false,
       smartZoomObject: "",
       smartFillRatio: 60,
-      productType: "Shower Unit",
+      productType: "Shower",
       productHeight: "74 3/8\"",
       productWidth: "29 3/4\"",
       productDepth: "32\"",
