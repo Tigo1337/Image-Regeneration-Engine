@@ -43,6 +43,7 @@ import {
 interface ControlPanelProps {
   onGenerate: (data: RoomRedesignRequest, prompt: string, batchSize?: number) => void;
   onGenerateVariations?: (selected: string[]) => void;
+  onGenerateBatchStyles?: (data: RoomRedesignRequest, prompt: string) => void;
   onSmartCrop: (data: SmartCropRequest) => void;
   onGenerateDimensional: (data: DimensionalImageRequest) => void;
   disabled?: boolean;
@@ -58,7 +59,8 @@ interface ControlPanelProps {
 
 export function ControlPanel({ 
   onGenerate,
-  onGenerateVariations, 
+  onGenerateVariations,
+  onGenerateBatchStyles,
   onSmartCrop,
   onGenerateDimensional,
   disabled, 
@@ -74,7 +76,8 @@ export function ControlPanel({
 
   const [styleContext, setStyleContext] = useState("");
   const [selectedVariations, setSelectedVariations] = useState<string[]>(["Front", "Side", "Top"]);
-  const [activeTab, setActiveTab] = useState("design"); 
+  const [activeTab, setActiveTab] = useState("design");
+  const [generateAllStyles, setGenerateAllStyles] = useState(false); 
 
   // Local state for Smart Crop Tab
   const [cropObject, setCropObject] = useState("");
@@ -204,7 +207,12 @@ export function ControlPanel({
     const formData = form.getValues();
     formData.referenceImages = referenceImages;
     formData.referenceDrawing = referenceDrawing || undefined;
-    onGenerate(formData, generatedPrompt, 1);
+    
+    if (generateAllStyles && onGenerateBatchStyles) {
+      onGenerateBatchStyles(formData, generatedPrompt);
+    } else {
+      onGenerate(formData, generatedPrompt, 1);
+    }
   };
 
   if (isModificationMode) {
@@ -594,9 +602,13 @@ export function ControlPanel({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">Target Style</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          disabled={generateAllStyles}
+                        >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className={generateAllStyles ? "opacity-50" : ""}>
                               <SelectValue placeholder="Select a style" />
                             </SelectTrigger>
                           </FormControl>
@@ -610,15 +622,38 @@ export function ControlPanel({
                       </FormItem>
                     )}
                   />
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-muted-foreground">Style Characteristics (Editable)</Label>
-                    <Textarea 
-                      value={styleContext}
-                      onChange={(e) => setStyleContext(e.target.value)}
-                      className="h-20 text-xs resize-none"
-                      placeholder="Style details will appear here..."
+                  
+                  <div className="flex items-center space-x-2 p-3 bg-primary/5 rounded-md border border-primary/20">
+                    <Checkbox 
+                      id="generate-all-styles"
+                      checked={generateAllStyles}
+                      onCheckedChange={(checked) => setGenerateAllStyles(checked === true)}
+                      data-testid="checkbox-generate-all-styles"
                     />
+                    <div className="flex-1">
+                      <label
+                        htmlFor="generate-all-styles"
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
+                        Generate All Styles
+                      </label>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Generate {availableStyles.length} designs in parallel (one for each style)
+                      </p>
+                    </div>
                   </div>
+
+                  {!generateAllStyles && (
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-muted-foreground">Style Characteristics (Editable)</Label>
+                      <Textarea 
+                        value={styleContext}
+                        onChange={(e) => setStyleContext(e.target.value)}
+                        className="h-20 text-xs resize-none"
+                        placeholder="Style details will appear here..."
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -723,7 +758,10 @@ export function ControlPanel({
               <div className="space-y-3">
                 <Button type="submit" className="w-full" size="lg" disabled={disabled || isGenerating}>
                   <Sparkles className="w-5 h-5 mr-2" />
-                  {isGenerating ? "Generating..." : "Generate Redesign"}
+                  {isGenerating 
+                    ? (generateAllStyles ? `Generating ${availableStyles.length} Styles...` : "Generating...") 
+                    : (generateAllStyles ? `Generate All ${availableStyles.length} Styles` : "Generate Redesign")
+                  }
                 </Button>
               </div>
             </form>
