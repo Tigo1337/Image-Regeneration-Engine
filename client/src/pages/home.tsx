@@ -6,8 +6,10 @@ import { LoadingOverlay } from "@/components/loading-overlay";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { RoomRedesignRequest, RoomRedesignResponse, SmartCropRequest, DimensionalImageRequest } from "@shared/schema";
+import { availableStyles } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles } from "lucide-react";
+import { styleDescriptions, constructPrompt, type PromptType } from "@/lib/prompt-builder";
 
 export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -21,6 +23,7 @@ export default function Home() {
 
   const [generatedVariations, setGeneratedVariations] = useState<string[]>([]);
   const [modificationPrompt, setModificationPrompt] = useState<string>("");
+  const [batchStyleResults, setBatchStyleResults] = useState<{style: string; image: string}[]>([]);
 
   // Track request data for file naming
   const [currentFormData, setCurrentFormData] = useState<RoomRedesignRequest | null>(null);
@@ -214,6 +217,51 @@ export default function Home() {
     }
   });
 
+  const batchStylesMutation = useMutation({
+    mutationFn: async (data: { imageData: string; formData: RoomRedesignRequest; styles: string[] }) => {
+      const res = await apiRequest("POST", "/api/generate/batch-styles", data);
+      return res.json() as Promise<{ success: boolean; results: {style: string; image: string; error?: string}[]; error?: string }>;
+    },
+    onSuccess: async (response) => {
+      if (response.success && response.results) {
+        const successfulResults = response.results.filter(r => r.image);
+        setBatchStyleResults(successfulResults);
+        setGeneratedVariations([]);
+        
+        if (successfulResults.length > 0) {
+          setGeneratedImage(successfulResults[0].image);
+          setGenerationType("design");
+        }
+        
+        const failedCount = response.results.length - successfulResults.length;
+        const failedStyles = response.results.filter(r => !r.image).map(r => r.style);
+        
+        toast({
+          title: `Batch Generation Complete`,
+          description: failedCount > 0 
+            ? `Generated ${successfulResults.length} styles. Failed: ${failedStyles.join(', ')}`
+            : `Generated ${successfulResults.length} style${successfulResults.length !== 1 ? 's' : ''}.`,
+          variant: failedCount > 0 ? "default" : "default",
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Batch Generation Failed",
+          description: response.error || "Failed to generate styles",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate batch styles",
+      });
+    },
+  });
+
   const handleGenerate = (formData: RoomRedesignRequest, prompt: string, batchSize: number = 1) => {
     if (!originalImage) {
       toast({ variant: "destructive", title: "Missing image", description: "Please upload an image first" });
@@ -302,6 +350,22 @@ export default function Home() {
       });
   };
 
+  const handleGenerateBatchStyles = (formData: RoomRedesignRequest, _prompt: string) => {
+    if (!originalImage) {
+      toast({ variant: "destructive", title: "Missing image", description: "Please upload an image first" });
+      return;
+    }
+
+    setBatchStyleResults([]);
+    setCurrentFormData(formData);
+
+    batchStylesMutation.mutate({
+      imageData: originalImage,
+      formData: formData,
+      styles: [...availableStyles],
+    });
+  };
+
   const handleReset = () => {
     setOriginalImage(null);
     setOriginalFileName("image");
@@ -310,6 +374,7 @@ export default function Home() {
     setCropSourceImage(null);
     setGeneratedVariations([]);
     setModificationPrompt("");
+    setBatchStyleResults([]);
     setCurrentFormData(null);
     setCurrentSmartCropData(null);
     setCurrentDimensionalData(null);
@@ -351,10 +416,11 @@ export default function Home() {
             <ControlPanel 
               onGenerate={handleGenerate}
               onGenerateVariations={handleGenerateVariations}
+              onGenerateBatchStyles={handleGenerateBatchStyles}
               onSmartCrop={handleSmartCrop}
               onGenerateDimensional={handleGenerateDimensional}
               disabled={!originalImage}
-              isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending}
+              isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending}
               isModificationMode={!!generatedImage && generationType === "design"}
               modificationPrompt={modificationPrompt}
               onModificationPromptChange={setModificationPrompt}
@@ -371,16 +437,17 @@ export default function Home() {
         <ImageCanvas 
           originalImage={originalImage}
           generatedImage={generatedImage}
-          generationType={generationType} // [NEW] Pass generation type
+          generationType={generationType}
           generatedVariations={generatedVariations}
           originalFileName={originalFileName}
           currentFormData={currentFormData || undefined}
-          currentSmartCropData={currentSmartCropData || undefined} // [NEW] Pass crop data
+          currentSmartCropData={currentSmartCropData || undefined}
           referenceImages={referenceImages}
+          batchStyleResults={batchStyleResults}
         />
       </main>
 
-      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending) && <LoadingOverlay />}
+      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending) && <LoadingOverlay />}
     </div>
   );
 }

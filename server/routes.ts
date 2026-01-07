@@ -208,6 +208,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Style descriptions for batch generation
+  const styleDescriptions: Record<string, string> = {
+    "Scandinavian": "white walls, light wood tones (ash/birch), functional furniture, minimal decor, soft textiles, abundant natural light, and hygge elements",
+    "Modern": "clean lines, minimal clutter, neutral color palette (white/grey/black), glass and steel accents, geometric shapes, raw concrete",
+    "Contemporary": "current trends, rounded curves, soft textures, sophisticated and fluid shapes, organic elements, mixed metals, sculptural lighting",
+    "Boho": "rattan, macramé, layered textiles, mismatched patterns, natural fibers (jute/wool), warm earth tones, abundant live plants, low-slung seating",
+    "Industrial": "exposed brick, raw concrete floors, unfinished wood, black metal piping and fixtures, salvaged or utilitarian furniture, open-plan layout, visible ductwork",
+    "Mid-Century Modern": "teak and walnut woods, tapered legs, geometric fabrics, bright accent colors (orange/teal/yellow), low profile furniture, iconic 1950s/60s pieces",
+    "Farmhouse": "shiplap walls, reclaimed wood, large comfortable seating, galvanized metal accents, oversized lighting fixtures, white cabinets, wide-plank floors",
+    "Coastal": "light blue and white color palette, linen and cotton fabrics, nautical accents (rope/driftwood), rattan and wicker furniture, slipcovered sofas, large windows, airy feel",
+    "Transitional": "seamless blend of traditional and contemporary elements, curved and straight lines, neutral color palette (taupe/beige), emphasis on texture, lack of excessive ornamentation",
+    "Japandi": "light natural wood (bamboo/ash), minimalist decor, clean lines (Japanese), soft textures (Scandinavian), wabi-sabi appreciation of imperfections, low furniture profiles",
+    "Maximalist": "bold colors and patterns, layered textures (velvet, silk), gallery walls with excessive art, ornate details, saturated jewel tones (emerald, sapphire)",
+  };
+
+  // Batch Styles Generation Endpoint
+  app.post("/api/generate/batch-styles", async (req, res) => {
+    try {
+      const { imageData, formData, styles } = req.body;
+      
+      if (!imageData) return res.status(400).json({ success: false, error: "No image data" });
+      if (!styles || !Array.isArray(styles) || styles.length === 0) {
+        return res.status(400).json({ success: false, error: "No styles specified" });
+      }
+      
+      console.log(`Batch Generation Started: ${styles.length} styles`);
+      
+      const processedImage = await processImageForGemini(imageData);
+      
+      // Apply any preprocessing (smart zoom, etc)
+      let modifiedMainImage = processedImage;
+      if (formData.useSmartZoom && formData.smartZoomObject && formData.smartFillRatio) {
+        const box = await detectObjectBoundingBox(processedImage, formData.smartZoomObject);
+        if (box) {
+          modifiedMainImage = await applySmartObjectZoom(processedImage, box, formData.smartFillRatio);
+        }
+      } else {
+        modifiedMainImage = await applyPerspectiveMockup(
+          processedImage, 
+          formData.viewAngle || "Original", 
+          formData.cameraZoom || 100
+        );
+      }
+      
+      // Generate all styles in parallel with controlled concurrency
+      const CONCURRENCY = 3;
+      const results: {style: string; image: string; error?: string}[] = [];
+      
+      for (let i = 0; i < styles.length; i += CONCURRENCY) {
+        const batch = styles.slice(i, i + CONCURRENCY);
+        const batchPromises = batch.map(async (style: string) => {
+          try {
+            console.log(`Generating style: ${style}`);
+            
+            const styleDesc = styleDescriptions[style] || styleDescriptions["Modern"];
+            
+            let prompt = `You are an expert interior designer and architectural visualizer.
+
+TASK: Transform this room into a beautiful "${style}" style interior.
+
+STYLE DEFINITION: ${styleDesc}
+
+PRESERVED ELEMENTS: ${formData.preservedElements || "No specific elements to preserve"}
+
+${formData.addedElements ? `ADDED ELEMENTS: ${formData.addedElements}` : ""}
+
+CRITICAL INSTRUCTION - PERSPECTIVE LOCK:
+Maintain the EXACT camera angle and perspective of the original input image.
+
+CREATIVITY LEVEL: ${formData.creativityLevel || 50}% - ${(formData.creativityLevel || 50) >= 70 ? "Feel free to reimagine walls, flooring, and architecture." : "Preserve the general layout while changing decor and furniture."}
+
+Generate a photorealistic interior design rendering in the "${style}" style.`;
+            
+            const generatedImage = await generateRoomRedesign({
+              imageBase64: modifiedMainImage,
+              referenceImages: formData.referenceImages,
+              referenceDrawing: formData.referenceDrawing,
+              preservedElements: formData.preservedElements || "",
+              targetStyle: style,
+              quality: formData.quality || "Standard",
+              aspectRatio: formData.aspectRatio || "Original",
+              creativityLevel: formData.creativityLevel || 50,
+              customPrompt: prompt,
+              outputFormat: formData.outputFormat || "PNG",
+            });
+            
+            return { style, image: generatedImage };
+          } catch (error) {
+            console.error(`Error generating style ${style}:`, error);
+            return { style, image: "", error: error instanceof Error ? error.message : "Generation failed" };
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+      }
+      
+      const successCount = results.filter(r => r.image).length;
+      console.log(`Batch Generation Complete: ${successCount}/${styles.length} successful`);
+      
+      res.json({
+        success: true,
+        results
+      });
+      
+    } catch (error) {
+      console.error("Error in /api/generate/batch-styles:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to generate batch styles"
+      });
+    }
+  });
+
   // [Smart Crop Route - Preserved]
   app.post("/api/smart-crop", async (req, res) => {
     try {

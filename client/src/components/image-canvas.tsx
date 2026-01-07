@@ -13,8 +13,9 @@ interface ImageCanvasProps {
   generationType?: "design" | "crop" | "dimensional" | null;
   originalFileName?: string;
   currentFormData?: RoomRedesignRequest;
-  currentSmartCropData?: SmartCropRequest; // [NEW] For crop file naming
+  currentSmartCropData?: SmartCropRequest;
   referenceImages?: string[];
+  batchStyleResults?: {style: string; image: string}[];
 }
 
 export function ImageCanvas({
@@ -26,6 +27,7 @@ export function ImageCanvas({
   currentFormData,
   currentSmartCropData,
   referenceImages = [],
+  batchStyleResults = [],
 }: ImageCanvasProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalImage, setModalImage] = useState<string | null>(null);
@@ -251,8 +253,30 @@ export function ImageCanvas({
           </div>
         )}
 
-        {/* Batch Variations Thumbnails - Hide for Dimensional jobs */}
-        {(generatedVariations.length > 0 || generatedImage) && generationType === 'design' && !isDimensional && (
+        {/* Batch Styles Grid */}
+        {batchStyleResults.length > 0 && (
+          <div className="flex-none mt-2">
+            <h4 className="text-sm font-semibold mb-3">All Styles ({batchStyleResults.length})</h4>
+            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 overflow-x-auto pb-2">
+              {batchStyleResults.map((result, idx) => (
+                <div 
+                  key={idx}
+                  className={`cursor-pointer rounded-md overflow-hidden border-2 transition-all aspect-square relative group ${currentDisplayImage === result.image ? 'border-primary ring-2 ring-primary/20 scale-105' : 'border-transparent hover:border-primary/30'}`}
+                  onClick={() => setActiveVariation(result.image)}
+                  title={result.style}
+                >
+                  <img src={result.image} className="w-full h-full object-cover" alt={result.style} />
+                  <span className="absolute bottom-0 left-0 right-0 text-[9px] bg-black/70 text-white px-1 py-0.5 truncate text-center">
+                    {result.style}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Batch Variations Thumbnails - Hide for Dimensional jobs and when batch styles are shown */}
+        {batchStyleResults.length === 0 && (generatedVariations.length > 0 || generatedImage) && generationType === 'design' && !isDimensional && (
           <div className="flex-none mt-2">
             <h4 className="text-sm font-semibold mb-3">Variations</h4>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
