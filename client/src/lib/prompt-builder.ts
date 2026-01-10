@@ -6,10 +6,10 @@ export interface StyleDescription {
 }
 
 export const styleDescriptions: Record<string, string> = {
-  "Scandinavian": "white walls, light wood tones (ash/birch), functional furniture, minimal decor, soft textiles, abundant natural light, and hygge elements",
-  "Modern": "clean lines, minimal clutter, neutral color palette (white/grey/black), glass and steel accents, geometric shapes, raw concrete",
+  "Scandinavian": "Focus on high-contrast textures over color. Utilize a 'Hygge' atmosphere with a mix of matte light woods, tactile wool fabrics, and soft ambient natural light. The palette should be monochromatic but rich in material variety",
+  "Modern": "A study in 'Less is More' through geometric discipline. Emphasize large-scale unadorned surfaces, the interplay of shadow and light on flat planes, and a sophisticated mix of cold metals (steel/chrome) against warm natural stone",
   "Contemporary": "current trends, rounded curves, soft textures, sophisticated and fluid shapes, organic elements, mixed metals, sculptural lighting",
-  "Boho": "rattan, macramé, layered textiles, mismatched patterns, natural fibers (jute/wool), warm earth tones, abundant live plants, low-slung seating",
+  "Boho": "A 'Collected, Not Decorated' aesthetic. Lean into an organic, maximalist-light approach using highly varied natural textures like woven seagrass, raw terracotta, and layered patterned textiles. Lighting should feel warm and sun-drenched",
   "Industrial": "exposed brick, raw concrete floors, unfinished wood, black metal piping and fixtures, salvaged or utilitarian furniture, open-plan layout, visible ductwork",
   "Mid-Century Modern": "teak and walnut woods, tapered legs, geometric fabrics, bright accent colors (orange/teal/yellow), low profile furniture, iconic 1950s/60s pieces",
   "Farmhouse": "shiplap walls, reclaimed wood, large comfortable seating, galvanized metal accents, oversized lighting fixtures, white cabinets, wide-plank floors",
@@ -59,12 +59,10 @@ export interface PromptConfig {
   viewAngle?: string;
   cameraZoom?: number; 
   creativityLevel?: number;
-  // [NEW] Allow passing the editable description from UI
   customStyleDescription?: string; 
 }
 
 export function constructRoomScenePrompt(config: PromptConfig): string {
-  // Destructure with default values
   const { 
     style, 
     preservedElements, 
@@ -73,16 +71,23 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     viewAngle = "Original",
     cameraZoom = 100,
     creativityLevel = 50,
-    customStyleDescription // [NEW]
+    customStyleDescription 
   } = config;
 
-  // Use the custom description if provided, otherwise fallback to the dictionary
   const specificAesthetic = customStyleDescription || styleDescriptions[style] || styleDescriptions["Scandinavian"];
-
-  // Creativity applies to the ROOM SHELL, not the preserved object identity.
   const isHighCreativity = creativityLevel >= 70;
 
-  let prompt = `You are an expert interior designer and architectural visualizer.`;
+  // === [NEW] POINT #2: STYLE VARIANCE LOGIC ===
+  let styleGuidance = "";
+  if (creativityLevel < 30) {
+      styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision. Use only the most iconic elements.`;
+  } else if (creativityLevel < 70) {
+      styleGuidance = `Provide a standard, balanced interpretation of the ${style} aesthetic, focusing on cohesive materials.`;
+  } else {
+      styleGuidance = `Provide a unique, 'Designer Signature' take on ${style}. Introduce unexpected but complementary textures and avant-garde lighting that push the boundaries of the style.`;
+  }
+
+  let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
 
   // === DYNAMIC ZOOM INSTRUCTIONS ===
   if (cameraZoom < 85) {
@@ -99,11 +104,12 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   // === PERSPECTIVE & ANGLE LOGIC ===
   if (viewAngle === "Original") {
-      prompt += `\n\nCRITICAL INSTRUCTION - PERSPECTIVE LOCK:
-      Maintain the EXACT camera angle and perspective of the original input image. 
-      The preserved object must be viewed from the exact same vantage point as the original.`;
+      prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
+      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
+      2. VANISHING POINTS: Do not shift the vanishing points. All orthogonal lines in the new environment must converge at the exact same coordinates as the original image.
+      3. FOCAL LENGTH: Do not change the lens distortion. If the original is a wide-angle, the output must remain wide-angle.
+      4. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation from the original source. The preserved object must be viewed from the exact same vantage point.`;
   } else {
-      // Forcing a new angle
       prompt += `\n\nCRITICAL INSTRUCTION - CHANGE CAMERA ANGLE:
       You must re-render the scene from a strictly "${viewAngle}" perspective.`;
 
@@ -134,16 +140,15 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     Strictly analyze the input image to identify the following elements: "${preservedElements}".`;
 
     if (viewAngle === "Original") {
-      // IF ANGLE IS ORIGINAL: We can visually freeze pixels
       if (centerPreservedElements) {
          prompt += `\n1. VISUAL FREEZE: You must FREEZE the visual appearance (geometry, texture, material, details) of the "${preservedElements}". It must look EXACTLY like the original.`;
          prompt += `\n2. PERMISSION TO MOVE: You are explicitly permitted to SHIFT THE POSITION (X/Y axis) of this element on the canvas to center it within the new aspect ratio.`;
          prompt += `\n3. RESTRICTION: Do NOT rotate, scale, or distort the object itself. Only its placement on the canvas may change.`;
+         prompt += `\n4. SPATIAL ANCHOR: Use the 3D orientation of the "${preservedElements}" as the master coordinate system for the entire room.`;
       } else {
          prompt += `\nYou must FREEZE the pixels associated with these specific elements. They must remain 100% UNCHANGED in geometry, texture, material, and position.`;
       }
     } else {
-      // IF ANGLE IS CHANGED: We cannot freeze pixels, must preserve Identity
       prompt += `\n1. IDENTITY PRESERVATION: Since the camera angle is changing to "${viewAngle}", you cannot freeze the pixels. Instead, you must generate a perfect 3D representation of the "${preservedElements}" from this new angle.`;
       prompt += `\n2. DESIGN CONSISTENCY: The object must have the EXACT SAME design, material, finish, and features as the original. It should look like the same physical object, just viewed from the ${viewAngle}.`;
       prompt += `\n3. INTERNAL GEOMETRY: Pay close attention to internal curves, drain placement, and rim width. These must match the original object's technical specifications.`;
@@ -159,7 +164,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     }
 
   } else {
-    // If nothing preserved
     if (!isHighCreativity && viewAngle === "Original") {
       prompt += `\n\nINSTRUCTION: Preserve the structural shell of the room (walls, floor, ceiling, windows) and perspective.`;
     }
@@ -172,10 +176,15 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     Ensure they are placed logically within the 3D space of the room.`;
   }
 
+  // === [NEW] POINT #3: MATERIALITY FOCUS & TRANSFORMATION ===
   prompt += `\n\nTRANSFORMATION GOAL:
-  Redesign the rest of the room to match a "${style}" aesthetic.
-  Key characteristics to apply: ${specificAesthetic}.
-  Replace furniture, lighting, and decor that are NOT in the preservation list.`;
+  Redesign the environment to match a "${style}" aesthetic.
+  STYLE DIRECTION: ${styleGuidance}
+  KEY CHARACTERISTICS: ${specificAesthetic}.
+
+  MATERIALITY DIRECTIVE: 
+  Interpret the style primarily through material depth and surface quality. Focus on how light interacts with different textures (e.g., the grain of wood, the coolness of stone, the softness of textiles). Avoid generic surfaces; prioritize tactile realism.
+  Replace furniture, lighting, and decor that are NOT in the preservation list to align with this vision.`;
 
   // === FIXTURE COHERENCE ===
   if (preservedElements && preservedElements.trim().length > 0) {

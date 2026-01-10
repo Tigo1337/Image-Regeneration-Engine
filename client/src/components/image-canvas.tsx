@@ -57,21 +57,19 @@ export function ImageCanvas({
   const generateDownloadFileName = (): string => {
     const baseName = originalFileName?.replace(/\.[^/.]+$/, "") || "image";
 
-    // [NEW] Logic for Dimensional Image Filenames
-    if (isDimensional) {
-        return `${baseName}-dimensional-ar-1-1`;
-    }
-
-    // [NEW] Logic for Smart Crop Filenames
+    if (isDimensional) return `${baseName}-dimensional-ar-1-1`;
     if (generationType === 'crop' && currentSmartCropData) {
         const fill = currentSmartCropData.fillRatio;
         const ar = slugify(currentSmartCropData.aspectRatio);
         return `${baseName}-crop-fill-${fill}-ar-${ar}`;
     }
 
-    // Existing Logic for Design Filenames
     if (currentFormData) {
-        const style = slugify(currentFormData.targetStyle);
+        // [NEW] Find the specific style of the image being viewed
+        const batchMatch = batchStyleResults.find(r => r.image === currentDisplayImage);
+        const styleToUse = batchMatch ? batchMatch.style : currentFormData.targetStyle;
+
+        const style = slugify(styleToUse);
         const quality = slugify(currentFormData.quality);
         const ar = slugify(currentFormData.aspectRatio);
         return `${baseName}-${style}-${quality}-ar-${ar}`;
@@ -256,19 +254,23 @@ export function ImageCanvas({
         {/* Batch Styles Grid */}
         {batchStyleResults.length > 0 && (
           <div className="flex-none mt-2">
-            <h4 className="text-sm font-semibold mb-3">All Styles ({batchStyleResults.length})</h4>
-            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 overflow-x-auto pb-2">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-semibold">Style Explorations ({batchStyleResults.length})</h4>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Scroll to view all</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-4 pt-1 scrollbar-thin">
               {batchStyleResults.map((result, idx) => (
                 <div 
                   key={idx}
-                  className={`cursor-pointer rounded-md overflow-hidden border-2 transition-all aspect-square relative group ${currentDisplayImage === result.image ? 'border-primary ring-2 ring-primary/20 scale-105' : 'border-transparent hover:border-primary/30'}`}
+                  className={`w-28 h-28 flex-shrink-0 cursor-pointer rounded-md overflow-hidden border-2 transition-all relative group ${currentDisplayImage === result.image ? 'border-primary ring-2 ring-primary/20 scale-105 z-10' : 'border-transparent hover:border-primary/30'}`}
                   onClick={() => setActiveVariation(result.image)}
-                  title={result.style}
                 >
                   <img src={result.image} className="w-full h-full object-cover" alt={result.style} />
-                  <span className="absolute bottom-0 left-0 right-0 text-[9px] bg-black/70 text-white px-1 py-0.5 truncate text-center">
-                    {result.style}
-                  </span>
+                  <div className="absolute inset-x-0 bottom-0 bg-black/80 p-1">
+                     <p className="text-[9px] text-white truncate text-center font-medium leading-tight">
+                       {result.style}
+                     </p>
+                  </div>
                 </div>
               ))}
             </div>
