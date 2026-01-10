@@ -67,7 +67,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     style, 
     preservedElements, 
     addedElements, 
-    centerPreservedElements = true, 
     viewAngle = "Original",
     cameraZoom = 100,
     creativityLevel = 50,
@@ -77,132 +76,110 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   const specificAesthetic = customStyleDescription || styleDescriptions[style] || styleDescriptions["Scandinavian"];
   const isHighCreativity = creativityLevel >= 70;
 
-  // === [NEW] POINT #2: STYLE VARIANCE LOGIC ===
+  // 1. STYLE VARIANCE LOGIC
   let styleGuidance = "";
   if (creativityLevel < 30) {
       styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision.`;
   } else if (creativityLevel < 70) {
       styleGuidance = `Provide a standard, balanced interpretation of the ${style} aesthetic, focusing on cohesive materials.`;
   } else {
-      styleGuidance = `Provide a unique, 'Designer Signature' take on ${style}. Introduce unexpected but complementary textures and avant-garde lighting that push the boundaries of the style.`;
+      styleGuidance = `Provide a unique, 'Designer Signature' take on ${style}. Introduce unexpected but complementary textures and avant-garde lighting.`;
   }
 
+  // --- START PROMPT CONSTRUCTION ---
+
+  // PHASE 1: ROLE & GLOBAL QUALITY
   let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
 
-  // === DYNAMIC ZOOM INSTRUCTIONS ===
+  // PHASE 2: CANVAS & ZOOM (Establishing the boundaries)
   if (cameraZoom < 85) {
-    prompt += `\n\nCRITICAL INSTRUCTION - WIDE ANGLE CONTEXT (Outpainting):
-    The input image is centered with empty white space around it.
-    Task: OUTPAINTING. You must fill the surrounding white space with a scene that perfectly matches the center image.
-    Extend floors, ceilings, and walls seamlessly. Do NOT create a frame or border. The room continues deeply into the white space.`;
+      prompt += `\n\nCRITICAL INSTRUCTION - WIDE ANGLE CONTEXT (Outpainting):
+      The input image is centered with empty white space around it.
+      Task: OUTPAINTING. Fill the surrounding white space with a scene that perfectly matches the center image.
+      Extend floors, ceilings, and walls seamlessly. Maintain uniform lighting; avoid vignetting or artificial shadows at the edges.`;
   } else if (cameraZoom > 115) {
-    prompt += `\n\nCRITICAL INSTRUCTION - MACRO DETAIL (Upscaling):
-    The input image is a zoomed-in crop.
-    Task: UPSCALING & REFINEMENT. Focus on the texture and material quality of the visible objects.
-    Do NOT add new objects that wouldn't be visible at this close range. Enhance the realism of existing surfaces.`;
+      prompt += `\n\nCRITICAL INSTRUCTION - MACRO DETAIL (Upscaling):
+      The input image is a zoomed-in crop. Focus on texture and material quality.
+      Enhance the realism of existing surfaces without adding new large-scale objects.`;
   }
 
-  // === PERSPECTIVE & ANGLE LOGIC ===
+  // PHASE 3: PERSPECTIVE & CAMERA MATH (The "Grid")
   if (viewAngle === "Original") {
-      prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
-      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
-      2. VANISHING POINTS: Do not shift the vanishing points. All orthogonal lines in the new environment must converge at the exact same coordinates as the original image.
-      3. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset or shift the object even slightly.
-      4. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation.`;
+      if (isHighCreativity) {
+          // Adaptive perspective for total overhaul
+          prompt += `\n\nCRITICAL INSTRUCTION - ADAPTIVE PERSPECTIVE:
+          1. OBJECT COORDINATE ANCHOR: The 3D space must be built around the current X/Y coordinates of the "Bathtub".
+          2. VANISHING POINT FREEDOM: You are encouraged to redefine the room's depth and vanishing points. The room structure does NOT need to follow the original walls or window lines.
+          3. VANTAGE POINT: Maintain the same camera height, but you may expand the architectural volume.`;
+      } else {
+          // Rigid perspective for standard refinement
+          prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
+          1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
+          2. VANISHING POINTS: All orthogonal lines must converge at the exact same coordinates as the original image.
+          3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation.`;
+      }
   } else {
       prompt += `\n\nCRITICAL INSTRUCTION - CHANGE CAMERA ANGLE:
       You must re-render the scene from a strictly "${viewAngle}" perspective.`;
 
       if (viewAngle === "Front") {
-        prompt += `\n**CAMERA LOCK: 0-DEGREE FRONT ELEVATION**`;
-        prompt += `\n1. Position the camera directly perpendicular to the face of the "${preservedElements}".`;
-        prompt += `\n2. Use One-Point Perspective: All horizontal lines of the object must be perfectly parallel to the image frame.`;
-        prompt += `\n3. Do not show the side panels of the object. Show ONLY the front face.`;
-      }
-
-      if (viewAngle === "Side") {
-        prompt += `\n**CAMERA LOCK: 45-DEGREE ISOMETRIC / THREE-QUARTER VIEW**`;
-        prompt += `\n1. Rotate the camera strictly 45 degrees around the "${preservedElements}".`;
-        prompt += `\n2. COMPOSITION RULE: You MUST show two distinct faces of the object (the Front Face AND the Side Face) to establish volumetric depth.`;
-        prompt += `\n3. The object should NOT look flat. It must have 3D dimensionality.`;
-      }
-
-      if (viewAngle === "Top") {
-        prompt += `\n**CAMERA LOCK: 90-DEGREE OVERHEAD (FLAT LAY)**`;
-        prompt += `\nOrient the view to be a Top-Down / Flat-Lay view, looking directly down at the "${preservedElements}".`;
-        prompt += `\n**TOP VIEW CONSTRAINT**: You must respect the object's asymmetry. If the drain/faucets are offset in the 3D structure, they MUST be offset in the top view. Do NOT auto-center internal features.`;
+          prompt += `\n**CAMERA LOCK: 0-DEGREE FRONT ELEVATION**. Use One-Point Perspective. All horizontal lines must be parallel to the frame. Show ONLY the front face.`;
+      } else if (viewAngle === "Side") {
+          prompt += `\n**CAMERA LOCK: 45-DEGREE THREE-QUARTER VIEW**. Establish volumetric depth by showing both the Front and Side faces.`;
+      } else if (viewAngle === "Top") {
+          prompt += `\n**CAMERA LOCK: 90-DEGREE OVERHEAD**. Respect object asymmetry (drain/faucet offsets). Do not auto-center internal features.`;
       }
   }
 
-  // === OBJECT PRESERVATION ===
+  // PHASE 4: OBJECT ANCHORING (Placing the fixed items in the grid)
   if (preservedElements && preservedElements.trim().length > 0) {
-    prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
-    Strictly analyze the input image to identify the following elements: "${preservedElements}".`;
+      prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
+      Strictly analyze the input image to identify and isolate the following elements: "${preservedElements}".`;
 
-    if (viewAngle === "Original") {
-      prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
-      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
-      2. VANISHING POINTS: Do not shift the vanishing points. All orthogonal lines in the new environment must converge at the exact same coordinates as the original image.
-      3. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset or shift the object even slightly.
-      4. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation.`;
-    } else {
-      prompt += `\n\nCRITICAL INSTRUCTION - CHANGE CAMERA ANGLE: Re-render from strictly "${viewAngle}" perspective.`;
+      if (viewAngle === "Original") {
+          prompt += `\n1. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset, scale, or shift the object even slightly.
+          2. IDENTITY LOCK: Render with 100% fidelity to the original design, material, and features.
+          3. STYLE ISOLATION: Do not apply any textures, colors, or materials from the new "${style}" aesthetic to the "${preservedElements}". It must remain a visually independent asset within the new environment.`;
+      } else {
+          prompt += `\n1. IDENTITY PRESERVATION: Generate a perfect 3D representation of the "${preservedElements}" from the "${viewAngle}" perspective.
+          2. DESIGN CONSISTENCY: Must maintain identical material, finish, and internal geometry (e.g., drain placement, rim thickness, and curvature) as the original source.
+          3. VOLUMETRIC ACCURACY: Ensure the object's scale remains realistic relative to the newly generated "${style}" room environment.`;
+      }
+  }
 
-      if (viewAngle === "Front") {
-        prompt += `\n**CAMERA LOCK: 0-DEGREE FRONT ELEVATION**`;
-      }
-      if (viewAngle === "Side") {
-        prompt += `\n**CAMERA LOCK: 45-DEGREE ISOMETRIC VIEW**`;
-      }
-      if (viewAngle === "Top") {
-        prompt += `\n**CAMERA LOCK: 90-DEGREE OVERHEAD**`;
-      }
-    }
-
-    // ROOM STRUCTURE LOGIC
-    if (!isHighCreativity) {
+  // PHASE 5: STRUCTURAL SHELL
+  if (!isHighCreativity) {
       prompt += `\n\nCONSTRAINT - ROOM STRUCTURE:
-      Do not modify the structural shell of the room (walls, windows, ceiling) unless explicitly required by the style change. Keep the room layout identical.`;
-    } else {
-      prompt += `\n\nFREEDOM - ROOM STRUCTURE (ARCHITECTURAL OVERHAUL):
-        Ignore the current room's geometry. You are explicitly authorized and encouraged to completely replace the structural shell (walls, partitions, floor transitions, window positions) with brand new architecture that embodies the "${style}" style. CRITICAL: You must construct this new architecture RELATIVE to the fixed coordinates of the "${preservedElements}". The object does not move; the room changes around it.`;
-      }
-
+      Keep the structural shell (walls, windows, ceiling) identical to the original layout. Do not add doors or windows that do not exist in the source image.`;
   } else {
-    if (!isHighCreativity && viewAngle === "Original") {
-      prompt += `\n\nINSTRUCTION: Preserve the structural shell of the room (walls, floor, ceiling, windows) and perspective.`;
-    }
+      prompt += `\n\nFREEDOM - ARCHITECTURAL OVERHAUL:
+      You have absolute freedom to redesign the structural shell (walls, floor, ceiling). Redesign the architecture to perfectly match the "${style}" aesthetic.`;
   }
 
-  // === ADDED ELEMENTS ===
+  // PHASE 6: AESTHETIC TRANSFORMATION & ADDITIONS
   if (addedElements && addedElements.trim().length > 0) {
-    prompt += `\n\nCRITICAL INSTRUCTION - ADDED ELEMENTS:
-    Seamlessly integrate the following elements into the scene: "${addedElements}".
-    Ensure they are placed logically within the 3D space of the room.`;
+      prompt += `\n\nCRITICAL INSTRUCTION - ADDED ELEMENTS:
+      Seamlessly integrate: "${addedElements}". Ensure they are placed logically within the 3D space.`;
   }
 
-  // === [NEW] POINT #3: MATERIALITY FOCUS & TRANSFORMATION ===
   prompt += `\n\nTRANSFORMATION GOAL:
   Redesign the environment to match a "${style}" aesthetic.
   STYLE DIRECTION: ${styleGuidance}
   KEY CHARACTERISTICS: ${specificAesthetic}.
 
   MATERIALITY DIRECTIVE: 
-  Interpret the style primarily through material depth and surface quality. Focus on how light interacts with different textures (e.g., the grain of wood, the coolness of stone, the softness of textiles). Avoid generic surfaces; prioritize tactile realism.
-  Replace furniture, lighting, and decor that are NOT in the preservation list to align with this vision.`;
+  Interpret style through material depth. Focus on how light interacts with textures (grain of wood, coolness of stone, softness of textiles). Avoid generic surfaces; prioritize tactile realism.`;
 
-  // === FIXTURE COHERENCE ===
+  // PHASE 7: COHERENCE & FINAL REFINEMENT
   if (preservedElements && preservedElements.trim().length > 0) {
-    prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE (MATCH PRESERVED ELEMENTS):
-    You must explicitly analyze the material and metallic finish of the preserved "${preservedElements}".
-    Use this existing finish (e.g., if the preserved item has chrome hinges, use chrome) as the 'Master Finish' for the rest of the room.
-    Apply this exact matching finish to ALL NEW metallic fixtures (faucets, lighting, hardware) generated in the new design.`;
+      prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
+      Identify the metallic finish of the preserved "${preservedElements}". Use this as the 'Master Finish'. Apply this exact finish to ALL newly generated fixtures, hardware, and lighting.`;
   } else {
-    prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
-    For the selected style, choose the single most appropriate metallic finish (e.g., brushed nickel, matte black, chrome). You MUST apply this exact finish uniformly to **ALL** visible metallic fixtures, including plumbing hardware, lighting fixtures, and cabinet pulls. Maintain absolute consistency of this single finish across the entire scene.`;
+      prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
+      Select the single most appropriate metallic finish for the "${style}" style. Apply this finish uniformly to ALL metallic elements for absolute consistency.`;
   }
 
-  prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. Zero perspective drift.`;
+  prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. High-end photography. Zero perspective drift.`;
 
   return prompt;
 }
