@@ -28,7 +28,12 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
   CRITICAL - HANDLING HIDDEN ANGLES:
   The Input Image only shows the Front. You MUST use the provided "Visual Reference Images" (if any) and the "3D Structure Analysis" below to reconstruct the hidden sides logically.
   `;
-
+  
+  prompt += `\n\nMATERIALITY & LIGHTING COHERENCE:
+  1. Identify the primary light source in the original image. Maintain this light vector.
+  2. Focus on material depth (wood grain, stone texture, fabric weave). 
+  3. The surface quality must be consistent across all objects.`;
+  
   if (structureAnalysis) {
     prompt += `\n\n=== 3D STRUCTURE ANALYSIS (GROUND TRUTH) ===
     Use this technical description to render the details correctly:
@@ -289,26 +294,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const batch = styles.slice(i, i + CONCURRENCY);
         const batchPromises = batch.map(async (style: string) => {
           try {
-            console.log(`Generating style: ${style}`);
-            
             const styleDesc = styleDescriptions[style] || styleDescriptions["Modern"];
-            
+
+            // [NEW] Sync Creativity/Variance Logic
+            const creativity = formData.creativityLevel || 50;
+            let styleGuidance = "";
+            if (creativity < 30) {
+                styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision.`;
+            } else if (creativity < 70) {
+                styleGuidance = `Provide a standard, balanced interpretation of the ${style} aesthetic.`;
+            } else {
+                styleGuidance = `Provide a unique, 'Designer Signature' take on ${style} with avant-garde lighting.`;
+            }
+
+            // [NEW] Enhanced Prompt with Materiality Directive
             let prompt = `You are an expert interior designer and architectural visualizer.
 
-TASK: Transform this room into a beautiful "${style}" style interior.
+        TASK: Transform this room into a "${style}" style interior.
+        STYLE DIRECTION: ${styleGuidance}
+        KEY CHARACTERISTICS: ${styleDesc}
 
-STYLE DEFINITION: ${styleDesc}
+        MATERIALITY DIRECTIVE: 
+        Interpret the style primarily through material depth and surface quality. Focus on how light interacts with different textures (e.g., wood grain, stone, textiles). Prioritize tactile realism.
 
-PRESERVED ELEMENTS: ${formData.preservedElements || "No specific elements to preserve"}
+        PRESERVED ELEMENTS: ${formData.preservedElements || "None"}
+        ${formData.addedElements ? `ADDED ELEMENTS: ${formData.addedElements}` : ""}
 
-${formData.addedElements ? `ADDED ELEMENTS: ${formData.addedElements}` : ""}
+        CRITICAL INSTRUCTION - PERSPECTIVE LOCK:
+        Maintain the EXACT camera angle and perspective of the original input image. 
+        1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line.
+        2. VANISHING POINTS: All orthogonal lines must converge at the exact same coordinates as the original.
 
-CRITICAL INSTRUCTION - PERSPECTIVE LOCK:
-Maintain the EXACT camera angle and perspective of the original input image.
-
-CREATIVITY LEVEL: ${formData.creativityLevel || 50}% - ${(formData.creativityLevel || 50) >= 70 ? "Feel free to reimagine walls, flooring, and architecture." : "Preserve the general layout while changing decor and furniture."}
-
-Generate a photorealistic interior design rendering in the "${style}" style.`;
+        Generate a photorealistic rendering.`;
             
             const generatedImage = await generateRoomRedesign({
               imageBase64: modifiedMainImage,
