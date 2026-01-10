@@ -1,3 +1,10 @@
+export type PromptType = "room-scene";
+
+export interface StyleDescription {
+  name: string;
+  description: string;
+}
+
 export const styleDescriptions: Record<string, string> = {
   "Scandinavian": "Focus on high-contrast textures over color. Utilize a 'Hygge' atmosphere with a mix of matte light woods, tactile wool fabrics, and soft ambient natural light. The palette should be monochromatic but rich in material variety",
   "Modern": "A study in 'Less is More' through geometric discipline. Emphasize large-scale unadorned surfaces, the interplay of shadow and light on flat planes, and a sophisticated mix of cold metals (steel/chrome) against warm natural stone",
@@ -69,7 +76,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   const specificAesthetic = customStyleDescription || styleDescriptions[style] || styleDescriptions["Scandinavian"];
   const isHighCreativity = creativityLevel >= 70;
 
-  // 1. STYLE VARIANCE LOGIC
   let styleGuidance = "";
   if (creativityLevel < 30) {
       styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision.`;
@@ -79,12 +85,8 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       styleGuidance = `Provide a unique, 'Designer Signature' take on ${style}. Introduce unexpected but complementary textures and avant-garde lighting.`;
   }
 
-  // --- START PROMPT CONSTRUCTION ---
-
-  // PHASE 1: ROLE & GLOBAL QUALITY
   let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
 
-  // PHASE 2: CANVAS & ZOOM (Establishing the boundaries)
   if (cameraZoom < 85) {
       prompt += `\n\nCRITICAL INSTRUCTION - WIDE ANGLE CONTEXT (Outpainting):
       The input image is centered with empty white space around it.
@@ -96,16 +98,13 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       Enhance the realism of existing surfaces without adding new large-scale objects.`;
   }
 
-  // PHASE 3: PERSPECTIVE & CAMERA MATH (The "Grid")
   if (viewAngle === "Original") {
       if (isHighCreativity) {
-          // Adaptive perspective for total overhaul
           prompt += `\n\nCRITICAL INSTRUCTION - ADAPTIVE PERSPECTIVE:
-          1. OBJECT COORDINATE ANCHOR: The 3D space must be built around the current X/Y coordinates of the "Bathtub".
+          1. OBJECT COORDINATE ANCHOR: The 3D space must be built around the current X/Y coordinates of the "${preservedElements || 'main object'}".
           2. VANISHING POINT FREEDOM: You are encouraged to redefine the room's depth and vanishing points. The room structure does NOT need to follow the original walls or window lines.
           3. VANTAGE POINT: Maintain the same camera height, but you may expand the architectural volume.`;
       } else {
-          // Rigid perspective for standard refinement
           prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
           1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
           2. VANISHING POINTS: All orthogonal lines must converge at the exact same coordinates as the original image.
@@ -124,7 +123,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       }
   }
 
-  // PHASE 4: OBJECT ANCHORING (Placing the fixed items in the grid)
   if (preservedElements && preservedElements.trim().length > 0) {
       prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
       Strictly analyze the input image to identify and isolate the following elements: "${preservedElements}".`;
@@ -135,12 +133,11 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
           3. STYLE ISOLATION: Do not apply any textures, colors, or materials from the new "${style}" aesthetic to the "${preservedElements}". It must remain a visually independent asset within the new environment.`;
       } else {
           prompt += `\n1. IDENTITY PRESERVATION: Generate a perfect 3D representation of the "${preservedElements}" from the "${viewAngle}" perspective.
-          2. DESIGN CONSISTENCY: Must maintain identical material, finish, and internal geometry (e.g., drain placement, rim thickness, and curvature) as the original source.
+          2. DESIGN CONSISTENCY: Must maintain identical material, finish, and internal geometry as the original source.
           3. VOLUMETRIC ACCURACY: Ensure the object's scale remains realistic relative to the newly generated "${style}" room environment.`;
       }
   }
 
-  // PHASE 5: STRUCTURAL SHELL
   if (!isHighCreativity) {
       prompt += `\n\nCONSTRAINT - ROOM STRUCTURE:
       Keep the structural shell (walls, windows, ceiling) identical to the original layout. Do not add doors or windows that do not exist in the source image.`;
@@ -149,7 +146,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       You have absolute freedom to redesign the structural shell (walls, floor, ceiling). Redesign the architecture to perfectly match the "${style}" aesthetic.`;
   }
 
-  // PHASE 6: AESTHETIC TRANSFORMATION & ADDITIONS
   if (addedElements && addedElements.trim().length > 0) {
       prompt += `\n\nCRITICAL INSTRUCTION - ADDED ELEMENTS:
       Seamlessly integrate: "${addedElements}". Ensure they are placed logically within the 3D space.`;
@@ -161,9 +157,8 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   KEY CHARACTERISTICS: ${specificAesthetic}.
 
   MATERIALITY DIRECTIVE: 
-  Interpret style through material depth. Focus on how light interacts with textures (grain of wood, coolness of stone, softness of textiles). Avoid generic surfaces; prioritize tactile realism.`;
+  Interpret style through material depth. Focus on how light interacts with textures. Prioritize tactile realism.`;
 
-  // PHASE 7: COHERENCE & FINAL REFINEMENT
   if (preservedElements && preservedElements.trim().length > 0) {
       prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
       Identify the metallic finish of the preserved "${preservedElements}". Use this as the 'Master Finish'. Apply this exact finish to ALL newly generated fixtures, hardware, and lighting.`;
@@ -176,3 +171,11 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   return prompt;
 }
+
+export const promptTypes: { value: PromptType; label: string; description: string }[] = [
+  {
+    value: "room-scene",
+    label: "Room Scene",
+    description: "Transform the room design while preserving specific elements",
+  },
+];
