@@ -10,7 +10,51 @@ import { z } from "zod";
 import sharp from "sharp";
 import { constructDimensionalPrompt } from "./dimensional-prompt"; 
 
-// Prompt Builder
+// Updated Materiality-Focused Style Descriptions
+const styleDescriptions: Record<string, string> = {
+  "Scandinavian": "Focus on high-contrast textures over color. Utilize a 'Hygge' atmosphere with a mix of matte light woods, tactile wool fabrics, and soft ambient natural light. The palette should be monochromatic but rich in material variety",
+  "Modern": "A study in 'Less is More' through geometric discipline. Emphasize large-scale unadorned surfaces, the interplay of shadow and light on flat planes, and a sophisticated mix of cold metals (steel/chrome) against warm natural stone",
+  "Contemporary": "A fluid aesthetic defined by soft-touch finishes and organic curves. Balance high-gloss surfaces with deep-pile textiles. Focus on the interplay of mixed metals and sculptural, diffused lighting that highlights rounded architectural forms",
+  "Boho": "A 'Collected, Not Decorated' aesthetic. Lean into an organic, maximalist-light approach using highly varied natural textures like woven seagrass, raw terracotta, and layered patterned textiles. Lighting should feel warm and sun-drenched",
+  "Industrial": "Emphasize the beauty of raw, 'unfinished' materials. Contrast the cold, hard texture of polished concrete and black iron piping with the warmth of deep-grained reclaimed wood and exposed, patinated brickwork",
+  "Mid-Century Modern": "Highlight the contrast between organic wood grains (teak/walnut) and smooth synthetic polymers. Focus on low-profile geometry, matte-finish cabinetry, and punctuated pops of saturated primary colors through textile and glass",
+  "Farmhouse": "Defined by 'Worn-In' comfort. Prioritize matte, chalky paint finishes, wide-planked distressed wood, and tactile fabrics like linen and burlap. Use galvanized metals and oversized fixtures to create a sense of scale",
+  "Coastal": "Capture the essence of air and light. Use a palette of bleached woods, crisp cottons, and weathered driftwood textures. Lighting should be bright and overexposed, mimicking a reflective seaside atmosphere",
+  "Transitional": "A sophisticated equilibrium between heritage and modernism. Blend the tactile weight of traditional crown molding with the sleek, neutral surfaces of contemporary design. Focus on taupe and beige tonality with rich fabric layering",
+  "Japandi": "The intersection of Scandi-function and Japanese wabi-sabi. Use light-toned bamboo, slatted wood partitions, and stone surfaces with natural imperfections. Keep lines horizontal and low, emphasizing quietude and matte finishes",
+  "Maximalist": "A high-drama celebration of saturated jewel tones and tactile abundance. Layer velvet, silk, and brocade against ornate gold details. Focus on rhythmic patterns and the complex interplay of shadows in a heavily curated space",
+  "Art Deco": "Architectural glamour defined by 'The Machine Age.' Prioritize polished marble, brushed gold hardware, and fluted glass textures. Use high-contrast symmetry and tiered lighting to create a sense of verticality and opulence",
+  "Biophilic": "Blur the line between interior and exterior. Integrate living moss textures, river-stone transitions, and raw teak. Focus on abundant, unfiltered natural light and the moisture-rich atmosphere of a greenhouse",
+  "Desert Modern": "Inspired by arid landscapes. Use sun-baked terracotta, plaster tadelakt walls, and sandy, abrasive textures. Contrast these with matte black fixtures and sharp, dramatic architectural shadows from the high sun",
+  "Moody Luxe": "A 'Hotel-Spa' atmosphere defined by obsidian stone and charcoal wood. Use backlit surfaces and integrated LED strips to create high-contrast highlights on dark, velvet-smooth cabinetry and chrome accents",
+  "Mediterranean": "Sun-drenched and earthy. Focus on hand-painted ceramic glaze, lime-washed plaster walls, and weathered bronze. The flooring should feel cool to the touch with terracotta or stone tiles under a warm, golden light",
+  "Zen Spa": "The ultimate in sensory reduction. Use slatted wood partitions to create rhythmic shadows, smooth river rocks, and floating stone vanities. Lighting must be soft, diffused, and indirect to mimic a steam-filled sanctuary",
+  "Mountain Modern": "Rugged gravity meets clean lines. Utilize heavy timber beams with visible grain, slate stone flooring, and floor-to-ceiling glass. The materiality should feel defensive against the elements but plush and warm internally",
+  "Soft Modern": "A gentler take on minimalism. Focus on beige microcement, brushed nickel, and radius (curved) edges. The atmosphere should feel 'hush-toned' with neutral palettes and plush, enveloping textiles",
+  "Modern Farmhouse": "High-contrast architectural clarity. Combine the sharpness of black steel window frames with the soft, organic texture of white marble and shaker-style cabinetry. Focus on clean lines and polished hardware",
+  "Industrial Chic": "A refined take on raw materials. Pair polished, high-gloss concrete with sophisticated glass partitions. Use black steel for structural accents but soften the atmosphere with high-thread-count white textiles",
+  "Dark Scandi": "The 'Noir' side of Hygge. Utilize smoked oak or walnut, deep slate-grey matte walls, and cozy, heavy-knit textures. Focus on low-level 'pools' of warm light against dark, minimalist functionalism",
+  "Wabi-Sabi Japandi": "Appreciate the beauty of the aged and irregular. Use rough-hewn stone, textured lime plaster, and irregular wooden forms. The palette should be muted and earthy, emphasizing the 'honesty' of raw materials",
+  "Victorian": "Ornate materiality and historical weight. Focus on intricate wood carvings, heavy brass patina, and etched glass. Use deep, saturated tones like mahogany and emerald, highlighted by the flickering quality of candlelight",
+  "Hollywood Regency": "Cinematic glamour. Use high-gloss lacquered surfaces, mirrored furniture, and metallic gold accents. The atmosphere should be theatrical, featuring high-contrast black-and-white floors and velvet-clad focal points",
+  "French Country": "Elegant rusticity. Combine distressed white-washed wood with soft lavender or cream palettes. Focus on curved cabinetry, wrought iron details, and the tactile quality of stone tile and toile fabrics",
+  "Brutalist": "Monolithic and raw. Emphasize the massive weight of unpolished concrete and blocky geometric forms. Use monochromatic grey tones and dramatic architectural shadows to highlight the rugged, honest texture of the build",
+  "Tropical": "Exotic and ventilated. Use dark mahogany, woven rattan, and large-scale leafy greenery. Focus on the transition between indoor stone floors and outdoor bamboo textures, with turquoise accents mimicking water",
+  "Southwestern": "Adobe-inspired textures. Use sunset hues (pink, orange, clay) against stucco walls. Prioritize the woven texture of tribal rugs and the cool, matte touch of turquoise stone and terracotta clay tiles",
+  "Ultra-Minimalist": "Clinical precision and zero visual noise. Use large-format porcelain slabs, handle-less cabinetry, and frameless glass. Everything is hidden; focus on the perfection of the white-on-white material joinery",
+  "Grandmillennial": "Nostalgic and layered. Use chintz florals, scalloped wicker, and needlepoint textures. The palette is a mix of pastels and 'heirloom' wood finishes, creating a cozy, storied, and slightly eccentric atmosphere",
+  "Eclectic": "A curation of historical layers. Mix matte vintage woods with high-gloss modern metals. Focus on the harmony found in diversity—pairing unexpected color pops with a variety of textures like velvet, leather, and glass",
+  "Rustic": "The raw power of nature. Use unfinished log walls, massive stone boulders, and hand-forged copper. The atmosphere is defined by the smell and feel of leather, chunky wool, and warm amber lighting",
+  "Neo-Classical": "Formal, dignified elegance. Use Hellenic marble columns, muted gold leaf, and symmetrical crown moldings. Focus on the cool, smooth touch of stone statues against cream-colored silk-finish walls",
+  "Memphis Design": "A playful, pop-art rebellion. Use high-contrast primary colors, black-and-white zig-zag patterns, and terrazzo surfaces. Focus on whimsical geometric forms and matte plastic or laminate finishes",
+  "Bauhaus": "Industrial functionalism. Use tubular steel frames, glass block walls, and primary color accents. The materiality is a mix of leather, chrome, and smooth geometric purity where 'form follows function'",
+  "Retro Futurism": "The 'Space Age' imagined from the past. Use chrome spheres, neon backlighting, and sleek synthetic curves. Focus on silver and metallic white surfaces that feel like a polished spaceship interior",
+  "Organic Modern": "Sculptural and grounded. Use soft lime-plaster walls, driftwood accents, and linen curtains. Focus on 'pebble' shapes—smooth, rounded, and handcrafted—in a warm, off-white earth-toned palette",
+  "Gothic Noir": "Mysterious and heavy. Use dark velvet drapes, wrought iron candelabras, and deep burgundy granite. Emphasize pointed arches and the intricate, dark-stained grain of carved wood",
+  "Shabby Chic": "Romantic, airy, and time-worn. Use distressed, white-washed furniture with faded paint textures. Focus on ruffled linens, vintage crystal, and a soft pastel palette that feels lived-in and nostalgic",
+};
+
+// Prompt Builder for Perspectives
 function buildVariationPrompt(formData: any, variationType: string, structureAnalysis: string = ""): string {
   const style = formData.targetStyle || "the existing style";
 
@@ -28,12 +72,12 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
   CRITICAL - HANDLING HIDDEN ANGLES:
   The Input Image only shows the Front. You MUST use the provided "Visual Reference Images" (if any) and the "3D Structure Analysis" below to reconstruct the hidden sides logically.
   `;
-  
+
   prompt += `\n\nMATERIALITY & LIGHTING COHERENCE:
   1. Identify the primary light source in the original image. Maintain this light vector.
   2. Focus on material depth (wood grain, stone texture, fabric weave). 
   3. The surface quality must be consistent across all objects.`;
-  
+
   if (structureAnalysis) {
     prompt += `\n\n=== 3D STRUCTURE ANALYSIS (GROUND TRUTH) ===
     Use this technical description to render the details correctly:
@@ -90,18 +134,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/generate", async (req, res) => {
     try {
-      const { imageData, prompt, batchSize = 1, ...formData } = req.body;
+      const { imageData, prompt, ...formData } = req.body;
       const validatedData = roomRedesignRequestSchema.parse(formData);
 
       if (!imageData) return res.status(400).json({ success: false, error: "No image data" });
       if (!prompt) return res.status(400).json({ success: false, error: "No prompt" });
 
+      const batchSize = validatedData.batchSize || 1;
       const processedImage = await processImageForGemini(imageData);
 
       let modifiedMainImage = processedImage;
       let finalPrompt = prompt;
 
-      // [UPDATED] Check for Smart Zoom vs Manual Zoom
+      // Check for Smart Zoom vs Manual Zoom
       if (validatedData.useSmartZoom && validatedData.smartZoomObject && validatedData.smartFillRatio) {
          console.log(`Applying Smart Object Zoom on "${validatedData.smartZoomObject}" at ${validatedData.smartFillRatio}%`);
 
@@ -113,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 validatedData.smartFillRatio
             );
 
-            // [NEW] Inject Explicit Size Instruction into Prompt
+            // Inject Explicit Size Instruction into Prompt
             finalPrompt += `\n\n=== COMPOSITION CONSTRAINT (STRICT) ===
             The input image has been strictly cropped so that the "${validatedData.smartZoomObject}" occupies exactly ${validatedData.smartFillRatio}% of the canvas width.
             1. LOCK CAMERA DISTANCE: You are FORBIDDEN from zooming in or out. Maintain this exact frame.
@@ -132,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
          );
       }
 
-      console.log(`Generating Master Design: ${validatedData.viewAngle}`);
+      console.log(`Generating Master Design: ${validatedData.viewAngle} (Batch Size: ${batchSize})`);
 
       let computedStructureAnalysis = "";
 
@@ -142,10 +187,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if ((isAngleChange || hasRefs) && validatedData.preservedElements) {
         try {
-          console.log("3D Analysis Attempted...");
           if (validatedData.structureAnalysis) {
              computedStructureAnalysis = validatedData.structureAnalysis;
-             console.log("Using provided 3D Analysis from client.");
           } else {
              computedStructureAnalysis = await analyzeObjectStructure(
               processedImage, 
@@ -172,35 +215,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         finalPrompt += `\n\nCRITICAL: A Technical Drawing (PDF/Image) has been provided. You MUST strictly adhere to the dimensions, orthographic views, and geometry shown in this drawing. It is the "Ground Truth".`;
       }
 
-      if (storage.createPromptLog) {
-        await storage.createPromptLog({
-            jobType: "generation",
-            prompt: finalPrompt,
-            parameters: {
-                style: validatedData.targetStyle,
-                view: validatedData.viewAngle,
-                creativity: validatedData.creativityLevel
-            }
-        });
-      }
+      // Upload original once for gallery association
+      const originalImageUrl = await uploadImageToStorage(imageData, "originals");
+      const generatedImages = [];
 
-      const mainImage = await generateRoomRedesign({
-        imageBase64: modifiedMainImage, // Now potentially smart-zoomed
-        referenceImages: validatedData.referenceImages,
-        referenceDrawing: validatedData.referenceDrawing,
-        preservedElements: validatedData.preservedElements,
-        targetStyle: validatedData.targetStyle,
-        quality: validatedData.quality,
-        aspectRatio: validatedData.aspectRatio,
-        creativityLevel: validatedData.creativityLevel, 
-        customPrompt: finalPrompt, 
-        outputFormat: validatedData.outputFormat,
-      });
+      for (let i = 0; i < batchSize; i++) {
+        console.log(`Processing variation ${i+1}/${batchSize}...`);
+
+        const mainImage = await generateRoomRedesign({
+          imageBase64: modifiedMainImage,
+          referenceImages: validatedData.referenceImages,
+          referenceDrawing: validatedData.referenceDrawing,
+          preservedElements: validatedData.preservedElements,
+          targetStyle: validatedData.targetStyle,
+          quality: validatedData.quality,
+          aspectRatio: validatedData.aspectRatio,
+          creativityLevel: validatedData.creativityLevel, 
+          customPrompt: finalPrompt, 
+          outputFormat: validatedData.outputFormat,
+        });
+
+        // SAVE EACH RESULT TO GALLERY AUTOMATICALLY
+        const generatedImageUrl = await uploadImageToStorage(mainImage, "generated");
+        await storage.saveGeneratedDesign({
+          timestamp: Date.now(),
+          originalImageUrl,
+          generatedImageUrl,
+          originalFileName: validatedData.originalFileName || "design",
+          config: { ...validatedData, prompt: finalPrompt },
+          variations: [],
+        });
+
+        // LOGGING LOGIC - Moved inside loop to log every individual generation
+        if (storage.createPromptLog) {
+            await storage.createPromptLog({
+                jobType: "generation",
+                prompt: finalPrompt,
+                parameters: {
+                    style: validatedData.targetStyle,
+                    view: validatedData.viewAngle,
+                    creativity: validatedData.creativityLevel,
+                    batchIndex: i + 1,
+                    batchTotal: batchSize
+                }
+            });
+        }
+
+        generatedImages.push(mainImage);
+      }
 
       res.json({
         success: true,
-        generatedImage: mainImage,
-        variations: [],
+        generatedImage: generatedImages[0],
+        allImages: generatedImages,
         structureAnalysis: computedStructureAnalysis 
       });
 
@@ -213,65 +280,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Style descriptions for batch generation
-  const styleDescriptions: Record<string, string> = {
-    "Scandinavian": "white walls, light wood tones (ash/birch), functional furniture, minimal decor, soft textiles, abundant natural light, and hygge elements",
-    "Modern": "clean lines, minimal clutter, neutral color palette (white/grey/black), glass and steel accents, geometric shapes, raw concrete",
-    "Contemporary": "current trends, rounded curves, soft textures, sophisticated and fluid shapes, organic elements, mixed metals, sculptural lighting",
-    "Boho": "rattan, macramé, layered textiles, mismatched patterns, natural fibers (jute/wool), warm earth tones, abundant live plants, low-slung seating",
-    "Industrial": "exposed brick, raw concrete floors, unfinished wood, black metal piping and fixtures, salvaged or utilitarian furniture, open-plan layout, visible ductwork",
-    "Mid-Century Modern": "teak and walnut woods, tapered legs, geometric fabrics, bright accent colors (orange/teal/yellow), low profile furniture, iconic 1950s/60s pieces",
-    "Farmhouse": "shiplap walls, reclaimed wood, large comfortable seating, galvanized metal accents, oversized lighting fixtures, white cabinets, wide-plank floors",
-    "Coastal": "light blue and white color palette, linen and cotton fabrics, nautical accents (rope/driftwood), rattan and wicker furniture, slipcovered sofas, large windows, airy feel",
-    "Transitional": "seamless blend of traditional and contemporary elements, curved and straight lines, neutral color palette (taupe/beige), emphasis on texture, lack of excessive ornamentation",
-    "Japandi": "light natural wood (bamboo/ash), minimalist decor, clean lines (Japanese), soft textures (Scandinavian), wabi-sabi appreciation of imperfections, low furniture profiles",
-    "Maximalist": "bold colors and patterns, layered textures (velvet, silk), gallery walls with excessive art, ornate details, saturated jewel tones (emerald, sapphire)",
-    "Art Deco": "symmetrical layouts, bold geometric patterns, emerald or navy tiles, brushed gold hardware, fluted glass textures, tiered lighting, marble surfaces",
-    "Biophilic": "living moss walls, pebble floor transitions, teak wood accents, oversized skylights, organic stone basins, abundant greenery, natural airiness",
-    "Desert Modern": "warm terracotta tones, plaster tadelakt walls, matte black fixtures, arched entryways, dried pampas grass, natural sunlight, sandy textures",
-    "Moody Luxe": "charcoal or obsidian stone, backlit mirrors, integrated LED strip lighting, dark wood cabinetry, chrome accents, hotel-spa atmosphere, high-contrast shadows",
-    "Mediterranean": "hand-painted ceramic tiles, wrought iron details, terracotta floors, arched mirrors, lime-wash walls, weathered copper or bronze finishes, sun-drenched feel",
-    "Zen Spa": "slatted wood partitions, river rocks, bamboo accents, steam atmosphere, floating vanity, soft diffused lighting, minimalist stone surfaces",
-    "Mountain Modern": "slate stone, heavy timber beams, floor-to-ceiling glass, forest views, rustic textures, contemporary furniture, warm fireplace elements",
-    "Soft Modern": "beige microcement, brushed nickel hardware, curved mirrors, neutral tones, warm ambient lighting, minimal but soft edges, plush textiles",
-    "Modern Farmhouse": "high-contrast white walls, black window frames, marble countertops, X-motif cabinetry, shaker style doors, polished hardware, clean rustic blend",
-    "Industrial Chic": "polished concrete, high-end glass partitions, black steel accents, plush white towels, refined utilitarian fixtures, open-plan layout, softened raw materials",
-    "Dark Scandi": "smoked oak or walnut, deep sage or slate grey walls, minimalist functional furniture, hygge lighting, cozy textures, matte black accents",
-    "Wabi-Sabi Japandi": "rough-hewn stone, textured plaster walls, irregular wooden stools, imperfect organic shapes, low furniture profiles, muted earthy tones",
-    "Victorian": "ornate wainscoting, clawfoot tub, pedestal sink, floral wallpaper, intricate brass fixtures, dark mahogany wood, etched glass mirrors",
-    "Hollywood Regency": "lacquered cabinets, mirrored surfaces, metallic gold accents, crystal chandeliers, high-gloss marble, black and white floor tiles, velvet stools",
-    "French Country": "distressed wood beams, toile patterns, lavender accents, wrought iron towel racks, stone tile floors, soft cream palette, elegant curved cabinetry",
-    "Brutalist": "heavy raw concrete, blocky geometric forms, rugged unpolished textures, matte metal fixtures, monochromatic grey tones, dramatic architectural shadows",
-    "Tropical": "exotic mahogany wood, large palm leaf plants, outdoor-indoor transition, bamboo matting, turquoise accents, woven rattan textures, bright ventilation",
-    "Southwestern": "terracotta clay tiles, sunset orange and pink hues, stucco walls, woven tribal rugs, turquoise stone accents, desert cacti, desert sun lighting",
-    "Ultra-Minimalist": "handle-less cabinetry, hidden storage, monochrome white-on-white, large format porcelain slabs, frameless glass, zero visible hardware, clinical precision",
-    "Grandmillennial": "chintz floral patterns, scalloped edges, antique porcelain accessories, wicker hampers, needlepoint textures, pastel palette, nostalgic 'granny-chic' charm",
-    "Eclectic": "mix of vintage and modern periods, curated gallery wall, unexpected color pops, velvet mixed with metal, diverse textures, unique found objects",
-    "Rustic": "unfinished log walls, natural stone boulders, warm leather accents, hand-forged copper basins, chunky wool textiles, warm amber lighting",
-    "Neo-Classical": "Hellenic marble columns, symmetrical crown molding, muted gold leaf, cream and pale blue palette, dignified stone statues, formal elegance",
-    "Memphis Design": "high-contrast primary colors, black zig-zag patterns, terrazzo countertops, whimsical geometric shapes, pop-art influence, matte plastic finishes",
-    "Bauhaus": "form follows function, primary color accents, tubular steel frames, glass block walls, geometric purity, leather and chrome, functionalist lighting",
-    "Retro Futurism": "chrome spheres, neon backlighting, space-age plastic curves, silver and metallic white, orbit-shaped mirrors, sleek synthetic surfaces",
-    "Organic Modern": "sculptural driftwood, soft lime-plaster walls, linen curtains, pebble-shaped rugs, warm off-white palette, handcrafted ceramics, flowing lines",
-    "Gothic Noir": "dark velvet drapes, pointed arch mirrors, wrought iron candelabras, heavy granite, deep burgundy tones, ornate wood carvings, mysterious shadows",
-    "Shabby Chic": "distressed white-washed furniture, pastel floral motifs, ruffled linen towels, vintage crystal knobs, faded paint textures, romantic and airy aesthetic",
-  };
-
   // Batch Styles Generation Endpoint
   app.post("/api/generate/batch-styles", async (req, res) => {
     try {
       const { imageData, formData, styles } = req.body;
-      
+
       if (!imageData) return res.status(400).json({ success: false, error: "No image data" });
       if (!styles || !Array.isArray(styles) || styles.length === 0) {
         return res.status(400).json({ success: false, error: "No styles specified" });
       }
-      
-      console.log(`Batch Generation Started: ${styles.length} styles`);
-      
+
+      console.log(`Batch Style Generation Started: ${styles.length} styles`);
+
       const processedImage = await processImageForGemini(imageData);
-      
-      // Apply any preprocessing (smart zoom, etc)
+      const originalImageUrl = await uploadImageToStorage(imageData, "originals");
+
+      // Apply preprocessing
       let modifiedMainImage = processedImage;
       if (formData.useSmartZoom && formData.smartZoomObject && formData.smartFillRatio) {
         const box = await detectObjectBoundingBox(processedImage, formData.smartZoomObject);
@@ -285,19 +309,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           formData.cameraZoom || 100
         );
       }
-      
-      // Generate all styles in parallel with controlled concurrency
+
       const CONCURRENCY = 3;
       const results: {style: string; image: string; error?: string}[] = [];
-      
+
       for (let i = 0; i < styles.length; i += CONCURRENCY) {
         const batch = styles.slice(i, i + CONCURRENCY);
         const batchPromises = batch.map(async (style: string) => {
           try {
-            const styleDesc = styleDescriptions[style] || styleDescriptions["Modern"];
+            console.log(`Generating style: ${style}`);
 
-            // [NEW] Sync Creativity/Variance Logic
+            const styleDesc = styleDescriptions[style] || styleDescriptions["Modern"];
             const creativity = formData.creativityLevel || 50;
+
+            // Sync Creativity/Variance Logic
             let styleGuidance = "";
             if (creativity < 30) {
                 styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision.`;
@@ -307,26 +332,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 styleGuidance = `Provide a unique, 'Designer Signature' take on ${style} with avant-garde lighting.`;
             }
 
-            // [NEW] Enhanced Prompt with Materiality Directive
             let prompt = `You are an expert interior designer and architectural visualizer.
 
-        TASK: Transform this room into a "${style}" style interior.
-        STYLE DIRECTION: ${styleGuidance}
-        KEY CHARACTERISTICS: ${styleDesc}
+TASK: Transform this room into a beautiful "${style}" style interior.
+STYLE DIRECTION: ${styleGuidance}
+STYLE DEFINITION: ${styleDesc}
 
-        MATERIALITY DIRECTIVE: 
-        Interpret the style primarily through material depth and surface quality. Focus on how light interacts with different textures (e.g., wood grain, stone, textiles). Prioritize tactile realism.
+MATERIALITY DIRECTIVE: 
+Interpret the style primarily through material depth and surface quality. Focus on how light interacts with different textures (e.g., wood grain, stone, textiles). Prioritize tactile realism.
 
-        PRESERVED ELEMENTS: ${formData.preservedElements || "None"}
-        ${formData.addedElements ? `ADDED ELEMENTS: ${formData.addedElements}` : ""}
+PRESERVED ELEMENTS: ${formData.preservedElements || "No specific elements to preserve"}
+${formData.addedElements ? `ADDED ELEMENTS: ${formData.addedElements}` : ""}
 
-        CRITICAL INSTRUCTION - PERSPECTIVE LOCK:
-        Maintain the EXACT camera angle and perspective of the original input image. 
-        1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line.
-        2. VANISHING POINTS: All orthogonal lines must converge at the exact same coordinates as the original.
+CRITICAL INSTRUCTION - PERSPECTIVE LOCK:
+Maintain the EXACT camera angle and perspective of the original input image.
 
-        Generate a photorealistic rendering.`;
-            
+Generate a photorealistic interior design rendering in the "${style}" style.`;
+
             const generatedImage = await generateRoomRedesign({
               imageBase64: modifiedMainImage,
               referenceImages: formData.referenceImages,
@@ -335,30 +357,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
               targetStyle: style,
               quality: formData.quality || "Standard",
               aspectRatio: formData.aspectRatio || "Original",
-              creativityLevel: formData.creativityLevel || 50,
+              creativityLevel: creativity,
               customPrompt: prompt,
               outputFormat: formData.outputFormat || "PNG",
             });
-            
+
+            // SAVE TO GALLERY
+            const generatedImageUrl = await uploadImageToStorage(generatedImage, "generated");
+            await storage.saveGeneratedDesign({
+              timestamp: Date.now(),
+              originalImageUrl,
+              generatedImageUrl,
+              originalFileName: `${formData.originalFileName || "batch"}_${style}`,
+              config: { ...formData, targetStyle: style, prompt },
+              variations: [],
+            });
+
+            // LOG EVERY STYLE GENERATION
+            if (storage.createPromptLog) {
+                await storage.createPromptLog({
+                    jobType: "batch-style-generation",
+                    prompt: prompt,
+                    parameters: {
+                        style: style,
+                        creativity: creativity,
+                        originalFileName: formData.originalFileName
+                    }
+                });
+            }
+
             return { style, image: generatedImage };
           } catch (error) {
             console.error(`Error generating style ${style}:`, error);
             return { style, image: "", error: error instanceof Error ? error.message : "Generation failed" };
           }
         });
-        
+
         const batchResults = await Promise.all(batchPromises);
         results.push(...batchResults);
       }
-      
-      const successCount = results.filter(r => r.image).length;
-      console.log(`Batch Generation Complete: ${successCount}/${styles.length} successful`);
-      
+
       res.json({
         success: true,
         results
       });
-      
+
     } catch (error) {
       console.error("Error in /api/generate/batch-styles:", error);
       res.status(500).json({
@@ -375,8 +418,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { objectName, fillRatio, aspectRatio } = smartCropRequestSchema.parse(formData);
 
       if (!imageData) return res.status(400).json({ success: false, error: "No image data" });
-
-      console.log(`Processing Smart Crop: Object=${objectName}, Fill=${fillRatio}%`);
 
       const box = await detectObjectBoundingBox(imageData, objectName);
 
@@ -433,16 +474,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const srcWidth = srcRight - srcLeft;
       const srcHeight = srcBottom - srcTop;
 
-      if (srcWidth <= 0 || srcHeight <= 0) {
-        throw new Error("Crop region is completely outside the image bounds.");
-      }
-
       const extractedPiece = await sharp(imgBuffer)
         .extract({ left: srcLeft, top: srcTop, width: srcWidth, height: srcHeight })
         .toBuffer();
-
-      const destLeft = srcLeft - cropLeft; 
-      const destTop = srcTop - cropTop;
 
       const canvas = await sharp({
         create: {
@@ -454,8 +488,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })
       .composite([{
         input: extractedPiece,
-        top: destTop,
-        left: destLeft
+        top: srcTop - cropTop,
+        left: srcLeft - cropLeft
       }])
       .png()
       .toBuffer();
@@ -465,7 +499,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, generatedImage: finalBase64 });
 
     } catch (error) {
-      console.error("Smart crop error:", error);
       res.status(500).json({ success: false, error: "Failed to perform smart crop" });
     }
   });
@@ -477,14 +510,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!imageData) return res.status(400).json({ success: false, error: "No source image provided" });
 
-      console.log("Generating Additional Perspectives...");
-      console.log("Requested views:", selectedVariations);
-
       let structureAnalysis = validatedData.structureAnalysis || "";
 
       if (!structureAnalysis && validatedData.referenceImages && validatedData.referenceImages.length > 0 && validatedData.preservedElements) {
         try {
-            console.log("Running 3D Structure Analysis for Variations (Not provided by client)...");
             structureAnalysis = await analyzeObjectStructure(
               imageData, 
               validatedData.referenceImages, 
@@ -493,23 +522,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (e) {
             console.warn("Variation Analysis skipped:", e);
         }
-      } else if (structureAnalysis) {
-        console.log("Using cached 3D Analysis provided by client.");
       }
 
       const variationConfigs = [
-        { 
-          type: "Front",
-          preprocess: async (img: string) => await applyPerspectiveMockup(img, "Front", 100) 
-        },
-        { 
-          type: "Side",
-          preprocess: async (img: string) => await applyPerspectiveMockup(img, "Side", 100)
-        },
-        { 
-          type: "Top",
-          preprocess: async (img: string) => await applyPerspectiveMockup(img, "Top", 135) 
-        }
+        { type: "Front", preprocess: async (img: string) => await applyPerspectiveMockup(img, "Front", 100) },
+        { type: "Side", preprocess: async (img: string) => await applyPerspectiveMockup(img, "Side", 100) },
+        { type: "Top", preprocess: async (img: string) => await applyPerspectiveMockup(img, "Top", 135) }
       ];
 
       const variationsToRun = selectedVariations && Array.isArray(selectedVariations)
@@ -523,18 +541,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const variationPromises = variationsToRun.map(async (config) => {
         const modifiedImage = await config.preprocess(imageData);
         const specificPrompt = buildVariationPrompt(validatedData, config.type, structureAnalysis);
-
-        if (storage.createPromptLog) {
-            await storage.createPromptLog({
-                jobType: `variation-${config.type.toLowerCase()}`,
-                prompt: specificPrompt,
-                parameters: {
-                    parentJob: "variation",
-                    view: config.type,
-                    reusedAnalysis: !!structureAnalysis
-                }
-            });
-        }
 
         return generateRoomRedesign({
           imageBase64: modifiedImage,
@@ -590,7 +596,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dimensional Images - Add dimension annotations to product photos
   app.post("/api/generate-dimensional", async (req, res) => {
     try {
       const { imageData, ...formData } = req.body;
@@ -600,45 +605,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, error: "No image data provided" });
       }
 
-      console.log("=== Dimensional Image Generation ===");
-      console.log("Product Type:", validatedData.productType);
-      console.log("Dimensions:", { 
-        height: validatedData.productHeight, 
-        width: validatedData.productWidth, 
-        depth: validatedData.productDepth 
-      });
-      console.log("Placements:", { 
-        height: validatedData.heightPlacement, 
-        width: validatedData.widthPlacement, 
-        depth: validatedData.depthPlacement 
-      });
-      console.log("Fill Ratio:", validatedData.productFillRatio);
-
       const processedImage = await processImageForGemini(imageData);
       const dimensionalPrompt = constructDimensionalPrompt(validatedData);
-
-      if (storage.createPromptLog) {
-        await storage.createPromptLog({
-          jobType: "dimensional",
-          prompt: dimensionalPrompt,
-          parameters: {
-            productType: validatedData.productType,
-            dimensions: {
-              height: validatedData.productHeight,
-              width: validatedData.productWidth,
-              depth: validatedData.productDepth,
-            },
-            placements: {
-              height: validatedData.heightPlacement,
-              width: validatedData.widthPlacement,
-              depth: validatedData.depthPlacement,
-            },
-            productFillRatio: validatedData.productFillRatio,
-            showLegend: validatedData.showTopLegend,
-            showDisclaimer: validatedData.showBottomDisclaimer,
-          },
-        });
-      }
 
       const generatedImage = await generateRoomRedesign({
         imageBase64: processedImage,
@@ -676,7 +644,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
 
       const variationUrls = await Promise.all(variations.map((v: string) => uploadImageToStorage(v, "generated")));
-
       const [originalImageUrl, generatedImageUrl] = await Promise.all(uploadPromises);
 
       const design = await storage.saveGeneratedDesign({
@@ -689,29 +656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json({ success: true, design });
     } catch (error) {
-      console.error("Error saving design:", error);
       res.status(500).json({ success: false, error: "Failed to save" });
-    }
-  });
-
-  app.post("/api/gallery/update", async (req, res) => {
-    try {
-      const { id, variations } = req.body;
-      if (!id || !variations || !Array.isArray(variations)) {
-        return res.status(400).json({ success: false, error: "Invalid data" });
-      }
-
-      const variationUrls = await Promise.all(variations.map((v: string) => uploadImageToStorage(v, "generated")));
-
-      const existing = await storage.getGeneratedDesign(id);
-      const existingVars = (existing?.variations as string[]) || [];
-      const allVariations = [...existingVars, ...variationUrls];
-
-      const updated = await storage.updateGeneratedDesign(id, { variations: allVariations });
-      res.json({ success: true, design: updated });
-    } catch (error) {
-      console.error("Error updating design:", error);
-      res.status(500).json({ success: false, error: "Failed to update" });
     }
   });
 

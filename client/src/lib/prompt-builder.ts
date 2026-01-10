@@ -80,7 +80,7 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   // === [NEW] POINT #2: STYLE VARIANCE LOGIC ===
   let styleGuidance = "";
   if (creativityLevel < 30) {
-      styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision. Use only the most iconic elements.`;
+      styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision.`;
   } else if (creativityLevel < 70) {
       styleGuidance = `Provide a standard, balanced interpretation of the ${style} aesthetic, focusing on cohesive materials.`;
   } else {
@@ -107,8 +107,8 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
       1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
       2. VANISHING POINTS: Do not shift the vanishing points. All orthogonal lines in the new environment must converge at the exact same coordinates as the original image.
-      3. FOCAL LENGTH: Do not change the lens distortion. If the original is a wide-angle, the output must remain wide-angle.
-      4. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation from the original source. The preserved object must be viewed from the exact same vantage point.`;
+      3. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset or shift the object even slightly.
+      4. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation.`;
   } else {
       prompt += `\n\nCRITICAL INSTRUCTION - CHANGE CAMERA ANGLE:
       You must re-render the scene from a strictly "${viewAngle}" perspective.`;
@@ -140,18 +140,23 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     Strictly analyze the input image to identify the following elements: "${preservedElements}".`;
 
     if (viewAngle === "Original") {
-      if (centerPreservedElements) {
-         prompt += `\n1. VISUAL FREEZE: You must FREEZE the visual appearance (geometry, texture, material, details) of the "${preservedElements}". It must look EXACTLY like the original.`;
-         prompt += `\n2. PERMISSION TO MOVE: You are explicitly permitted to SHIFT THE POSITION (X/Y axis) of this element on the canvas to center it within the new aspect ratio.`;
-         prompt += `\n3. RESTRICTION: Do NOT rotate, scale, or distort the object itself. Only its placement on the canvas may change.`;
-         prompt += `\n4. SPATIAL ANCHOR: Use the 3D orientation of the "${preservedElements}" as the master coordinate system for the entire room.`;
-      } else {
-         prompt += `\nYou must FREEZE the pixels associated with these specific elements. They must remain 100% UNCHANGED in geometry, texture, material, and position.`;
-      }
+      prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
+      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
+      2. VANISHING POINTS: Do not shift the vanishing points. All orthogonal lines in the new environment must converge at the exact same coordinates as the original image.
+      3. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset or shift the object even slightly.
+      4. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation.`;
     } else {
-      prompt += `\n1. IDENTITY PRESERVATION: Since the camera angle is changing to "${viewAngle}", you cannot freeze the pixels. Instead, you must generate a perfect 3D representation of the "${preservedElements}" from this new angle.`;
-      prompt += `\n2. DESIGN CONSISTENCY: The object must have the EXACT SAME design, material, finish, and features as the original. It should look like the same physical object, just viewed from the ${viewAngle}.`;
-      prompt += `\n3. INTERNAL GEOMETRY: Pay close attention to internal curves, drain placement, and rim width. These must match the original object's technical specifications.`;
+      prompt += `\n\nCRITICAL INSTRUCTION - CHANGE CAMERA ANGLE: Re-render from strictly "${viewAngle}" perspective.`;
+
+      if (viewAngle === "Front") {
+        prompt += `\n**CAMERA LOCK: 0-DEGREE FRONT ELEVATION**`;
+      }
+      if (viewAngle === "Side") {
+        prompt += `\n**CAMERA LOCK: 45-DEGREE ISOMETRIC VIEW**`;
+      }
+      if (viewAngle === "Top") {
+        prompt += `\n**CAMERA LOCK: 90-DEGREE OVERHEAD**`;
+      }
     }
 
     // ROOM STRUCTURE LOGIC
@@ -159,9 +164,9 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       prompt += `\n\nCONSTRAINT - ROOM STRUCTURE:
       Do not modify the structural shell of the room (walls, windows, ceiling) unless explicitly required by the style change. Keep the room layout identical.`;
     } else {
-      prompt += `\n\nFREEDOM - ROOM STRUCTURE:
-      You have creative freedom to redesign the structural shell (walls, floor, ceiling, windows) surrounding the preserved object. You may change the room's architecture to perfectly match the "${style}" aesthetic, provided the preserved object remains intact.`;
-    }
+      prompt += `\n\nFREEDOM - ROOM STRUCTURE (ARCHITECTURAL OVERHAUL):
+        Ignore the current room's geometry. You are explicitly authorized and encouraged to completely replace the structural shell (walls, partitions, floor transitions, window positions) with brand new architecture that embodies the "${style}" style. CRITICAL: You must construct this new architecture RELATIVE to the fixed coordinates of the "${preservedElements}". The object does not move; the room changes around it.`;
+      }
 
   } else {
     if (!isHighCreativity && viewAngle === "Original") {
@@ -197,9 +202,7 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     For the selected style, choose the single most appropriate metallic finish (e.g., brushed nickel, matte black, chrome). You MUST apply this exact finish uniformly to **ALL** visible metallic fixtures, including plumbing hardware, lighting fixtures, and cabinet pulls. Maintain absolute consistency of this single finish across the entire scene.`;
   }
 
-  prompt += `\n\nFINAL OUTPUT & COMPOSITION:
-  Ensure lighting, shadows, and reflections blend realistically between the preserved elements and the new design.
-  Generate a photorealistic result.`;
+  prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. Zero perspective drift.`;
 
   return prompt;
 }

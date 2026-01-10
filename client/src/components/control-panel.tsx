@@ -79,6 +79,10 @@ export function ControlPanel({
   const [activeTab, setActiveTab] = useState("design");
   const [generateAllStyles, setGenerateAllStyles] = useState(false); 
 
+  // [NEW] Local state for multiple generation
+  const [generateMultiple, setGenerateMultiple] = useState(false);
+  const [batchSize, setBatchSize] = useState(1);
+
   // Local state for Smart Crop Tab
   const [cropObject, setCropObject] = useState("");
   const [cropFill, setCropFill] = useState(80);
@@ -207,11 +211,11 @@ export function ControlPanel({
     const formData = form.getValues();
     formData.referenceImages = referenceImages;
     formData.referenceDrawing = referenceDrawing || undefined;
-    
+
     if (generateAllStyles && onGenerateBatchStyles) {
       onGenerateBatchStyles(formData, generatedPrompt);
     } else {
-      onGenerate(formData, generatedPrompt, 1);
+      onGenerate(formData, generatedPrompt, generateMultiple ? batchSize : 1);
     }
   };
 
@@ -622,12 +626,15 @@ export function ControlPanel({
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="flex items-center space-x-2 p-3 bg-primary/5 rounded-md border border-primary/20">
                     <Checkbox 
                       id="generate-all-styles"
                       checked={generateAllStyles}
-                      onCheckedChange={(checked) => setGenerateAllStyles(checked === true)}
+                      onCheckedChange={(checked) => {
+                        setGenerateAllStyles(checked === true);
+                        if (checked === true) setGenerateMultiple(false);
+                      }}
                       data-testid="checkbox-generate-all-styles"
                     />
                     <div className="flex-1">
@@ -640,6 +647,34 @@ export function ControlPanel({
                       <p className="text-[10px] text-muted-foreground mt-0.5">
                         Generate {availableStyles.length} designs in parallel (one for each style)
                       </p>
+                    </div>
+                  </div>
+
+                  {/* [NEW] Generate Multiple Variations UI */}
+                  <div className="flex items-center space-x-2 p-3 bg-primary/5 rounded-md border border-primary/20">
+                    <Checkbox 
+                      id="generate-multiple"
+                      checked={generateMultiple}
+                      onCheckedChange={(checked) => {
+                        setGenerateMultiple(checked === true);
+                        if (checked === true) setGenerateAllStyles(false);
+                      }}
+                    />
+                    <div className="flex-1 flex items-center justify-between">
+                      <label htmlFor="generate-multiple" className="text-sm font-medium leading-none cursor-pointer">
+                        Generate Multiple Variations
+                      </label>
+                      {generateMultiple && (
+                        <div className="flex items-center gap-2">
+                           <Input 
+                            type="number" 
+                            min={1} max={10} 
+                            value={batchSize} 
+                            onChange={(e) => setBatchSize(parseInt(e.target.value) || 1)}
+                            className="w-16 h-8 text-xs bg-background"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -759,8 +794,8 @@ export function ControlPanel({
                 <Button type="submit" className="w-full" size="lg" disabled={disabled || isGenerating}>
                   <Sparkles className="w-5 h-5 mr-2" />
                   {isGenerating 
-                    ? (generateAllStyles ? `Generating ${availableStyles.length} Styles...` : "Generating...") 
-                    : (generateAllStyles ? `Generate All ${availableStyles.length} Styles` : "Generate Redesign")
+                    ? (generateAllStyles ? `Generating ${availableStyles.length} Styles...` : generateMultiple ? `Generating ${batchSize} Designs...` : "Generating...") 
+                    : (generateAllStyles ? `Generate All ${availableStyles.length} Styles` : generateMultiple ? `Generate ${batchSize} Variations` : "Generate Redesign")
                   }
                 </Button>
               </div>

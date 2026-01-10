@@ -92,6 +92,10 @@ export const roomRedesignRequestSchema = z.object({
   aspectRatio: z.enum(["Original", "16:9", "1:1", "4:3"]),
   creativityLevel: z.number().min(0).max(100),
   outputFormat: z.enum(outputFormats).default("PNG"),
+
+  // [NEW] Batch and Save Parameters
+  batchSize: z.number().min(1).max(10).default(1),
+  originalFileName: z.string().optional(),
 });
 
 // Smart Crop Schema (unchanged)
@@ -150,6 +154,7 @@ export type DimensionalImageRequest = z.infer<typeof dimensionalImageRequestSche
 export interface RoomRedesignResponse {
   success: boolean;
   generatedImage?: string; 
+  allImages?: string[];
   error?: string;
   variations?: string[];
   structureAnalysis?: string;

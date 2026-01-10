@@ -60,7 +60,7 @@ export default function Home() {
   };
 
   const generateMutation = useMutation({
-    mutationFn: async (data: RoomRedesignRequest & { imageData: string; referenceImage?: string; prompt: string; isModification?: boolean; batchSize?: number }) => {
+    mutationFn: async (data: RoomRedesignRequest & { imageData: string; referenceImage?: string; prompt: string; isModification?: boolean }) => {
       const endpoint = data.isModification ? "/api/modify" : "/api/generate";
       const res = await apiRequest(
         "POST",
@@ -79,30 +79,23 @@ export default function Home() {
             setStructureAnalysis(response.structureAnalysis);
         }
 
-        setGeneratedVariations([]); 
-        setModificationPrompt("");
-
-        if (originalImage && currentFormData) {
-          try {
-            const saveRes = await apiRequest("POST", "/api/gallery/save", {
-              originalImage,
-              generatedImage: response.generatedImage,
-              originalFileName,
-              config: currentFormData,
-            });
-            const savedData = await saveRes.json();
-            if (savedData.success && savedData.design?.id) {
-               setSavedDesignId(savedData.design.id);
-            }
-            queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
-          } catch (error) {
-            console.error("Failed to save design to gallery:", error);
-          }
+        // [UPDATED] If multiple images were generated, treat the extras as variations for the slider
+        if (response.allImages && response.allImages.length > 1) {
+            setGeneratedVariations(response.allImages.slice(1));
+        } else {
+            setGeneratedVariations([]); 
         }
 
+        setModificationPrompt("");
+
+        // Server now handles saving to gallery automatically for batch and single generations
+        queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
+
         toast({
-          title: "Room redesigned successfully!",
-          description: "Your AI-generated design is ready. You can now generate perspectives.",
+          title: response.allImages && response.allImages.length > 1 
+            ? `Batch of ${response.allImages.length} designs ready!` 
+            : "Room redesigned successfully!",
+          description: "Your AI-generated design is saved in the gallery.",
         });
       } else {
         toast({
@@ -227,23 +220,23 @@ export default function Home() {
         const successfulResults = response.results.filter(r => r.image);
         setBatchStyleResults(successfulResults);
         setGeneratedVariations([]);
-        
+
         if (successfulResults.length > 0) {
           setGeneratedImage(successfulResults[0].image);
           setGenerationType("design");
         }
-        
+
         const failedCount = response.results.length - successfulResults.length;
         const failedStyles = response.results.filter(r => !r.image).map(r => r.style);
-        
+
         toast({
           title: `Batch Generation Complete`,
           description: failedCount > 0 
-            ? `Generated ${successfulResults.length} styles. Failed: ${failedStyles.join(', ')}`
-            : `Generated ${successfulResults.length} style${successfulResults.length !== 1 ? 's' : ''}.`,
+            ? `Generated ${successfulResults.length} styles and saved to gallery. Failed: ${failedStyles.join(', ')}`
+            : `Generated ${successfulResults.length} styles and saved to gallery.`,
           variant: failedCount > 0 ? "default" : "default",
         });
-        
+
         queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
       } else {
         toast({
@@ -274,6 +267,8 @@ export default function Home() {
 
     const requestData = {
       ...formData,
+      batchSize: batchSize,
+      originalFileName: originalFileName,
       referenceImages: referenceImages,
       referenceDrawing: referenceDrawing || undefined,
       structureAnalysis: structureAnalysis || undefined 
@@ -287,16 +282,14 @@ export default function Home() {
         imageData: originalImage,
         referenceImage: generatedImage,
         prompt: prompt,
-        isModification: true,
-        batchSize: 1 
+        isModification: true
       });
     } else {
       generateMutation.mutate({
         ...requestData,
         imageData: originalImage,
         prompt: prompt,
-        isModification: false,
-        batchSize: 1, 
+        isModification: false
       });
     }
   };
@@ -357,11 +350,11 @@ export default function Home() {
     }
 
     setBatchStyleResults([]);
-    setCurrentFormData(formData);
+    setCurrentFormData({ ...formData, originalFileName });
 
     batchStylesMutation.mutate({
       imageData: originalImage,
-      formData: formData,
+      formData: { ...formData, originalFileName },
       styles: [...availableStyles],
     });
   };
