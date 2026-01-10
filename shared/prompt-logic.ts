@@ -76,6 +76,7 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   const specificAesthetic = customStyleDescription || styleDescriptions[style] || styleDescriptions["Scandinavian"];
   const isHighCreativity = creativityLevel >= 70;
 
+  // 1. STYLE VARIANCE LOGIC
   let styleGuidance = "";
   if (creativityLevel < 30) {
       styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision.`;
@@ -85,8 +86,12 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       styleGuidance = `Provide a unique, 'Designer Signature' take on ${style}. Introduce unexpected but complementary textures and avant-garde lighting.`;
   }
 
+  // --- START PROMPT CONSTRUCTION ---
+
+  // PHASE 1: ROLE & GLOBAL QUALITY
   let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
 
+  // PHASE 2: CANVAS & ZOOM
   if (cameraZoom < 85) {
       prompt += `\n\nCRITICAL INSTRUCTION - WIDE ANGLE CONTEXT (Outpainting):
       The input image is centered with empty white space around it.
@@ -98,18 +103,12 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       Enhance the realism of existing surfaces without adding new large-scale objects.`;
   }
 
+  // PHASE 3: PERSPECTIVE & CAMERA MATH
   if (viewAngle === "Original") {
-      if (isHighCreativity) {
-          prompt += `\n\nCRITICAL INSTRUCTION - ADAPTIVE PERSPECTIVE:
-          1. OBJECT COORDINATE ANCHOR: The 3D space must be built around the current X/Y coordinates of the "${preservedElements || 'main object'}".
-          2. VANISHING POINT FREEDOM: You are encouraged to redefine the room's depth and vanishing points. The room structure does NOT need to follow the original walls or window lines.
-          3. VANTAGE POINT: Maintain the same camera height, but you may expand the architectural volume.`;
-      } else {
-          prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
-          1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
-          2. VANISHING POINTS: All orthogonal lines must converge at the exact same coordinates as the original image.
-          3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation.`;
-      }
+      prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
+      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
+      2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates as the original image. Zero perspective deviation.
+      3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation. The camera lens and position must remain static and fixed.`;
   } else {
       prompt += `\n\nCRITICAL INSTRUCTION - CHANGE CAMERA ANGLE:
       You must re-render the scene from a strictly "${viewAngle}" perspective.`;
@@ -119,31 +118,45 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       } else if (viewAngle === "Side") {
           prompt += `\n**CAMERA LOCK: 45-DEGREE THREE-QUARTER VIEW**. Establish volumetric depth by showing both the Front and Side faces.`;
       } else if (viewAngle === "Top") {
-          prompt += `\n**CAMERA LOCK: 90-DEGREE OVERHEAD**. Respect object asymmetry (drain/faucet offsets). Do not auto-center internal features.`;
+          prompt += `\n**CAMERA LOCK: 90-DEGREE OVERHEAD**. Respect object asymmetry (offsets). Do not auto-center internal features.`;
       }
   }
 
-  if (preservedElements && preservedElements.trim().length > 0) {
-      prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
-      Strictly analyze the input image to identify and isolate the following elements: "${preservedElements}".`;
+    // PHASE 4: OBJECT ANCHORING & DYNAMIC STAGING
+      if (preservedElements && preservedElements.trim().length > 0) {
+          prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
+          Strictly analyze the input image to identify and isolate the following elements: "${preservedElements}".`;
 
-      if (viewAngle === "Original") {
-          prompt += `\n1. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset, scale, or shift the object even slightly.
-          2. IDENTITY LOCK: Render with 100% fidelity to the original design, material, and features.
-          3. STYLE ISOLATION: Do not apply any textures, colors, or materials from the new "${style}" aesthetic to the "${preservedElements}". It must remain a visually independent asset within the new environment.`;
-      } else {
-          prompt += `\n1. IDENTITY PRESERVATION: Generate a perfect 3D representation of the "${preservedElements}" from the "${viewAngle}" perspective.
-          2. DESIGN CONSISTENCY: Must maintain identical material, finish, and internal geometry as the original source.
-          3. VOLUMETRIC ACCURACY: Ensure the object's scale remains realistic relative to the newly generated "${style}" room environment.`;
+          if (viewAngle === "Original") {
+              prompt += `\n1. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset, scale, move, or shift the object even by 1 pixel.
+              2. IDENTITY LOCK: Render the core body of the "${preservedElements}" with 100% fidelity to the original design, material, and contours.
+              3. STYLE ISOLATION: Do not apply any textures or materials from the new "${style}" aesthetic to the structural body of the "${preservedElements}".
+              4. STATIONARY ASSET: The object is a fixed reference point. Redesign the environment BEHIND and AROUND it, but do not touch the asset itself.
+              5. MODEL INTEGRITY FORBIDDEN SUBSTITUTION: You are prohibited from replacing the "${preservedElements}" with a different model or SKU. Contours and geometry MUST be preserved precisely. Do not 'modernize' or change the physical build of the object.
+              6. AUTHORIZED DYNAMIC STAGING: You are authorized to update or remove transient accessories and propping (e.g., bottles, towels, containers) sitting on or inside the "${preservedElements}" only where necessary to stylistically align with the "${style}" look.
+              7. SELECTIVE RE-PROPPING: Do not aggressively clear the "${preservedElements}". Instead, selectively replace original staging items only if they clash significantly with the new aesthetic. Maintain a clean, high-end designer integration between the "${preservedElements}" and any propping.`;
+          } else {
+              prompt += `\n1. IDENTITY PRESERVATION: Generate a perfect 3D representation of the "${preservedElements}" from the "${viewAngle}" perspective.
+              2. DESIGN CONSISTENCY: Must maintain identical material, finish, and internal geometry as the original source.
+              3. VOLUMETRIC ACCURACY: Ensure the object's scale remains realistic relative to the newly generated "${style}" room environment.`;
+          }
       }
-  }
 
+  // PHASE 5: STRUCTURAL SHELL & NEGATIVE CONSTRAINTS
   if (!isHighCreativity) {
       prompt += `\n\nCONSTRAINT - ROOM STRUCTURE:
       Keep the structural shell (walls, windows, ceiling) identical to the original layout. Do not add doors or windows that do not exist in the source image.`;
   } else {
       prompt += `\n\nFREEDOM - ARCHITECTURAL OVERHAUL:
-      You have absolute freedom to redesign the structural shell (walls, floor, ceiling). Redesign the architecture to perfectly match the "${style}" aesthetic.`;
+      You have absolute freedom to redesign the walls and ceiling. Redesign the architecture to perfectly match the "${style}" aesthetic.
+
+      ANCHOR POINT CONSTRAINT:
+      - The floor plane directly beneath the "${preservedElements || 'main object'}" must remain identical in geometry and position to ensure the object stays anchored at its original coordinates.
+
+      NEGATIVE CONSTRAINTS (CRITICAL):
+      - DO NOT add primary utility fixtures or large appliances (e.g., secondary plumbing fixtures, cabinetry, or major hardware) if they are not present in the original image.
+      - DO NOT add extra rugs or floor coverings. Maintain the original count of floor textiles.
+      - Maintain the functional logic of the room based on the preserved items.`;
   }
 
   if (addedElements && addedElements.trim().length > 0) {
@@ -151,23 +164,27 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       Seamlessly integrate: "${addedElements}". Ensure they are placed logically within the 3D space.`;
   }
 
+  // PHASE 6: AESTHETIC TRANSFORMATION & METALLIC SELECTION
   prompt += `\n\nTRANSFORMATION GOAL:
   Redesign the environment to match a "${style}" aesthetic.
   STYLE DIRECTION: ${styleGuidance}
   KEY CHARACTERISTICS: ${specificAesthetic}.
 
+  METALLIC TARGET SELECTION:
+  Identify the single most appropriate metallic finish for the "${style}" aesthetic (e.g., Brushed Brass, Matte Black, or Polished Chrome). This finish will serve as the "Master Finish" for the room.
+
   MATERIALITY DIRECTIVE: 
   Interpret style through material depth. Focus on how light interacts with textures. Prioritize tactile realism.`;
 
-  if (preservedElements && preservedElements.trim().length > 0) {
-      prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
-      Identify the metallic finish of the preserved "${preservedElements}". Use this as the 'Master Finish'. Apply this exact finish to ALL newly generated fixtures, hardware, and lighting.`;
-  } else {
-      prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
-      Select the single most appropriate metallic finish for the "${style}" style. Apply this finish uniformly to ALL metallic elements for absolute consistency.`;
-  }
+  // PHASE 7: FIXTURE COHERENCE & STYLE ADAPTATION (ENFORCEMENT)
+  prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE & STYLE ADAPTATION:
+  1. ADAPTIVE UPDATING: You are AUTHORIZED and encouraged to update the metallic finish of any hardware or fixtures on the preserved "${preservedElements || 'object'}" to match the chosen "Master Finish" from the previous section.
+  2. UNIFIED HARDWARE: Establish absolute visual harmony. Apply the "Master Finish" with 100% consistency to ALL metallic elements: the fixtures on the preserved object, new plumbing or hardware, lighting frames, and cabinet hardware.`;
 
-  prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. High-end photography. Zero perspective drift.`;
+  prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. High-end photography. Zero perspective drift.
+
+  MANDATORY PERSPECTIVE OVERRIDE:
+  ${viewAngle === "Original" ? `You are FORBIDDEN from changing the camera angle or the X/Y position of the "${preservedElements}". The output MUST align pixel-perfectly with the input.` : `Maintain strictly the ${viewAngle} perspective.`}`;
 
   return prompt;
 }

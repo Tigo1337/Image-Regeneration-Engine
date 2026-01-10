@@ -270,71 +270,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const CONCURRENCY = 3;
       const results: {style: string; image: string; error?: string}[] = [];
 
-      for (let i = 0; i < styles.length; i += CONCURRENCY) {
-        const batch = styles.slice(i, i + CONCURRENCY);
-        const batchPromises = batch.map(async (style: string) => {
-          try {
-            console.log(`Generating style: ${style}`);
+      for (const style of styles) {
+        try {
+          console.log(`Generating style: ${style}`);
 
-            // UNIFIED PROMPT LOGIC: 
-            // We call the shared constructRoomScenePrompt instead of using hardcoded templates.
-            // This ensures batch generations get the same "Phase-based" instructions,
-            // including Geometric Perspective Lock and Style Isolation.
-            const prompt = constructRoomScenePrompt({
-              style: style,
-              preservedElements: formData.preservedElements || "",
-              addedElements: formData.addedElements || "",
-              viewAngle: formData.viewAngle || "Original",
-              cameraZoom: formData.cameraZoom || 100,
-              creativityLevel: formData.creativityLevel || 50,
-            });
+          // UNIFIED PROMPT LOGIC: 
+          const prompt = constructRoomScenePrompt({
+            promptType: "room-scene",
+            style: style,
+            preservedElements: formData.preservedElements || "",
+            addedElements: formData.addedElements || "",
+            viewAngle: formData.viewAngle || "Original",
+            cameraZoom: formData.cameraZoom || 100,
+            creativityLevel: formData.creativityLevel || 50,
+          });
 
-            const generatedImage = await generateRoomRedesign({
-              imageBase64: modifiedMainImage,
-              referenceImages: formData.referenceImages,
-              referenceDrawing: formData.referenceDrawing,
-              preservedElements: formData.preservedElements || "",
-              targetStyle: style,
-              quality: formData.quality || "Standard",
-              aspectRatio: formData.aspectRatio || "Original",
-              creativityLevel: formData.creativityLevel || 50,
-              customPrompt: prompt,
-              outputFormat: formData.outputFormat || "PNG",
-            });
+          const generatedImage = await generateRoomRedesign({
+            imageBase64: modifiedMainImage,
+            referenceImages: formData.referenceImages,
+            referenceDrawing: formData.referenceDrawing,
+            preservedElements: formData.preservedElements || "",
+            targetStyle: style,
+            quality: formData.quality || "Standard",
+            aspectRatio: formData.aspectRatio || "Original",
+            creativityLevel: formData.creativityLevel || 50,
+            customPrompt: prompt,
+            outputFormat: formData.outputFormat || "PNG",
+          });
 
-            // SAVE TO GALLERY
-            const generatedImageUrl = await uploadImageToStorage(generatedImage, "generated");
-            await storage.saveGeneratedDesign({
-              timestamp: Date.now(),
-              originalImageUrl,
-              generatedImageUrl,
-              originalFileName: `${formData.originalFileName || "batch"}_${style}`,
-              config: { ...formData, targetStyle: style, prompt },
-              variations: [],
-            });
+          // SAVE TO GALLERY
+          const generatedImageUrl = await uploadImageToStorage(generatedImage, "generated");
+          await storage.saveGeneratedDesign({
+            timestamp: Date.now(),
+            originalImageUrl,
+            generatedImageUrl,
+            originalFileName: `${formData.originalFileName || "batch"}_${style}`,
+            config: { ...formData, targetStyle: style, prompt },
+            variations: [],
+          });
 
-            // LOG EVERY STYLE GENERATION
-            if (storage.createPromptLog) {
-                await storage.createPromptLog({
-                    jobType: "batch-style-generation",
-                    prompt: prompt,
-                    parameters: {
-                        style: style,
-                        creativity: formData.creativityLevel || 50,
-                        originalFileName: formData.originalFileName
-                    }
-                });
-            }
-
-            return { style, image: generatedImage };
-          } catch (error) {
-            console.error(`Error generating style ${style}:`, error);
-            return { style, image: "", error: error instanceof Error ? error.message : "Generation failed" };
+          // LOG EVERY STYLE GENERATION (Added logging fix here)
+          if (storage.createPromptLog) {
+              await storage.createPromptLog({
+                  jobType: "batch-style-generation",
+                  prompt: prompt,
+                  parameters: {
+                      style: style,
+                      creativity: formData.creativityLevel || 50,
+                      originalFileName: formData.originalFileName || "batch",
+                      viewAngle: formData.viewAngle || "Original"
+                  }
+              });
           }
-        });
 
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults);
+          results.push({ style, image: generatedImage });
+        } catch (error) {
+          console.error(`Error generating style ${style}:`, error);
+          return { style, image: "", error: error instanceof Error ? error.message : "Generation failed" };
+        }
       }
 
       res.json({
@@ -351,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // [Smart Crop Route - Preserved]
+  // [Smart Crop Route - Full Restore]
   app.post("/api/smart-crop", async (req, res) => {
     try {
       const { imageData, ...formData } = req.body;
@@ -443,6 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // [Variations Route - Full Restore]
   app.post("/api/variations", async (req, res) => {
     try {
       const { imageData, prompt, selectedVariations, ...formData } = req.body;
@@ -512,6 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // [Modify Route - Full Restore]
   app.post("/api/modify", async (req, res) => {
     try {
       const { imageData, referenceImage, prompt, ...formData } = req.body;
@@ -536,6 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // [Dimensional Route - Full Restore]
   app.post("/api/generate-dimensional", async (req, res) => {
     try {
       const { imageData, ...formData } = req.body;
@@ -574,6 +570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // [Gallery Route - Full Restore]
   app.post("/api/gallery/save", async (req, res) => {
     try {
       const { originalImage, generatedImage, originalFileName, config, variations = [] } = req.body;
