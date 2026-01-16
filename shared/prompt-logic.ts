@@ -62,23 +62,6 @@ export interface PromptConfig {
   customStyleDescription?: string; 
 }
 
-/*** [NEW] Specialized Room Re-use Logic ***/
-export function constructPersistencePrompt(productDescription: string): string {
-  return `ROLE: Expert Architectural Visualizer.
-  TASK: Seamless Product Integration (Room Persistence).
-
-  CORE DIRECTIVE: You are provided with two distinct images. Image 1 is the Target Room Scene. Image 2 is the Product Asset.
-
-  1. THE FROZEN ROOM (CRITICAL): You are strictly FORBIDDEN from altering the architecture, lighting, floor, walls, windows, or decor of the room shown in Image 1. It must remain pixel-perfectly identical.
-  2. PRODUCT INSERTION: Take the specific item shown in Image 2 and render it into the scene in Image 1. Place it logically where the primary floor-mounted object currently sits.
-  3. GEOMETRIC ALIGNMENT: The new product must match the perspective and camera angle of the existing room exactly.
-  4. LIGHTING & SHADOW SYNERGY: Analyze the light sources in Image 1. Apply matching highlights, specular reflections, and soft contact shadows to the new product so it feels physically present in the space.
-  5. MATERIAL REALISM: Render the product from Image 2 with high-fidelity textures (e.g., gloss, matte, stone, metal) as seen in its source.
-  6. CLEAN MASKING: Ensure the transition between the product and the existing floor/wall is seamless with no artifacts.
-
-  FINAL OUTPUT: 8K Photorealistic Architectural Photography render. Zero room design drift. The room is the anchor; only the item changes.`;
-}
-
 export function constructRoomScenePrompt(config: PromptConfig): string {
   const { 
     style, 
@@ -95,25 +78,18 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   // 1. STYLE VARIANCE LOGIC
   let styleGuidance = "";
-  if (creativityLevel < 33) {
-      styleGuidance = `STRICT FIDELITY: Follow the ${style} aesthetic with clinical, textbook precision. Maintain a conservative approach to design changes.`;
-  } else if (creativityLevel < 66) {
-      styleGuidance = `BALANCED DESIGN: Provide a standard, professional interpretation of the ${style} aesthetic, focusing on cohesive materials and sensible layout updates.`;
+  if (creativityLevel < 30) {
+      styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision.`;
+  } else if (creativityLevel < 70) {
+      styleGuidance = `Provide a standard, balanced interpretation of the ${style} aesthetic, focusing on cohesive materials.`;
   } else {
-      styleGuidance = `BOLD TRANSFORMATION: Provide a high-creativity, 'Designer Signature' take on ${style}. Introduce radical material shifts, unexpected textures, and avant-garde lighting.`;
+      styleGuidance = `Provide a unique, 'Designer Signature' take on ${style}. Introduce unexpected but complementary textures and avant-garde lighting.`;
   }
 
   // --- START PROMPT CONSTRUCTION ---
 
   // PHASE 1: ROLE & GLOBAL QUALITY
   let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
-  
-  // PHASE 1.1: CREATIVITY WEIGHTING (Added for influence)
-  if (creativityLevel >= 80) {
-      prompt += `\n\nCRITICAL: This is a MAX-CREATIVITY job. You are encouraged to take massive design risks. Re-imagine the space entirely.`;
-  } else if (creativityLevel <= 20) {
-      prompt += `\n\nCRITICAL: This is a MIN-CREATIVITY job. Be extremely conservative. Change as little as possible while still applying the ${style} theme.`;
-  }
 
   // PHASE 2: CANVAS & ZOOM
   if (cameraZoom < 85) {
@@ -130,9 +106,9 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   // PHASE 3: PERSPECTIVE & CAMERA MATH
   if (viewAngle === "Original") {
       prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
-      1. HORIZON LINE: Match the original horizon line.
-      2. VANISHING POINTS: Match the original vanishing points.
-      3. VANTAGE POINT: Maintain static camera position.`;
+      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
+      2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates as the original image. Zero perspective deviation.
+      3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation. The camera lens and position must remain static and fixed.`;
   } else {
       prompt += `\n\nCRITICAL INSTRUCTION - CHANGE CAMERA ANGLE:
       You must re-render the scene from a strictly "${viewAngle}" perspective.`;
@@ -149,19 +125,16 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
     // PHASE 4: OBJECT ANCHORING & DYNAMIC STAGING
       if (preservedElements && preservedElements.trim().length > 0) {
           prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
-          Strictly identify and isolate the following items for 100% geometric preservation: "${preservedElements}".`;
+          Strictly analyze the input image to identify and isolate the following elements: "${preservedElements}".`;
 
           if (viewAngle === "Original") {
-              prompt += `\n1. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas.
-              2. IDENTITY LOCK: Render the core body of the "${preservedElements}" with 100% fidelity to the original design and contours.`;
-              
-              if (creativityLevel >= 70) {
-                  prompt += `\n3. DYNAMIC RE-STAGING: You are authorized to replace ALL staging items, props, and accessories around and on the "${preservedElements}" to match the ${style} style.`;
-              } else if (creativityLevel <= 30) {
-                  prompt += `\n3. MINIMAL RE-STAGING: Keep all existing props and accessories exactly as they are. Only change colors/materials if they clash with ${style}.`;
-              }
-
-              prompt += `\n4. STATIONARY ASSET: This object is the fixed anchor of the scene. Redesign the environment BEHIND and AROUND it.`;
+              prompt += `\n1. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset, scale, move, or shift the object even by 1 pixel.
+              2. IDENTITY LOCK: Render the core body of the "${preservedElements}" with 100% fidelity to the original design, material, and contours.
+              3. STYLE ISOLATION: Do not apply any textures or materials from the new "${style}" aesthetic to the structural body of the "${preservedElements}".
+              4. STATIONARY ASSET: The object is a fixed reference point. Redesign the environment BEHIND and AROUND it, but do not touch the asset itself.
+              5. MODEL INTEGRITY FORBIDDEN SUBSTITUTION: You are prohibited from replacing the "${preservedElements}" with a different model or SKU. Contours and geometry MUST be preserved precisely. Do not 'modernize' or change the physical build of the object.
+              6. AUTHORIZED DYNAMIC STAGING: You are authorized to update or remove transient accessories and propping (e.g., bottles, towels, containers) sitting on or inside the "${preservedElements}" only where necessary to stylistically align with the "${style}" look.
+              7. SELECTIVE RE-PROPPING: Do not aggressively clear the "${preservedElements}". Instead, selectively replace original staging items only if they clash significantly with the new aesthetic. Maintain a clean, high-end designer integration between the "${preservedElements}" and any propping.`;
           } else {
               prompt += `\n1. IDENTITY PRESERVATION: Generate a perfect 3D representation of the "${preservedElements}" from the "${viewAngle}" perspective.
               2. DESIGN CONSISTENCY: Must maintain identical material, finish, and internal geometry as the original source.
@@ -175,12 +148,14 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       Keep the structural shell (walls, windows, ceiling) identical to the original layout. Do not add doors or windows that do not exist in the source image.`;
   } else {
       prompt += `\n\nFREEDOM - ARCHITECTURAL OVERHAUL:
-      - TOTAL RECONSTRUCTION: You are authorized to replace 100% of the architecture. 
-      - STRIP AND REBUILD: Discard the original walls, ceiling, and window placements.
-      - NEW VOLUME: Construct a completely new architectural shell in the "${style}" style.
-      - GEOMETRIC ANCHOR: The only fixed point is the floor area directly under the "${preservedElements || 'main object'}". Everything else must change.
+      You have absolute freedom to redesign the walls and ceiling. Redesign the architecture to perfectly match the "${style}" aesthetic.
+
+      ANCHOR POINT CONSTRAINT:
+      - The floor plane directly beneath the "${preservedElements || 'main object'}" must remain identical in geometry and position to ensure the object stays anchored at its original coordinates.
 
       NEGATIVE CONSTRAINTS (CRITICAL):
+      - DO NOT add primary utility fixtures or large appliances (e.g., secondary plumbing fixtures, cabinetry, or major hardware) if they are not present in the original image.
+      - DO NOT add extra rugs or floor coverings. Maintain the original count of floor textiles.
       - Maintain the functional logic of the room based on the preserved items.`;
   }
 
