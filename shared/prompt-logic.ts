@@ -123,10 +123,9 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   // PHASE 3: PERSPECTIVE & CAMERA MATH
   if (viewAngle === "Original") {
       prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
-      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
-      2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates as the original image. Zero perspective deviation.
-      3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation. The camera lens and position must remain static and fixed.
-      4. RIGID ALIGNMENT: You are FORBIDDEN from reinterpreting the room's depth or camera view. The 3D grid is non-negotiable.`;
+      1. HORIZON LINE: Match the original horizon line.
+      2. VANISHING POINTS: Match the original vanishing points.
+      3. VANTAGE POINT: Maintain static camera position.`;
   } else {
       prompt += `\n\nCRITICAL INSTRUCTION - CHANGE CAMERA ANGLE:
       You must re-render the scene from a strictly "${viewAngle}" perspective.`;
@@ -166,17 +165,12 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       Keep the structural shell (walls, windows, ceiling) identical to the original layout. Do not add doors or windows that do not exist in the source image.`;
   } else {
       prompt += `\n\nFREEDOM - ARCHITECTURAL OVERHAUL:
-      You have absolute freedom to redesign the walls, windows, and ceiling. This is an "EMPTY SHELL" redesign. 
-      - STRIP THE ROOM: Remove all existing wall coverings, built-in shelving, windows, and structural trim.
-      - REBUILD FROM SCRATCH: Construct a completely new architectural environment around the "${preservedElements || 'main object'}" that perfectly embodies the "${style}" aesthetic.
-      - CHANGE EVERYTHING: The original layout of the walls and ceiling should be treated as a suggestion; feel free to move walls, add structural depth, or change window placements entirely.
-
-      ANCHOR POINT CONSTRAINT:
-      - The floor plane directly beneath the "${preservedElements || 'main object'}" must remain identical in geometry and position to ensure the object stays anchored at its original coordinates.
+      - TOTAL RECONSTRUCTION: You are authorized to replace 100% of the architecture. 
+      - STRIP AND REBUILD: Discard the original walls, ceiling, and window placements.
+      - NEW VOLUME: Construct a completely new architectural shell in the "${style}" style.
+      - GEOMETRIC ANCHOR: The only fixed point is the floor area directly under the "${preservedElements || 'main object'}". Everything else must change.
 
       NEGATIVE CONSTRAINTS (CRITICAL):
-      - DO NOT add primary utility fixtures or large appliances (e.g., secondary plumbing fixtures, cabinetry, or major hardware) if they are not present in the original image.
-      - DO NOT add extra rugs or floor coverings. Maintain the original count of floor textiles.
       - Maintain the functional logic of the room based on the preserved items.`;
   }
 

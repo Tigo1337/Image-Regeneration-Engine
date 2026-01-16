@@ -1,0 +1,51 @@
+You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.
+
+CRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
+      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
+      2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates as the original image. Zero perspective deviation.
+      3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation. The camera lens and position must remain static and fixed.
+      4. RIGID ALIGNMENT: You are FORBIDDEN from reinterpreting the room's depth or camera view. The 3D grid is non-negotiable.
+
+CRITICAL INSTRUCTION - OBJECT PRESERVATION:
+          Strictly identify and isolate the following items for 100% geometric preservation: "Bathtub".
+1. PIXEL-LEVEL ALIGNMENT: The "Bathtub" must maintain its exact original X/Y coordinates on the canvas. Do not offset, scale, move, or shift the object even by 1 pixel.
+              2. IDENTITY LOCK: Render the core body of the "Bathtub" with 100% fidelity to the original design, material, and contours.
+              3. STYLE ISOLATION: Do not apply any textures or materials from the new "Dark Scandi" aesthetic to the structural body of the "Bathtub".
+              4. STATIONARY ASSET: This object is the fixed anchor of the scene. Redesign the environment BEHIND and AROUND it, but do not touch the asset itself.
+              5. MODEL INTEGRITY FORBIDDEN SUBSTITUTION: You are prohibited from replacing the "Bathtub" with a different model or SKU. Contours and geometry MUST be preserved precisely.
+              6. AUTHORIZED DYNAMIC STAGING: You are authorized to update or remove transient accessories sitting on or inside the "Bathtub" only where necessary to stylistically align with the "Dark Scandi" look.
+              7. SELECTIVE RE-PROPPING: Do not aggressively clear the "Bathtub". Selectively replace original staging items only if they clash significantly with the new aesthetic.
+
+FREEDOM - ARCHITECTURAL OVERHAUL:
+      You have absolute freedom to redesign the walls, windows, and ceiling. This is an "EMPTY SHELL" redesign. 
+      - STRIP THE ROOM: Remove all existing wall coverings, built-in shelving, windows, and structural trim.
+      - REBUILD FROM SCRATCH: Construct a completely new architectural environment around the "Bathtub" that perfectly embodies the "Dark Scandi" aesthetic.
+      - CHANGE EVERYTHING: The original layout of the walls and ceiling should be treated as a suggestion; feel free to move walls, add structural depth, or change window placements entirely.
+
+      ANCHOR POINT CONSTRAINT:
+      - The floor plane directly beneath the "Bathtub" must remain identical in geometry and position to ensure the object stays anchored at its original coordinates.
+
+      NEGATIVE CONSTRAINTS (CRITICAL):
+      - DO NOT add primary utility fixtures or large appliances (e.g., secondary plumbing fixtures, cabinetry, or major hardware) if they are not present in the original image.
+      - DO NOT add extra rugs or floor coverings. Maintain the original count of floor textiles.
+      - Maintain the functional logic of the room based on the preserved items.
+
+TRANSFORMATION GOAL:
+  Redesign the environment to match a "Dark Scandi" aesthetic.
+  STYLE DIRECTION: Provide a unique, 'Designer Signature' take on Dark Scandi. Introduce unexpected but complementary textures and avant-garde lighting.
+  KEY CHARACTERISTICS: The 'Noir' side of Hygge. Utilize smoked oak or walnut, deep slate-grey matte walls, and cozy, heavy-knit textures. Focus on low-level 'pools' of warm light against dark, minimalist functionalism.
+
+  METALLIC TARGET SELECTION:
+  Identify the single most appropriate metallic finish for the "Dark Scandi" aesthetic (e.g., Brushed Brass, Matte Black, or Polished Chrome). This finish will serve as the "Master Finish" for the room.
+
+  MATERIALITY DIRECTIVE: 
+  Interpret style through material depth. Focus on how light interacts with textures. Prioritize tactile realism.
+
+CRITICAL INSTRUCTION - FIXTURE COHERENCE & STYLE ADAPTATION:
+  1. ADAPTIVE UPDATING: You are AUTHORIZED and encouraged to update the metallic finish of any hardware or fixtures on the preserved "Bathtub" to match the chosen "Master Finish" from the previous section.
+  2. UNIFIED HARDWARE: Establish absolute visual harmony. Apply the "Master Finish" with 100% consistency to ALL metallic elements: the fixtures on the preserved object, new plumbing or hardware, lighting frames, and cabinet hardware.
+
+FINAL OUTPUT: Photorealistic 8k architectural render. High-end photography. Zero perspective drift.
+
+  MANDATORY PERSPECTIVE OVERRIDE:
+  You are FORBIDDEN from changing the camera angle or the X/Y position of the "Bathtub". The output MUST align pixel-perfectly with the input.
