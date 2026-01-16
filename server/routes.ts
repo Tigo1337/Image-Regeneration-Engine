@@ -254,10 +254,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply preprocessing
       let modifiedMainImage = processedImage;
+      let smartZoomPromptAddition = "";
+
       if (formData.useSmartZoom && formData.smartZoomObject && formData.smartFillRatio) {
         const box = await detectObjectBoundingBox(processedImage, formData.smartZoomObject);
         if (box) {
           modifiedMainImage = await applySmartObjectZoom(processedImage, box, formData.smartFillRatio);
+          // Add the same composition constraint that single generation uses
+          smartZoomPromptAddition = `\n\n=== COMPOSITION CONSTRAINT (STRICT) ===
+            The input image has been strictly cropped so that the "${formData.smartZoomObject}" occupies exactly ${formData.smartFillRatio}% of the canvas width.
+            1. LOCK CAMERA DISTANCE: You are FORBIDDEN from zooming in or out. Maintain this exact frame.
+            2. PRESERVE SCALE: The edges of the ${formData.smartZoomObject} must align perfectly with the input image. 
+            3. FILL RATIO: Ensure the object remains ${formData.smartFillRatio}% of the image width in your final generation.`;
         }
       } else {
         modifiedMainImage = await applyPerspectiveMockup(
@@ -267,15 +275,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      const CONCURRENCY = 3;
+      // Pre-compute structure analysis if reference images exist (same as single generation)
+      let structureAnalysisAddition = "";
+      const hasRefs = formData.referenceImages && formData.referenceImages.length > 0;
+      if (hasRefs && formData.preservedElements) {
+        try {
+          const analysis = await analyzeObjectStructure(
+            processedImage, 
+            formData.referenceImages, 
+            formData.preservedElements
+          );
+          if (analysis) {
+            structureAnalysisAddition = `\n\nCRITICAL CONTEXT - 3D STRUCTURE ANALYSIS:
+              Use the following technical analysis to ensure the "${formData.preservedElements}" is rendered correctly:
+              ${analysis}`;
+          }
+        } catch (e) {
+          console.warn("Batch: 3D Structure Analysis skipped.");
+        }
+      }
+
+      // Reference image hint (same as single generation)
+      let referenceHint = "";
+      if (hasRefs) {
+        referenceHint = `\n\nIMPORTANT: I have provided ${formData.referenceImages!.length} additional reference images. These show the TRUE shape and details of the "${formData.preservedElements}". Prioritize these visual examples.`;
+      }
+
+      const BATCH_DELAY_MS = 800; // Delay between requests to improve API consistency
       const results: {style: string; image: string; error?: string}[] = [];
 
-      for (const style of styles) {
-        try {
-          console.log(`Generating style: ${style}`);
+      // Helper function to add delay
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-          // UNIFIED PROMPT LOGIC: 
-          const prompt = constructRoomScenePrompt({
+      for (let i = 0; i < styles.length; i++) {
+        const style = styles[i];
+        
+        // Add delay between requests (skip first one)
+        if (i > 0) {
+          console.log(`Waiting ${BATCH_DELAY_MS}ms before next generation...`);
+          await delay(BATCH_DELAY_MS);
+        }
+
+        try {
+          console.log(`[Batch ${i + 1}/${styles.length}] Generating style: ${style}`);
+
+          // UNIFIED PROMPT LOGIC: Build base prompt then add all the same additions as single generation
+          let prompt = constructRoomScenePrompt({
             promptType: "room-scene",
             style: style,
             preservedElements: formData.preservedElements || "",
@@ -285,8 +330,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             creativityLevel: formData.creativityLevel || 50,
           });
 
+          // Apply the same prompt additions that single generation uses
+          prompt += smartZoomPromptAddition;
+          prompt += structureAnalysisAddition;
+          prompt += referenceHint;
+
+          // Create a fresh copy of the image data for each request
+          const freshImageCopy = String(modifiedMainImage);
+
           const generatedImage = await generateRoomRedesign({
-            imageBase64: modifiedMainImage,
+            imageBase64: freshImageCopy,
             referenceImages: formData.referenceImages,
             referenceDrawing: formData.referenceDrawing,
             preservedElements: formData.preservedElements || "",
@@ -297,6 +350,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             customPrompt: prompt,
             outputFormat: formData.outputFormat || "PNG",
           });
+
+          console.log(`[Batch ${i + 1}/${styles.length}] Style "${style}" generated successfully`);
 
           // SAVE TO GALLERY
           const generatedImageUrl = await uploadImageToStorage(generatedImage, "generated");
@@ -309,7 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             variations: [],
           });
 
-          // LOG EVERY STYLE GENERATION (Added logging fix here)
+          // LOG EVERY STYLE GENERATION
           if (storage.createPromptLog) {
               await storage.createPromptLog({
                   jobType: "batch-style-generation",
@@ -318,15 +373,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       style: style,
                       creativity: formData.creativityLevel || 50,
                       originalFileName: formData.originalFileName || "batch",
-                      viewAngle: formData.viewAngle || "Original"
+                      viewAngle: formData.viewAngle || "Original",
+                      batchIndex: i + 1,
+                      batchTotal: styles.length
                   }
               });
           }
 
           results.push({ style, image: generatedImage });
         } catch (error) {
-          console.error(`Error generating style ${style}:`, error);
-          return { style, image: "", error: error instanceof Error ? error.message : "Generation failed" };
+          console.error(`[Batch ${i + 1}/${styles.length}] Error generating style ${style}:`, error);
+          results.push({ style, image: "", error: error instanceof Error ? error.message : "Generation failed" });
         }
       }
 
