@@ -95,18 +95,25 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   // 1. STYLE VARIANCE LOGIC
   let styleGuidance = "";
-  if (creativityLevel < 30) {
-      styleGuidance = `Follow the ${style} aesthetic with clinical, textbook precision.`;
-  } else if (creativityLevel < 70) {
-      styleGuidance = `Provide a standard, balanced interpretation of the ${style} aesthetic, focusing on cohesive materials.`;
+  if (creativityLevel < 33) {
+      styleGuidance = `STRICT FIDELITY: Follow the ${style} aesthetic with clinical, textbook precision. Maintain a conservative approach to design changes.`;
+  } else if (creativityLevel < 66) {
+      styleGuidance = `BALANCED DESIGN: Provide a standard, professional interpretation of the ${style} aesthetic, focusing on cohesive materials and sensible layout updates.`;
   } else {
-      styleGuidance = `Provide a unique, 'Designer Signature' take on ${style}. Introduce unexpected but complementary textures and avant-garde lighting.`;
+      styleGuidance = `BOLD TRANSFORMATION: Provide a high-creativity, 'Designer Signature' take on ${style}. Introduce radical material shifts, unexpected textures, and avant-garde lighting.`;
   }
 
   // --- START PROMPT CONSTRUCTION ---
 
   // PHASE 1: ROLE & GLOBAL QUALITY
   let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
+  
+  // PHASE 1.1: CREATIVITY WEIGHTING (Added for influence)
+  if (creativityLevel >= 80) {
+      prompt += `\n\nCRITICAL: This is a MAX-CREATIVITY job. You are encouraged to take massive design risks. Re-imagine the space entirely.`;
+  } else if (creativityLevel <= 20) {
+      prompt += `\n\nCRITICAL: This is a MIN-CREATIVITY job. Be extremely conservative. Change as little as possible while still applying the ${style} theme.`;
+  }
 
   // PHASE 2: CANVAS & ZOOM
   if (cameraZoom < 85) {
@@ -145,13 +152,16 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
           Strictly identify and isolate the following items for 100% geometric preservation: "${preservedElements}".`;
 
           if (viewAngle === "Original") {
-              prompt += `\n1. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset, scale, move, or shift the object even by 1 pixel.
-              2. IDENTITY LOCK: Render the core body of the "${preservedElements}" with 100% fidelity to the original design, material, and contours.
-              3. STYLE ISOLATION: Do not apply any textures or materials from the new "${style}" aesthetic to the structural body of the "${preservedElements}".
-              4. STATIONARY ASSET: This object is the fixed anchor of the scene. Redesign the environment BEHIND and AROUND it, but do not touch the asset itself.
-              5. MODEL INTEGRITY FORBIDDEN SUBSTITUTION: You are prohibited from replacing the "${preservedElements}" with a different model or SKU. Contours and geometry MUST be preserved precisely.
-              6. AUTHORIZED DYNAMIC STAGING: You are authorized to update or remove transient accessories sitting on or inside the "${preservedElements}" only where necessary to stylistically align with the "${style}" look.
-              7. SELECTIVE RE-PROPPING: Do not aggressively clear the "${preservedElements}". Selectively replace original staging items only if they clash significantly with the new aesthetic.`;
+              prompt += `\n1. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas.
+              2. IDENTITY LOCK: Render the core body of the "${preservedElements}" with 100% fidelity to the original design and contours.`;
+              
+              if (creativityLevel >= 70) {
+                  prompt += `\n3. DYNAMIC RE-STAGING: You are authorized to replace ALL staging items, props, and accessories around and on the "${preservedElements}" to match the ${style} style.`;
+              } else if (creativityLevel <= 30) {
+                  prompt += `\n3. MINIMAL RE-STAGING: Keep all existing props and accessories exactly as they are. Only change colors/materials if they clash with ${style}.`;
+              }
+
+              prompt += `\n4. STATIONARY ASSET: This object is the fixed anchor of the scene. Redesign the environment BEHIND and AROUND it.`;
           } else {
               prompt += `\n1. IDENTITY PRESERVATION: Generate a perfect 3D representation of the "${preservedElements}" from the "${viewAngle}" perspective.
               2. DESIGN CONSISTENCY: Must maintain identical material, finish, and internal geometry as the original source.
