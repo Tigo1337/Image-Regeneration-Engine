@@ -135,7 +135,7 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   } else {
       prompt += `\n\nFREEDOM - ARCHITECTURAL METAMORPHOSIS (TOTAL DECONSTRUCTION):
       Execute a complete deconstruction and rebuilding of the room environment.
-      - AUTHORIZED FREEDOM: Change window positions, add skylights, remove partitions, and completely change the room's footprint. 
+      - AUTHORIZED FREEDOM: Absolute creative liberty to reinvent the spatial layout. You are mandated to deconstruct existing boundaries, reposition openings, add or remove partitions, and completely redefine the room's footprint and architectural volume. 
       - ANCHOR POINT: Ensure the "${preservedElements || 'main object'}" stays anchored to its floor position, but the architecture around it must change completely.
       - NO OVER-PROPPING: Prioritize architectural geometry over decorative clutter.`;
   }
