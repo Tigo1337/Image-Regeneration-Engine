@@ -54,6 +54,7 @@ export interface PromptConfig {
   promptType: PromptType;
   style: string;
   preservedElements: string;
+  addedElements?: string;
   centerPreservedElements?: boolean;
   viewAngle?: string;
   cameraZoom?: number; 

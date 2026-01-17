@@ -1,0 +1,106 @@
+import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sparkles, LogIn, LogOut, User, History, Image } from "lucide-react";
+
+export function Header() {
+  const { user, isLoading, isAuthenticated } = useAuth();
+  const [location] = useLocation();
+
+  const getInitials = (firstName?: string | null, lastName?: string | null) => {
+    const first = firstName?.charAt(0) || "";
+    const last = lastName?.charAt(0) || "";
+    return (first + last).toUpperCase() || "U";
+  };
+
+  return (
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 items-center justify-between px-4 gap-4">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <span className="font-semibold text-lg" data-testid="text-app-name">RoomReimagine AI</span>
+          </Link>
+          
+          <nav className="hidden md:flex items-center gap-1">
+            <Link href="/">
+              <Button 
+                variant={location === "/" ? "secondary" : "ghost"} 
+                size="sm"
+                data-testid="link-home"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Design
+              </Button>
+            </Link>
+            <Link href="/gallery">
+              <Button 
+                variant={location === "/gallery" ? "secondary" : "ghost"} 
+                size="sm"
+                data-testid="link-gallery"
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Gallery
+              </Button>
+            </Link>
+            <Link href="/prompts-history">
+              <Button 
+                variant={location === "/prompts-history" ? "secondary" : "ghost"} 
+                size="sm"
+                data-testid="link-prompts-history"
+              >
+                <History className="h-4 w-4 mr-2" />
+                Prompts
+              </Button>
+            </Link>
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isLoading ? (
+            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+          ) : isAuthenticated && user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-9 w-9 rounded-full" data-testid="button-user-menu">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || "User"} />
+                    <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <div className="flex flex-col space-y-1 p-2">
+                  <p className="text-sm font-medium leading-none" data-testid="text-user-name">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  {user.email && (
+                    <p className="text-xs leading-none text-muted-foreground" data-testid="text-user-email">
+                      {user.email}
+                    </p>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <a href="/api/logout" className="w-full cursor-pointer" data-testid="button-logout">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button asChild size="sm" data-testid="button-login">
+              <a href="/api/login">
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In
+              </a>
+            </Button>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}

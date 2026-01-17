@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { roomRedesignRequestSchema, smartCropRequestSchema, dimensionalImageRequestSchema } from "@shared/schema";
 import { generateRoomRedesign, analyzeObjectStructure, detectObjectBoundingBox } from "./gemini"; 
@@ -6,10 +6,17 @@ import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup, app
 import { storage } from "./storage";
 import { uploadImageToStorage } from "./image-storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { z } from "zod";
 import sharp from "sharp";
 import { constructDimensionalPrompt } from "./dimensional-prompt"; 
 import { constructRoomScenePrompt, styleDescriptions } from "@shared/prompt-logic";
+
+// Helper to extract userId from authenticated request (or null for anonymous)
+function getUserId(req: Request): string | null {
+  const user = req.user as any;
+  return user?.claims?.sub || null;
+}
 
 // Prompt Builder for Perspectives
 function buildVariationPrompt(formData: any, variationType: string, structureAnalysis: string = ""): string {
@@ -75,6 +82,9 @@ function buildVariationPrompt(formData: any, variationType: string, structureAna
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication (MUST be before other routes)
+  await setupAuth(app);
+  registerAuthRoutes(app);
 
   app.get("/api/prompts-history", async (req, res) => {
     try {
@@ -196,6 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // SAVE EACH RESULT TO GALLERY AUTOMATICALLY
         const generatedImageUrl = await uploadImageToStorage(mainImage, "generated");
         await storage.saveGeneratedDesign({
+          userId: getUserId(req), // Associate with logged-in user if available
           timestamp: Date.now(),
           originalImageUrl,
           generatedImageUrl,
@@ -302,6 +313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // SAVE TO GALLERY
           const generatedImageUrl = await uploadImageToStorage(generatedImage, "generated");
           await storage.saveGeneratedDesign({
+            userId: getUserId(req), // Associate with logged-in user if available
             timestamp: Date.now(),
             originalImageUrl,
             generatedImageUrl,
@@ -585,6 +597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [originalImageUrl, generatedImageUrl] = await Promise.all(uploadPromises);
 
       const design = await storage.saveGeneratedDesign({
+        userId: getUserId(req), // Associate with logged-in user if available
         timestamp: Date.now(),
         originalImageUrl,
         generatedImageUrl,
@@ -600,7 +613,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/gallery", async (req, res) => {
     try {
-      const designs = await storage.getGeneratedDesigns();
+      const userId = getUserId(req);
+      const designs = await storage.getGeneratedDesigns(userId);
       res.json(designs);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch" });

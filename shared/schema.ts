@@ -91,6 +91,14 @@ export const roomRedesignRequestSchema = z.object({
   outputFormat: z.enum(outputFormats).default("PNG"),
   batchSize: z.number().min(1).max(10).default(1),
   originalFileName: z.string().optional(),
+
+  // Smart Zoom feature
+  useSmartZoom: z.boolean().optional(),
+  smartZoomObject: z.string().optional(),
+  smartFillRatio: z.number().min(10).max(100).optional(),
+
+  // Added elements for room design
+  addedElements: z.string().optional(),
 });
 
 // Smart Crop Schema (unchanged)
@@ -155,14 +163,13 @@ export interface RoomRedesignResponse {
   structureAnalysis?: string;
 }
 
-// Drizzle Tables
-export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  username: text("username").notNull().unique(),
-});
+// Export auth schema (users and sessions tables)
+export * from "./models/auth";
 
+// Drizzle Tables
 export const generatedDesigns = pgTable("generated_designs", {
   id: text("id").primaryKey(),
+  userId: text("user_id"),  // Optional user association for design history
   timestamp: bigint("timestamp", { mode: "number" }).notNull(),
   originalImageUrl: text("original_image_url").notNull(),
   generatedImageUrl: text("generated_image_url").notNull(),
@@ -181,9 +188,6 @@ export const promptLogs = pgTable("prompt_logs", {
 });
 
 // Type definitions
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
-
 export type GeneratedDesign = typeof generatedDesigns.$inferSelect;
 export type InsertGeneratedDesign = typeof generatedDesigns.$inferInsert;
 

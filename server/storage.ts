@@ -1,16 +1,15 @@
-import { type User, type InsertUser, type GeneratedDesign, type PromptLog, type InsertPromptLog, users, generatedDesigns, promptLogs } from "@shared/schema";
+import { type User, type UpsertUser, type GeneratedDesign, type PromptLog, type InsertPromptLog, users, generatedDesigns, promptLogs } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   saveGeneratedDesign(design: Omit<GeneratedDesign, 'id'>): Promise<GeneratedDesign>;
-  // [NEW] Method to update a design (e.g. add variations)
   updateGeneratedDesign(id: string, updates: Partial<GeneratedDesign>): Promise<GeneratedDesign | undefined>;
-  getGeneratedDesigns(): Promise<GeneratedDesign[]>;
+  getGeneratedDesigns(userId?: string | null): Promise<GeneratedDesign[]>;
   getGeneratedDesign(id: string): Promise<GeneratedDesign | undefined>;
 
   createPromptLog(log: InsertPromptLog): Promise<PromptLog>;
@@ -23,13 +22,23 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
     return user;
   }
 
@@ -51,7 +60,16 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getGeneratedDesigns(): Promise<GeneratedDesign[]> {
+  async getGeneratedDesigns(userId?: string | null): Promise<GeneratedDesign[]> {
+    // If userId is provided, return only that user's designs + anonymous designs
+    // If no userId, return all designs (admin view / anonymous user)
+    if (userId) {
+      return await db
+        .select()
+        .from(generatedDesigns)
+        .where(or(eq(generatedDesigns.userId, userId), isNull(generatedDesigns.userId)))
+        .orderBy(desc(generatedDesigns.timestamp));
+    }
     return await db
       .select()
       .from(generatedDesigns)
