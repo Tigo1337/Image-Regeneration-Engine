@@ -52,48 +52,40 @@ export const promptTypes = ["room-scene"] as const;
 // Output formats
 export const outputFormats = ["PNG", "JPEG", "WebP"] as const;
 
-// View Angles
+// View Angles (Limited to Original per current UX)
 export const viewAngles = [
-  "Original",
-  "Front",
-  "Side", 
-  "Top"
+  "Original"
 ] as const;
 
 // Room redesign request schema
 export const roomRedesignRequestSchema = z.object({
   promptType: z.enum(promptTypes).default("room-scene"),
   preservedElements: z.string(),
-  addedElements: z.string().optional(),
   closeupFocus: z.string().optional(),
 
-  // Allow uploading multiple reference images for 3D context
+  // Multiple reference images for context
   referenceImages: z.array(z.string()).optional(),
 
-  // Allow uploading a single technical drawing (PDF or Image)
+  // Single technical drawing
   referenceDrawing: z.string().optional(),
 
-  // Allow passing existing analysis to avoid re-generation
+  // Structure analysis metadata
   structureAnalysis: z.string().nullish(), 
 
-  // Angle for Rotation
+  // Angle restricted to Original
   viewAngle: z.enum(viewAngles).default("Original"),
 
-  // Standard Zoom Level (Legacy/Simple)
+  // Zoom Level (100% = Original)
   cameraZoom: z.number().min(50).max(200).default(100),
-
-  // [NEW] Smart Object Zoom parameters
-  useSmartZoom: z.boolean().default(false),
-  smartZoomObject: z.string().optional(),
-  smartFillRatio: z.number().min(20).max(100).optional(), // % of width
 
   targetStyle: z.enum(availableStyles),
   quality: z.enum(["Standard", "High Fidelity (2K)", "Ultra (4K)"]),
   aspectRatio: z.enum(["Original", "16:9", "1:1", "4:3"]),
-  creativityLevel: z.number().min(0).max(100),
-  outputFormat: z.enum(outputFormats).default("PNG"),
 
-  // [NEW] Batch and Save Parameters
+  // UPDATED: Complexity slider mapped to 4 discrete points
+  creativityLevel: z.number().min(1).max(4).default(2),
+
+  outputFormat: z.enum(outputFormats).default("PNG"),
   batchSize: z.number().min(1).max(10).default(1),
   originalFileName: z.string().optional(),
 });
