@@ -153,10 +153,8 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. Zero perspective drift.`;
 
-  if (!isMetamorphosis) {
       prompt += `\n\nMANDATORY PERSPECTIVE OVERRIDE:
       You are FORBIDDEN from changing the camera angle or the X/Y position of the "${preservedElements}". The output MUST align pixel-perfectly with the input.`;
-  }
 
   return prompt;
 }
