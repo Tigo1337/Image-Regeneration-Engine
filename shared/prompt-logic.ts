@@ -57,7 +57,7 @@ export interface PromptConfig {
   centerPreservedElements?: boolean;
   viewAngle?: string;
   cameraZoom?: number; 
-  creativityLevel?: number; // Now 1, 2, 3, or 4
+  creativityLevel?: number; 
   customStyleDescription?: string; 
 }
 
@@ -73,11 +73,11 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   const specificAesthetic = customStyleDescription || styleDescriptions[style] || styleDescriptions["Scandinavian"];
 
-  // 4-TIER CREATIVITY LOGIC (Complexity Slider)
-  const isAestheticRefresh = creativityLevel === 1;   // Tier 1: Surface only
-  const isSurfaceRenovation = creativityLevel === 2;  // Tier 2: Decorative additions
-  const isArchitecturalRemodel = creativityLevel === 3; // Tier 3: Shell geometry changes
-  const isMetamorphosis = creativityLevel === 4;      // Tier 4: Total deconstruction
+  // 4-TIER CREATIVITY LOGIC
+  const isAestheticRefresh = creativityLevel === 1;   
+  const isSurfaceRenovation = creativityLevel === 2;  
+  const isArchitecturalRemodel = creativityLevel === 3; 
+  const isMetamorphosis = creativityLevel === 4;      
 
   let styleGuidance = "";
   if (isAestheticRefresh) {
@@ -90,7 +90,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       styleGuidance = `Execute a 'Mandatory Architectural Metamorphosis.' Provide a unique, avant-garde 'Designer Signature' take on ${style} focusing on structural geometry.`;
   }
 
-  // PHASE 1: ROLE & GLOBAL QUALITY
   let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
 
   // PHASE 2: CANVAS & ZOOM
@@ -98,79 +97,65 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       prompt += `\n\nCRITICAL INSTRUCTION - WIDE ANGLE CONTEXT (Outpainting):
       The input image is centered with empty white space around it.
       Task: OUTPAINTING. Fill the surrounding white space with a scene that perfectly matches the center image.
-      Extend floors, ceilings, and walls seamlessly. Maintain uniform lighting; avoid vignetting or artificial shadows at the edges.`;
+      Extend floors, ceilings, and walls seamlessly.`;
   } else if (cameraZoom > 115) {
       prompt += `\n\nCRITICAL INSTRUCTION - MACRO DETAIL (Upscaling):
-      The input image is a zoomed-in crop. Focus on texture and material quality.
-      Enhance the realism of existing surfaces without adding new large-scale objects.`;
+      The input image is a zoomed-in crop. Focus on texture and material quality.`;
   }
 
-  // PHASE 3: PERSPECTIVE & CAMERA MATH (Strictly locked to Original)
-  prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
-  1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
-  2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates as the original image. Zero perspective deviation.
-  3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation. The camera lens and position must remain static and fixed.`;
+  // PHASE 3: DYNAMIC PERSPECTIVE MATH (FIXED)
+  if (isMetamorphosis) {
+      prompt += `\n\nCRITICAL INSTRUCTION - VANTAGE POINT ANCHOR:
+      1. CAMERA POSITION: Maintain the same camera vantage point (height and distance) relative to the room center.
+      2. PERSPECTIVE FREEDOM: You are AUTHORIZED to re-calculate vanishing points and horizon alignment to accommodate new architectural geometry. Internal lines should converge naturally to the new structural build.`;
+  } else {
+      prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
+      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
+      2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates. Zero perspective deviation.
+      3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation.`;
+  }
 
-  // PHASE 4: OBJECT ANCHORING & DYNAMIC STAGING
+  // PHASE 4: OBJECT ANCHORING
   if (preservedElements && preservedElements.trim().length > 0) {
       prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
-      Strictly analyze the input image to identify and isolate the following elements: "${preservedElements}".
-      1. PIXEL-LEVEL ALIGNMENT: The "${preservedElements}" must maintain its exact original X/Y coordinates on the canvas. Do not offset, scale, move, or shift the object even by 1 pixel.
-      2. IDENTITY LOCK: Render the core body of the "${preservedElements}" with 100% fidelity to the original design, material, and contours.
-      3. STYLE ISOLATION: Do not apply any textures or materials from the new "${style}" aesthetic to the structural body of the "${preservedElements}".
-      4. STATIONARY ASSET: The object is a fixed reference point. Redesign the environment BEHIND and AROUND it, but do not touch the asset itself.
-      5. MODEL INTEGRITY FORBIDDEN SUBSTITUTION: You are prohibited from replacing the "${preservedElements}" with a different model or SKU. Contours and geometry MUST be preserved precisely.
-      6. AUTHORIZED DYNAMIC STAGING: You are authorized to update or remove transient accessories and propping (e.g., bottles, towels, containers) sitting on or inside the "${preservedElements}" only where necessary to stylistically align with the "${style}" look.
-      7. SELECTIVE RE-PROPPING: Do not aggressively clear the "${preservedElements}". Instead, selectively replace original staging items only if they clash significantly with the new aesthetic. Maintain a clean, high-end designer integration between the asset and propping.`;
+      Strictly analyze the input image to identify and isolate: "${preservedElements}".
+      1. ANCHORING: The "${preservedElements}" must stay fixed to its original floor coordinates.
+      2. IDENTITY LOCK: Render the core body of the "${preservedElements}" with 100% fidelity to the original design and contours.
+      3. STYLE ISOLATION: Do not apply new aesthetic textures to the structural body of the preserved asset.
+      4. DYNAMIC STAGING: You are authorized to update accessories sitting on or inside the "${preservedElements}" to match the style.`;
   }
 
   // PHASE 5: STRUCTURAL SHELL & 4-TIER LOGIC
   if (isAestheticRefresh) {
-      prompt += `\n\nCONSTRAINT - ROOM STRUCTURE (LEVEL 1: AESTHETIC REFRESH):
-      Keep the architectural layout 100% identical to the original image. 
-      - DO NOT add or remove windows, doors, or partitions. 
-      - DO NOT change ceiling height or wall geometry.
-      - FOCUS: Only update surface materials, colors, and textures.`;
+      prompt += `\n\nCONSTRAINT - ROOM STRUCTURE: Keep the architectural layout 100% identical. Only update surface materials and colors.`;
   } else if (isSurfaceRenovation) {
-      prompt += `\n\nCONSTRAINT - ROOM STRUCTURE (LEVEL 2: SURFACE RENOVATION):
-      Keep the primary structural footprint (walls, windows, doors) identical. 
-      - AUTHORIZED FREEDOM: You may add stylistic architectural propping such as crown moldings, wall paneling, built-in shelving, or trim work that defines the ${style} look.
-      - PROHIBITED: Do not move windows or change the room's base geometry.`;
+      prompt += `\n\nCONSTRAINT - ROOM STRUCTURE: Keep primary structure identical. You may add decorative elements like moldings or built-ins.`;
   } else if (isArchitecturalRemodel) {
-      prompt += `\n\nFREEDOM - ARCHITECTURAL REMODEL (LEVEL 3: ARCHITECTURAL REMODEL):
-      Redesign the internal room shell geometry. 
-      - AUTHORIZED FREEDOM: Deconstruct and rebuild the architecture (walls and ceilings). You may change ceiling styles (tray, vaulted, coffered) and add structural partitions.
-      - CONSTRAINT: You MUST keep all windows and exterior doors in their exact original X/Y positions.
-      - NO OVER-PROPPING: Focus on the architectural surfaces. Do not add excessive decorative clutter.`;
+      prompt += `\n\nFREEDOM - ARCHITECTURAL REMODEL: Redesign the internal room shell. You may change ceiling styles and rebuild internal walls, but MUST keep windows in their original positions.`;
   } else {
-      prompt += `\n\nFREEDOM - ARCHITECTURAL METAMORPHOSIS (LEVEL 4: TOTAL METAMORPHOSIS):
+      prompt += `\n\nFREEDOM - ARCHITECTURAL METAMORPHOSIS (TOTAL DECONSTRUCTION):
       Execute a complete deconstruction and rebuilding of the room environment.
-      - AUTHORIZED FREEDOM: Change window positions, add skylights, remove partitions, and completely change the room's footprint and geometry. 
-      - ANCHOR POINT CONSTRAINT: The floor plane directly beneath the "${preservedElements || 'main object'}" must remain identical in geometry to ensure the asset stays anchored at its original coordinates.
-      - NO OVER-PROPPING: Prioritize the new architectural geometry over decorative items. The redesign must feel structural, not just re-decorated.`;
+      - AUTHORIZED FREEDOM: Change window positions, add skylights, remove partitions, and completely change the room's footprint. 
+      - ANCHOR POINT: Ensure the "${preservedElements || 'main object'}" stays anchored to its floor position, but the architecture around it must change completely.
+      - NO OVER-PROPPING: Prioritize architectural geometry over decorative clutter.`;
   }
 
-  // PHASE 6: AESTHETIC TRANSFORMATION & METALLIC SELECTION
+  // PHASE 6: AESTHETIC TRANSFORMATION
   prompt += `\n\nTRANSFORMATION GOAL:
-  Redesign the environment to match a "${style}" aesthetic.
-  STYLE DIRECTION: ${styleGuidance}
-  KEY CHARACTERISTICS: ${specificAesthetic}.
+  Style: ${styleGuidance}
+  Key Characteristics: ${specificAesthetic}.
+  Unified Hardware: Apply a single "Master Finish" (e.g., Matte Black) to ALL metallic elements.`;
 
-  METALLIC TARGET SELECTION:
-  Identify the single most appropriate metallic finish for the "${style}" aesthetic (e.g., Brushed Brass, Matte Black, or Polished Chrome). This finish will serve as the "Master Finish" for the room.
+  // PHASE 7: FIXTURE COHERENCE
+  prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
+  Update the metallic finish of any fixtures on the preserved "${preservedElements || 'object'}" to match the "Master Finish".`;
 
-  MATERIALITY DIRECTIVE: 
-  Interpret style through material depth. Focus on how light interacts with textures. Prioritize tactile realism.`;
+  prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. Zero perspective drift.`;
 
-  // PHASE 7: FIXTURE COHERENCE & STYLE ADAPTATION (ENFORCEMENT)
-  prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE & STYLE ADAPTATION:
-  1. ADAPTIVE UPDATING: You are AUTHORIZED and encouraged to update the metallic finish of any hardware or fixtures on the preserved "${preservedElements || 'object'}" to match the chosen "Master Finish" from the previous section.
-  2. UNIFIED HARDWARE: Establish absolute visual harmony. Apply the "Master Finish" with 100% consistency to ALL metallic elements: the fixtures on the preserved object, lighting frames, and cabinet hardware.`;
-
-  prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. High-end photography. Zero perspective drift.
-
-  MANDATORY PERSPECTIVE OVERRIDE:
-  You are FORBIDDEN from changing the camera angle or the X/Y position of the "${preservedElements}". The output MUST align pixel-perfectly with the input.`;
+  if (!isMetamorphosis) {
+      prompt += `\n\nMANDATORY PERSPECTIVE OVERRIDE:
+      You are FORBIDDEN from changing the camera angle or the X/Y position of the "${preservedElements}". The output MUST align pixel-perfectly with the input.`;
+  }
 
   return prompt;
 }
