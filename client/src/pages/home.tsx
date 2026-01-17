@@ -384,18 +384,6 @@ export default function Home() {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className="w-96 border-r border-border bg-card flex flex-col">
-        <div className="p-6 border-b border-card-border">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary text-primary-foreground">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-card-foreground">RoomReimagine AI</h1>
-              <p className="text-xs text-muted-foreground">AI-Powered Interior Design</p>
-            </div>
-          </div>
-        </div>
-
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
             {generatedImage ? (
