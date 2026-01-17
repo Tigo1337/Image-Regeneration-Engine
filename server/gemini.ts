@@ -10,6 +10,7 @@ const ai = new GoogleGenAI({
 interface RoomRedesignParams {
   imageBase64: string;
   referenceImages?: string[]; 
+  inspirationImages?: string[];
   referenceDrawing?: string;
   preservedElements: string;
   targetStyle: string;
@@ -186,6 +187,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
   const { 
     imageBase64, 
     referenceImages = [],
+    inspirationImages = [],
     referenceDrawing,
     customPrompt, 
     quality, 
@@ -216,7 +218,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       console.log(`Injecting ${referenceImages.length} Visual Reference Images into Generation Context...`);
 
       parts.push({ 
-        text: `\n\nCRITICAL VISUAL REFERENCES:\nThe following images show the EXACT object to be preserved. Use them to understand its geometry, material, and surface details (like paneling, tufting, or hardware) from multiple angles. Do not redesign this object.` 
+        text: `\n\nCRITICAL VISUAL REFERENCES (OBJECT PRESERVATION):\nThe following images show the EXACT object to be preserved. Use them to understand its geometry, material, and surface details (like paneling, tufting, or hardware) from multiple angles. Do not redesign this object.` 
       });
 
       referenceImages.forEach((ref) => {
@@ -232,7 +234,31 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       });
     }
 
-    // 4. Inject Technical Drawing
+    // 4. Inject Inspiration Images (Style/Mood Board)
+    if (inspirationImages.length > 0) {
+      console.log(`Injecting ${inspirationImages.length} Inspiration Images into Generation Context...`);
+
+      parts.push({ 
+        text: `\n\nSTYLE INSPIRATION (MOOD BOARD):\nThe following images represent the target aesthetic, color palette, and atmospheric lighting. 
+        1. EXTRACT AESTHETIC: Borrow the material finishes, lighting mood, and color harmony from these images.
+        2. APPLY TO ROOM: Translate this "vibe" into the redesigned room scene shown in the main image.
+        3. DO NOT COPY GEOMETRY: These images are for stylistic reference only; do not copy their layouts or furniture placements. Preserve the original room's structure as defined by the creativity level.` 
+      });
+
+      inspirationImages.forEach((insp) => {
+        if (insp && insp.includes('base64,')) {
+          const inspBase64 = insp.replace(/^data:image\/[a-z]+;base64,/, '');
+          parts.push({
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: inspBase64
+            }
+          });
+        }
+      });
+    }
+
+    // 5. Inject Technical Drawing
     if (referenceDrawing) {
       console.log("Injecting Technical Drawing into Generation Context...");
 
@@ -265,8 +291,9 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       "WebP": "image/webp"
     };
 
+    // creativityLevel is 1-4. Temperature typically 0-2.
     const temperature = typeof creativityLevel === 'number' 
-      ? (creativityLevel / 100) * 2.0 
+      ? (creativityLevel / 4) * 2.0 
       : 1.0;
 
     const config: any = {
@@ -292,7 +319,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     console.log("Model: gemini-3-pro-image-preview (Nano Banana Pro)");
     console.log("Input Parts Count:", parts.length);
     console.log("Aspect Ratio:", imageConfig.aspectRatio || "Default");
-    console.log("Has Drawing:", !!referenceDrawing);
+    console.log("Has Inspiration Images:", inspirationImages.length > 0);
     console.log("==========================================");
 
     const imageResponse = await ai.models.generateContent({

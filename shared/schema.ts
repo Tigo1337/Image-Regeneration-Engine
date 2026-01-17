@@ -66,6 +66,9 @@ export const roomRedesignRequestSchema = z.object({
   // Multiple reference images for context
   referenceImages: z.array(z.string()).optional(),
 
+  // Inspiration images for style/mood board
+  inspirationImages: z.array(z.string()).optional(),
+
   // Single technical drawing
   referenceDrawing: z.string().optional(),
 

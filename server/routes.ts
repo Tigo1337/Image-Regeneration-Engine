@@ -91,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/generate", async (req, res) => {
     try {
-      const { imageData, prompt, ...formData } = req.body;
+      const { imageData, prompt, inspirationImages, ...formData } = req.body;
       const validatedData = roomRedesignRequestSchema.parse(formData);
 
       if (!imageData) return res.status(400).json({ success: false, error: "No image data" });
@@ -182,6 +182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const mainImage = await generateRoomRedesign({
           imageBase64: modifiedMainImage,
           referenceImages: validatedData.referenceImages,
+          inspirationImages: inspirationImages,
           referenceDrawing: validatedData.referenceDrawing,
           preservedElements: validatedData.preservedElements,
           targetStyle: validatedData.targetStyle,
@@ -267,7 +268,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      const CONCURRENCY = 3;
       const results: {style: string; image: string; error?: string}[] = [];
 
       for (const style of styles) {
@@ -282,18 +282,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             addedElements: formData.addedElements || "",
             viewAngle: formData.viewAngle || "Original",
             cameraZoom: formData.cameraZoom || 100,
-            creativityLevel: formData.creativityLevel || 50,
+            creativityLevel: formData.creativityLevel || 2,
           });
 
           const generatedImage = await generateRoomRedesign({
             imageBase64: modifiedMainImage,
             referenceImages: formData.referenceImages,
+            inspirationImages: formData.inspirationImages,
             referenceDrawing: formData.referenceDrawing,
             preservedElements: formData.preservedElements || "",
             targetStyle: style,
             quality: formData.quality || "Standard",
             aspectRatio: formData.aspectRatio || "Original",
-            creativityLevel: formData.creativityLevel || 50,
+            creativityLevel: formData.creativityLevel || 2,
             customPrompt: prompt,
             outputFormat: formData.outputFormat || "PNG",
           });
@@ -316,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   prompt: prompt,
                   parameters: {
                       style: style,
-                      creativity: formData.creativityLevel || 50,
+                      creativity: formData.creativityLevel || 2,
                       originalFileName: formData.originalFileName || "batch",
                       viewAngle: formData.viewAngle || "Original"
                   }
@@ -326,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           results.push({ style, image: generatedImage });
         } catch (error) {
           console.error(`Error generating style ${style}:`, error);
-          return { style, image: "", error: error instanceof Error ? error.message : "Generation failed" };
+          results.push({ style, image: "", error: error instanceof Error ? error.message : "Generation failed" });
         }
       }
 
@@ -484,7 +485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           targetStyle: validatedData.targetStyle,
           quality: validatedData.quality,
           aspectRatio: validatedData.aspectRatio,
-          creativityLevel: 35, 
+          creativityLevel: 2, 
           customPrompt: specificPrompt,
           outputFormat: validatedData.outputFormat,
         });
@@ -550,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetStyle: "Technical Documentation",
         quality: "High Fidelity (2K)",
         aspectRatio: "1:1",
-        creativityLevel: 10,
+        creativityLevel: 2,
         customPrompt: dimensionalPrompt,
         outputFormat: "PNG",
       });

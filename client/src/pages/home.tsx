@@ -33,6 +33,7 @@ export default function Home() {
   const [currentDimensionalData, setCurrentDimensionalData] = useState<DimensionalImageRequest | null>(null);
 
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
+  const [inspirationImages, setInspirationImages] = useState<string[]>([]);
   const [referenceDrawing, setReferenceDrawing] = useState<string | null>(null);
   const [structureAnalysis, setStructureAnalysis] = useState<string | null>(null);
   const [savedDesignId, setSavedDesignId] = useState<string | null>(null);
@@ -54,6 +55,7 @@ export default function Home() {
     setCurrentSmartCropData(null);
     setCurrentDimensionalData(null);
     setReferenceImages([]); 
+    setInspirationImages([]);
     setReferenceDrawing(null); 
     setStructureAnalysis(null); 
     setSavedDesignId(null);
@@ -270,6 +272,7 @@ export default function Home() {
       batchSize: batchSize,
       originalFileName: originalFileName,
       referenceImages: referenceImages,
+      inspirationImages: inspirationImages,
       referenceDrawing: referenceDrawing || undefined,
       structureAnalysis: structureAnalysis || undefined 
     };
@@ -354,7 +357,7 @@ export default function Home() {
 
     batchStylesMutation.mutate({
       imageData: originalImage,
-      formData: { ...formData, originalFileName },
+      formData: { ...formData, originalFileName, inspirationImages },
       styles: [...availableStyles],
     });
   };
@@ -372,6 +375,7 @@ export default function Home() {
     setCurrentSmartCropData(null);
     setCurrentDimensionalData(null);
     setReferenceImages([]);
+    setInspirationImages([]);
     setReferenceDrawing(null);
     setStructureAnalysis(null);
     setSavedDesignId(null);
@@ -419,6 +423,8 @@ export default function Home() {
               onModificationPromptChange={setModificationPrompt}
               referenceImages={referenceImages}
               onReferenceImagesChange={setReferenceImages}
+              inspirationImages={inspirationImages}
+              onInspirationImagesChange={setInspirationImages}
               referenceDrawing={referenceDrawing}
               onReferenceDrawingChange={setReferenceDrawing}
             />

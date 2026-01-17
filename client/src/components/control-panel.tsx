@@ -29,7 +29,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { 
   Sparkles, AlertCircle, FileText, Layers, 
-  ZoomIn, Upload, X, Crop, Ruler 
+  ZoomIn, Upload, X, Crop, Ruler, ImagePlus 
 } from "lucide-react";
 import { constructPrompt, type PromptType, styleDescriptions } from "@/lib/prompt-builder";
 import { constructDimensionalPrompt } from "@/lib/dimensional-prompt";
@@ -47,6 +47,8 @@ interface ControlPanelProps {
   onModificationPromptChange?: (prompt: string) => void;
   referenceImages?: string[];
   onReferenceImagesChange?: (images: string[]) => void;
+  inspirationImages?: string[];
+  onInspirationImagesChange?: (images: string[]) => void;
   referenceDrawing?: string | null;
   onReferenceDrawingChange?: (drawing: string | null) => void;
 }
@@ -64,6 +66,8 @@ export function ControlPanel({
   onModificationPromptChange,
   referenceImages = [],
   onReferenceImagesChange,
+  inspirationImages = [],
+  onInspirationImagesChange,
   referenceDrawing = null,
   onReferenceDrawingChange,
 }: ControlPanelProps) {
@@ -81,19 +85,8 @@ export function ControlPanel({
   const [cropFill, setCropFill] = useState(80);
   const [cropRatio, setCropRatio] = useState<"1:1" | "9:16" | "16:9" | "4:5">("1:1");
 
-  // Local state for Dimensional Tab
-  const [dimProductType, setDimProductType] = useState<typeof productTypes[number]>("Shower Base");
-  const [dimHeight, setDimHeight] = useState("");
-  const [dimWidth, setDimWidth] = useState("");
-  const [dimDepth, setDimDepth] = useState("");
-  const [dimHeightPlacement, setDimHeightPlacement] = useState<typeof heightPlacements[number]>("Left Side (Vertical)");
-  const [dimWidthPlacement, setDimWidthPlacement] = useState<typeof widthPlacements[number]>("Front Bottom");
-  const [dimDepthPlacement, setDimDepthPlacement] = useState<typeof depthPlacements[number]>("Left Side (Perspective)");
-  const [dimFillRatio, setDimFillRatio] = useState(60);
-  const [dimShowLegend, setDimShowLegend] = useState(true);
-  const [dimShowDisclaimer, setDimShowDisclaimer] = useState(true);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inspirationInputRef = useRef<HTMLInputElement>(null);
   const drawingInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<RoomRedesignRequest>({
@@ -109,6 +102,7 @@ export function ControlPanel({
       creativityLevel: 2, 
       outputFormat: "PNG",
       referenceImages: [],
+      inspirationImages: [],
       referenceDrawing: undefined,
     },
   });
@@ -179,6 +173,27 @@ export function ControlPanel({
     }
   };
 
+  const handleInspirationUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && onInspirationImagesChange) {
+      const newImages: string[] = [];
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            newImages.push(event.target.result as string);
+            if (newImages.length === files.length) {
+              const updatedList = [...inspirationImages, ...newImages];
+              onInspirationImagesChange(updatedList);
+              form.setValue("inspirationImages", updatedList);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
   const handleDrawingUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && onReferenceDrawingChange) {
@@ -202,6 +217,14 @@ export function ControlPanel({
     }
   };
 
+  const removeInspirationImage = (indexToRemove: number) => {
+    if (onInspirationImagesChange) {
+      const updatedList = inspirationImages.filter((_, index) => index !== indexToRemove);
+      onInspirationImagesChange(updatedList);
+      form.setValue("inspirationImages", updatedList);
+    }
+  };
+
   const removeReferenceDrawing = () => {
     if (onReferenceDrawingChange) {
       onReferenceDrawingChange(null);
@@ -222,6 +245,7 @@ export function ControlPanel({
   const handleGenerate = () => {
     const formData = form.getValues();
     formData.referenceImages = referenceImages;
+    formData.inspirationImages = inspirationImages;
     formData.referenceDrawing = referenceDrawing || undefined;
 
     if (generateAllStyles && onGenerateBatchStyles) {
@@ -358,6 +382,50 @@ export function ControlPanel({
                     </FormItem>
                   )}
                 />
+
+                {/* Inspiration Mood Board */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    Inspiration Mood Board (Style) <ImagePlus className="w-3 h-3 text-primary" />
+                  </Label>
+                  <div 
+                    className="border border-dashed border-primary/30 rounded-md p-3 hover:bg-primary/5 transition-colors cursor-pointer text-center"
+                    onClick={() => inspirationInputRef.current?.click()}
+                  >
+                    <input 
+                      type="file" 
+                      multiple 
+                      accept="image/*" 
+                      className="hidden" 
+                      ref={inspirationInputRef} 
+                      onChange={handleInspirationUpload} 
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {inspirationImages.length > 0 
+                        ? `${inspirationImages.length} inspirations selected` 
+                        : "Upload mood board images for colors, textures & atmosphere"}
+                    </p>
+                  </div>
+                  {inspirationImages.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2 mt-2">
+                      {inspirationImages.map((img, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-md overflow-hidden border border-primary/20 group">
+                          <img src={img} alt={`Insp ${idx}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeInspirationImage(idx);
+                            }}
+                            className="absolute top-0 right-0 bg-black/50 hover:bg-destructive text-white p-0.5 rounded-bl-md opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Reference Images */}
                 <div className="space-y-2">
