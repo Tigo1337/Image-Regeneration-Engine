@@ -45,16 +45,6 @@ export function Header() {
                 Gallery
               </Button>
             </Link>
-            <Link href="/prompts-history">
-              <Button 
-                variant={location === "/prompts-history" ? "secondary" : "ghost"} 
-                size="sm"
-                data-testid="link-prompts-history"
-              >
-                <History className="h-4 w-4 mr-2" />
-                Prompts
-              </Button>
-            </Link>
           </nav>
         </div>
 

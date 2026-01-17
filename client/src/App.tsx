@@ -14,7 +14,6 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/gallery" component={Gallery} />
-      <Route path="/prompts-history" component={PromptsHistory} />
       <Route component={NotFound} />
     </Switch>
   );
