@@ -1,16 +1,9 @@
 import { getUncachableStripeClient } from '../server/stripeClient';
 
 async function seedProducts() {
-  console.log('Creating Stripe products and prices...');
+  console.log('Force Creating Stripe products and prices...');
   
   const stripe = await getUncachableStripeClient();
-
-  // Check if products already exist
-  const existingProducts = await stripe.products.search({ query: "name:'RoomReimagine Pro'" });
-  if (existingProducts.data.length > 0) {
-    console.log('Products already exist, skipping creation');
-    return;
-  }
 
   // 1. Create the subscription product
   const subscriptionProduct = await stripe.products.create({
@@ -44,7 +37,7 @@ async function seedProducts() {
   });
   console.log(`Created usage product: ${usageProduct.id}`);
 
-  // 3. Create Billing Meters for each quality tier (required by Stripe API 2025+)
+  // 3. Create Billing Meters for each quality tier
   console.log('\nCreating billing meters...');
   
   const standardMeter = await (stripe as any).billing.meters.create({
@@ -135,26 +128,6 @@ async function seedProducts() {
   console.log(`Created Ultra quality price: ${ultraPrice.id} ($0.50/image)`);
 
   console.log('\n=== Stripe Products Created Successfully ===');
-  console.log('');
-  console.log('SUBSCRIPTION PRODUCT:');
-  console.log('  Product ID:', subscriptionProduct.id);
-  console.log('  Monthly Price ID:', monthlyPrice.id);
-  console.log('');
-  console.log('USAGE PRODUCT:');
-  console.log('  Product ID:', usageProduct.id);
-  console.log('');
-  console.log('METERS:');
-  console.log('  Standard Meter ID:', standardMeter.id);
-  console.log('  High Fidelity Meter ID:', highFidelityMeter.id);
-  console.log('  Ultra Meter ID:', ultraMeter.id);
-  console.log('');
-  console.log('METERED PRICES:');
-  console.log('  Standard Quality Price ID:', standardPrice.id);
-  console.log('  High Fidelity Price ID:', highFidelityPrice.id);
-  console.log('  Ultra Quality Price ID:', ultraPrice.id);
-  console.log('');
-  console.log('The products are now synced to your Stripe account.');
-  console.log('Users can subscribe via the pricing page in the app.');
 }
 
 seedProducts().catch(console.error);
