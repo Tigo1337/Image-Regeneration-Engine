@@ -19,15 +19,15 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between px-4 gap-4">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/app" className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
             <span className="font-semibold text-lg" data-testid="text-app-name">RoomReimagine AI</span>
           </Link>
           
           <nav className="hidden md:flex items-center gap-1">
-            <Link href="/">
+            <Link href="/app">
               <Button 
-                variant={location === "/" ? "secondary" : "ghost"} 
+                variant={location === "/app" ? "secondary" : "ghost"} 
                 size="sm"
                 data-testid="link-home"
               >
