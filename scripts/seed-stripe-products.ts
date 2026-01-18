@@ -37,41 +37,40 @@ async function seedProducts() {
   });
   console.log(`Created usage product: ${usageProduct.id}`);
 
-  // 3. Create Billing Meters for each quality tier
-  console.log('\nCreating billing meters...');
+  // 3. Find or Create Billing Meters for each quality tier
+  console.log('\nConfiguring billing meters...');
   
-  const standardMeter = await (stripe as any).billing.meters.create({
-    display_name: 'Standard Quality Images',
-    event_name: 'standard_image_generation',
-    default_aggregation: { formula: 'sum' },
-    customer_mapping: {
-      type: 'by_id',
-      event_payload_key: 'stripe_customer_id',
-    },
-  });
-  console.log(`Created Standard meter: ${standardMeter.id}`);
+  const getOrCreateMeter = async (name: string, eventName: string) => {
+    try {
+      // Check for existing meters first
+      const meters = await (stripe as any).billing.meters.list({ limit: 100 });
+      const existing = meters.data.find((m: any) => m.event_name === eventName && m.status === 'active');
+      
+      if (existing) {
+        console.log(`Found existing meter: ${existing.id} for ${eventName}`);
+        return existing;
+      }
 
-  const highFidelityMeter = await (stripe as any).billing.meters.create({
-    display_name: 'High Fidelity (2K) Images',
-    event_name: 'high_fidelity_image_generation',
-    default_aggregation: { formula: 'sum' },
-    customer_mapping: {
-      type: 'by_id',
-      event_payload_key: 'stripe_customer_id',
-    },
-  });
-  console.log(`Created High Fidelity meter: ${highFidelityMeter.id}`);
+      const meter = await (stripe as any).billing.meters.create({
+        display_name: name,
+        event_name: eventName,
+        default_aggregation: { formula: 'sum' },
+        customer_mapping: {
+          type: 'by_id',
+          event_payload_key: 'stripe_customer_id',
+        },
+      });
+      console.log(`Created new meter: ${meter.id} for ${eventName}`);
+      return meter;
+    } catch (error: any) {
+      console.error(`Error configuring meter for ${eventName}:`, error.message);
+      throw error;
+    }
+  };
 
-  const ultraMeter = await (stripe as any).billing.meters.create({
-    display_name: 'Ultra (4K) Images',
-    event_name: 'ultra_image_generation',
-    default_aggregation: { formula: 'sum' },
-    customer_mapping: {
-      type: 'by_id',
-      event_payload_key: 'stripe_customer_id',
-    },
-  });
-  console.log(`Created Ultra meter: ${ultraMeter.id}`);
+  const standardMeter = await getOrCreateMeter('Standard Quality Images', 'standard_image_generation');
+  const highFidelityMeter = await getOrCreateMeter('High Fidelity (2K) Images', 'high_fidelity_image_generation');
+  const ultraMeter = await getOrCreateMeter('Ultra (4K) Images', 'ultra_image_generation');
 
   // 4. Create metered prices linked to meters
   console.log('\nCreating metered prices...');
