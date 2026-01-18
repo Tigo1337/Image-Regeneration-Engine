@@ -429,47 +429,54 @@ function GallerySection() {
         </div>
 
         {/* Interactive "Cinema" Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[600px] md:h-[750px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[750px]">
 
           {/* Navigation Menu (Left) */}
-          <div className="lg:col-span-4 flex flex-col justify-center space-y-2 pr-4 z-10 order-2 lg:order-1">
-             {images.map((img, index) => (
-               <motion.button
-                 key={index}
-                 initial={{ opacity: 0, x: -20 }}
-                 whileInView={{ opacity: 1, x: 0 }}
-                 transition={{ delay: index * 0.05 }}
-                 viewport={{ once: true }}
-                 onClick={() => setActiveIndex(index)}
-                 onMouseEnter={() => setActiveIndex(index)}
-                 className={`group relative flex flex-col items-start p-6 rounded-xl text-left transition-all duration-300 border ${
-                   activeIndex === index 
-                     ? 'bg-background border-border shadow-lg scale-[1.02]' 
-                     : 'hover:bg-background/50 border-transparent hover:border-border/30 opacity-60 hover:opacity-100'
-                 }`}
-               >
-                 <span className={`text-lg font-bold tracking-tight mb-1 transition-colors ${
-                   activeIndex === index ? 'text-primary' : 'text-foreground'
-                 }`}>
-                   {img.style}
-                 </span>
-                 <span className="text-sm text-muted-foreground line-clamp-1">
-                   {img.desc}
-                 </span>
+          <div className="lg:col-span-4 flex flex-col justify-center space-y-2 lg:pr-4 z-10 order-2 lg:order-1 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0">
+             <div className="flex lg:flex-col gap-2 min-w-max lg:min-w-0">
+               {images.map((img, index) => (
+                 <motion.button
+                   key={index}
+                   initial={{ opacity: 0, x: -20 }}
+                   whileInView={{ opacity: 1, x: 0 }}
+                   transition={{ delay: index * 0.05 }}
+                   viewport={{ once: true }}
+                   onClick={() => setActiveIndex(index)}
+                   className={`group relative flex flex-col items-start p-4 lg:p-6 rounded-xl text-left transition-all duration-300 border shrink-0 lg:shrink ${
+                     activeIndex === index 
+                       ? 'bg-background border-border shadow-lg scale-[1.02]' 
+                       : 'hover:bg-background/50 border-transparent hover:border-border/30 opacity-60 hover:opacity-100'
+                   }`}
+                 >
+                   <span className={`text-base lg:text-lg font-bold tracking-tight mb-1 transition-colors ${
+                     activeIndex === index ? 'text-primary' : 'text-foreground'
+                   }`}>
+                     {img.style}
+                   </span>
+                   <span className="text-xs lg:text-sm text-muted-foreground line-clamp-1">
+                     {img.desc}
+                   </span>
 
-                 {/* Animated Progress Bar for Active State */}
-                 {activeIndex === index && (
-                   <motion.div 
-                     layoutId="active-glow"
-                     className="absolute left-0 top-0 w-1 h-full bg-primary rounded-l-xl" 
-                   />
-                 )}
-               </motion.button>
-             ))}
+                   {/* Animated Progress Bar for Active State */}
+                   {activeIndex === index && (
+                     <motion.div 
+                       layoutId="active-glow"
+                       className="absolute left-0 top-0 w-1 h-full bg-primary rounded-l-xl hidden lg:block" 
+                     />
+                   )}
+                   {activeIndex === index && (
+                     <motion.div 
+                       layoutId="active-glow-mobile"
+                       className="absolute bottom-0 left-0 h-1 w-full bg-primary rounded-b-xl lg:hidden" 
+                     />
+                   )}
+                 </motion.button>
+               ))}
+             </div>
           </div>
 
           {/* Viewport (Right) */}
-          <div className="lg:col-span-8 relative rounded-3xl overflow-hidden shadow-2xl border border-border/50 bg-muted order-1 lg:order-2">
+          <div className="lg:col-span-8 relative rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl border border-border/50 bg-muted order-1 lg:order-2 aspect-video lg:aspect-auto">
             <AnimatePresence mode="popLayout">
               <motion.img
                 key={activeIndex}
