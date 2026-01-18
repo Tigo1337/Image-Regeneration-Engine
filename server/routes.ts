@@ -18,6 +18,14 @@ function getUserId(req: Request): string | null {
   return user?.claims?.sub || null;
 }
 
+// Helper to check if a user is a super admin (bypasses billing)
+function isSuperAdmin(userId: string | null): boolean {
+  if (!userId) return false;
+  const superAdminIds = process.env.SUPER_ADMIN_IDS || '';
+  const adminList = superAdminIds.split(',').map(id => id.trim()).filter(Boolean);
+  return adminList.includes(userId);
+}
+
 // Middleware to check if user has active subscription for generation endpoints
 async function requireActiveSubscription(req: Request, res: any, next: any) {
   const userId = getUserId(req);
@@ -28,6 +36,13 @@ async function requireActiveSubscription(req: Request, res: any, next: any) {
       code: "AUTH_REQUIRED",
       message: "Please sign in to use this feature."
     });
+  }
+
+  // Super admins bypass all billing checks
+  if (isSuperAdmin(userId)) {
+    console.log(`Super admin ${userId} - bypassing subscription check`);
+    (req as any).isSuperAdmin = true;
+    return next();
   }
 
   try {
@@ -68,6 +83,12 @@ async function requireActiveSubscription(req: Request, res: any, next: any) {
 
 // Helper to report usage to Stripe after successful generation
 async function reportGenerationUsage(req: Request, qualityTier: string) {
+  // Super admins don't get billed
+  if ((req as any).isSuperAdmin) {
+    console.log("Super admin - skipping usage reporting");
+    return;
+  }
+
   try {
     const subscriptionInfo = (req as any).subscriptionInfo;
     if (!subscriptionInfo?.customerId) return;
@@ -162,6 +183,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch prompt logs" });
     }
+  });
+
+  // Admin info endpoint - shows your user ID and admin status
+  app.get("/api/admin/info", isAuthenticated, (req: any, res) => {
+    const userId = getUserId(req);
+    const isAdmin = isSuperAdmin(userId);
+    res.json({ userId, isSuperAdmin: isAdmin });
   });
 
   app.post("/api/generate", requireActiveSubscription, async (req, res) => {
@@ -298,6 +326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         generatedImages.push(mainImage);
       }
 
+      // Report usage to Stripe (skipped for super admins)
+      await reportGenerationUsage(req, validatedData.quality);
+
       res.json({
         success: true,
         generatedImage: generatedImages[0],
@@ -315,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Batch Styles Generation Endpoint
-  app.post("/api/generate/batch-styles", async (req, res) => {
+  app.post("/api/generate/batch-styles", requireActiveSubscription, async (req, res) => {
     try {
       const { imageData, formData, styles } = req.body;
 
@@ -405,6 +436,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           console.error(`Error generating style ${style}:`, error);
           results.push({ style, image: "", error: error instanceof Error ? error.message : "Generation failed" });
+        }
+      }
+
+      // Report usage for batch generation (skipped for super admins)
+      // Fire-and-forget to avoid blocking response
+      const successfulCount = results.filter(r => r.image && !r.error).length;
+      if (successfulCount > 0 && !(req as any).isSuperAdmin) {
+        const subscriptionInfo = (req as any).subscriptionInfo;
+        if (subscriptionInfo?.customerId) {
+          import("./stripeService").then(({ stripeService }) => {
+            stripeService.reportMeterEvent(subscriptionInfo.customerId, formData.quality || "Standard", successfulCount)
+              .catch(err => console.error("Batch usage reporting error:", err));
+          });
         }
       }
 
@@ -632,6 +676,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customPrompt: dimensionalPrompt,
         outputFormat: "PNG",
       });
+
+      // Report usage to Stripe (skipped for super admins)
+      await reportGenerationUsage(req, "High Fidelity (2K)");
 
       res.json({
         success: true,
