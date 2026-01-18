@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Sparkles, LogIn, LogOut, User, History, Image } from "lucide-react";
+import { Sparkles, LogIn, LogOut, CreditCard, Image } from "lucide-react";
 
 export function Header() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -43,6 +43,16 @@ export function Header() {
               >
                 <Image className="h-4 w-4 mr-2" />
                 Gallery
+              </Button>
+            </Link>
+            <Link href="/pricing">
+              <Button 
+                variant={location === "/pricing" ? "secondary" : "ghost"} 
+                size="sm"
+                data-testid="link-pricing"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Pricing
               </Button>
             </Link>
           </nav>

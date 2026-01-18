@@ -9,6 +9,8 @@ import express, {
 
 import { registerRoutes } from "./routes";
 import { runMigrations } from "./db";
+import { initStripe } from "./stripeInit";
+import { WebhookHandlers } from "./webhookHandlers";
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -28,8 +30,38 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
+// CRITICAL: Stripe webhook route MUST be registered BEFORE express.json()
+app.post(
+  '/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['stripe-signature'];
+
+    if (!signature) {
+      return res.status(400).json({ error: 'Missing stripe-signature' });
+    }
+
+    try {
+      const sig = Array.isArray(signature) ? signature[0] : signature;
+
+      if (!Buffer.isBuffer(req.body)) {
+        console.error('STRIPE WEBHOOK ERROR: req.body is not a Buffer');
+        return res.status(500).json({ error: 'Webhook processing error' });
+      }
+
+      await WebhookHandlers.processWebhook(req.body as Buffer, sig);
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('Webhook error:', error.message);
+      res.status(400).json({ error: 'Webhook processing error' });
+    }
+  }
+);
+
+// Now apply JSON middleware for all other routes
 app.use(express.json({
-  limit: '50mb', // Allow large base64 image data
+  limit: '50mb',
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
@@ -72,6 +104,8 @@ export default async function runApp(
   // Run migrations before registering routes
   if (process.env.DATABASE_URL) {
     await runMigrations();
+    // Initialize Stripe after database migrations
+    await initStripe();
   }
 
   const server = await registerRoutes(app);
