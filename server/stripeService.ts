@@ -79,10 +79,21 @@ export class StripeService {
   }
 
   async getSubscription(subscriptionId: string) {
-    const result = await db.execute(
-      sql`SELECT * FROM stripe.subscriptions WHERE id = ${subscriptionId}`
-    );
-    return result.rows[0] || null;
+    // Use Stripe API directly to get full subscription with items
+    try {
+      const stripe = await getUncachableStripeClient();
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ['items.data.price']
+      });
+      return subscription;
+    } catch (error) {
+      console.error('Error fetching subscription from Stripe:', error);
+      // Fallback to local database
+      const result = await db.execute(
+        sql`SELECT * FROM stripe.subscriptions WHERE id = ${subscriptionId}`
+      );
+      return result.rows[0] || null;
+    }
   }
 
   async getSubscriptionItems(subscriptionId: string) {

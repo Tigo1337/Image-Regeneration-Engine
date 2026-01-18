@@ -84,6 +84,13 @@ export function Header() {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
+                  <Link href="/pricing" className="w-full cursor-pointer" data-testid="dropdown-pricing">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span>Billing & Subscription</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
                   <a href="/api/logout" className="w-full cursor-pointer" data-testid="button-logout">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>

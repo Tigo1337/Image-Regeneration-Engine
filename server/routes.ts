@@ -18,6 +18,82 @@ function getUserId(req: Request): string | null {
   return user?.claims?.sub || null;
 }
 
+// Middleware to check if user has active subscription for generation endpoints
+async function requireActiveSubscription(req: Request, res: any, next: any) {
+  const userId = getUserId(req);
+  
+  if (!userId) {
+    return res.status(401).json({ 
+      error: "Authentication required", 
+      code: "AUTH_REQUIRED",
+      message: "Please sign in to use this feature."
+    });
+  }
+
+  try {
+    const user = await storage.getUser(userId);
+    
+    if (!user?.stripeSubscriptionId) {
+      return res.status(402).json({ 
+        error: "Subscription required", 
+        code: "SUBSCRIPTION_REQUIRED",
+        message: "A Pro subscription is required to generate designs. Visit the pricing page to subscribe."
+      });
+    }
+
+    // Check subscription status via Stripe
+    const { stripeService } = await import("./stripeService");
+    const subscription = await stripeService.getSubscription(user.stripeSubscriptionId);
+    
+    if (!subscription || (subscription.status !== 'active' && subscription.status !== 'trialing')) {
+      return res.status(402).json({ 
+        error: "Subscription inactive", 
+        code: "SUBSCRIPTION_INACTIVE",
+        message: "Your subscription is not active. Please renew your subscription to continue."
+      });
+    }
+
+    // Attach subscription info to request for usage reporting
+    (req as any).subscriptionInfo = {
+      subscriptionId: user.stripeSubscriptionId,
+      customerId: user.stripeCustomerId
+    };
+
+    next();
+  } catch (error) {
+    console.error("Subscription check error:", error);
+    return res.status(500).json({ error: "Failed to verify subscription status" });
+  }
+}
+
+// Helper to report usage to Stripe after successful generation
+async function reportGenerationUsage(req: Request, qualityTier: string) {
+  try {
+    const subscriptionInfo = (req as any).subscriptionInfo;
+    if (!subscriptionInfo?.subscriptionId) return;
+
+    const { stripeService } = await import("./stripeService");
+    
+    // Get subscription items to find the metered usage item
+    const subscription = await stripeService.getSubscription(subscriptionInfo.subscriptionId);
+    if (!subscription?.items?.data) return;
+
+    // Find the metered price item matching the quality tier
+    // For now, we'll use a simple approach - in production you'd match by price metadata
+    const meteredItem = subscription.items.data.find((item: any) => 
+      item.price?.recurring?.usage_type === 'metered'
+    );
+
+    if (meteredItem) {
+      await stripeService.reportUsage(meteredItem.id, 1);
+      console.log(`Reported usage for quality: ${qualityTier}`);
+    }
+  } catch (error) {
+    console.error("Usage reporting error:", error);
+    // Don't fail the request if usage reporting fails
+  }
+}
+
 // Prompt Builder for Perspectives
 function buildVariationPrompt(formData: any, variationType: string, structureAnalysis: string = ""): string {
   const style = formData.targetStyle || "the existing style";
@@ -99,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/generate", async (req, res) => {
+  app.post("/api/generate", requireActiveSubscription, async (req, res) => {
     try {
       const { imageData, prompt, inspirationImages, ...formData } = req.body;
       const validatedData = roomRedesignRequestSchema.parse(formData);
@@ -358,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // [Smart Crop Route - Full Restore]
-  app.post("/api/smart-crop", async (req, res) => {
+  app.post("/api/smart-crop", requireActiveSubscription, async (req, res) => {
     try {
       const { imageData, ...formData } = req.body;
       const { objectName, fillRatio, aspectRatio } = smartCropRequestSchema.parse(formData);
@@ -545,7 +621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // [Dimensional Route - Full Restore]
-  app.post("/api/generate-dimensional", async (req, res) => {
+  app.post("/api/generate-dimensional", requireActiveSubscription, async (req, res) => {
     try {
       const { imageData, ...formData } = req.body;
       const validatedData = dimensionalImageRequestSchema.parse(formData);

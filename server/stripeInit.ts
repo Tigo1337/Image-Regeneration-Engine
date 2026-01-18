@@ -24,10 +24,18 @@ export async function initStripe() {
     const domains = process.env.REPLIT_DOMAINS?.split(',') || [];
     if (domains.length > 0) {
       const webhookBaseUrl = `https://${domains[0]}`;
-      const { webhook } = await stripeSync.findOrCreateManagedWebhook(
-        `${webhookBaseUrl}/api/stripe/webhook`
-      );
-      console.log(`Webhook configured: ${webhook.url}`);
+      try {
+        const result = await stripeSync.findOrCreateManagedWebhook(
+          `${webhookBaseUrl}/api/stripe/webhook`
+        );
+        if (result?.webhook?.url) {
+          console.log(`Webhook configured: ${result.webhook.url}`);
+        } else {
+          console.log('Webhook setup skipped - may already be configured');
+        }
+      } catch (webhookError: any) {
+        console.warn('Webhook setup warning:', webhookError?.message || webhookError);
+      }
     }
 
     console.log('Syncing Stripe data in background...');
