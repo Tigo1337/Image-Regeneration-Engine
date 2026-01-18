@@ -1,3 +1,4 @@
+import { LandingHeader } from "@/components/landing-header";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -76,8 +77,9 @@ export default function Gallery() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background pt-[124px]">
+      <LandingHeader />
+      <div className="max-w-7xl mx-auto px-8 py-8">
         <div className="flex items-center gap-4 mb-8">
           <Link href="/">
             <Button variant="ghost" size="icon" data-testid="button-back-gallery">

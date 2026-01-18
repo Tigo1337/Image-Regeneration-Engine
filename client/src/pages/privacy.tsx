@@ -1,3 +1,4 @@
+import { LandingHeader } from "@/components/landing-header";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,9 +6,10 @@ import { ArrowLeft, Shield, Lock, Server, Scale, Eye } from "lucide-react";
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 md:px-8 font-sans">
+    <div className="min-h-screen bg-slate-50 pt-[124px] px-4 md:px-8 font-sans">
+      <LandingHeader />
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-8 mt-12">
           <Link href="/">
             <Button variant="ghost" className="gap-2 pl-0 hover:bg-transparent hover:text-primary transition-colors">
               <ArrowLeft className="h-4 w-4" />

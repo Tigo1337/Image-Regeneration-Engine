@@ -1,3 +1,4 @@
+import { LandingHeader } from "@/components/landing-header";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -113,7 +114,9 @@ export default function Pricing() {
   const hasActiveSubscription = subscriptionData?.hasActiveSubscription;
 
   return (
-    <div className="container mx-auto py-12 px-4 max-w-5xl">
+    <div className="min-h-screen bg-background pt-[124px]">
+      <LandingHeader />
+      <div className="container mx-auto py-12 px-4 max-w-5xl">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Pricing</h1>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
