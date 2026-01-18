@@ -44,7 +44,7 @@ function HeroSection() {
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   return (
-    <section ref={ref} className="relative h-[calc(100vh-124px)] min-h-[600px] flex items-center justify-center overflow-hidden bg-black">
+    <section ref={ref} className="relative min-h-[calc(100vh-124px)] flex items-center justify-center overflow-hidden bg-black">
       <motion.div 
         className="absolute inset-0 bg-gradient-to-br from-primary/10 via-black to-black"
         style={{ y }}
