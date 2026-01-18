@@ -666,7 +666,7 @@ function FAQSection() {
 
 function FooterSection() {
   return (
-    <footer className="border-t py-12 px-4">
+    <footer className="border-t border-white/10 py-12 px-4 bg-black text-white">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center h-12">
