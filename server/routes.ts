@@ -70,24 +70,13 @@ async function requireActiveSubscription(req: Request, res: any, next: any) {
 async function reportGenerationUsage(req: Request, qualityTier: string) {
   try {
     const subscriptionInfo = (req as any).subscriptionInfo;
-    if (!subscriptionInfo?.subscriptionId) return;
+    if (!subscriptionInfo?.customerId) return;
 
     const { stripeService } = await import("./stripeService");
     
-    // Get subscription items to find the metered usage item
-    const subscription = await stripeService.getSubscription(subscriptionInfo.subscriptionId);
-    if (!subscription?.items?.data) return;
-
-    // Find the metered price item matching the quality tier
-    // For now, we'll use a simple approach - in production you'd match by price metadata
-    const meteredItem = subscription.items.data.find((item: any) => 
-      item.price?.recurring?.usage_type === 'metered'
-    );
-
-    if (meteredItem) {
-      await stripeService.reportUsage(meteredItem.id, 1);
-      console.log(`Reported usage for quality: ${qualityTier}`);
-    }
+    // Use meter events for usage-based billing (Stripe API 2025+)
+    await stripeService.reportMeterEvent(subscriptionInfo.customerId, qualityTier, 1);
+    console.log(`Reported meter event for quality: ${qualityTier}`);
   } catch (error) {
     console.error("Usage reporting error:", error);
     // Don't fail the request if usage reporting fails

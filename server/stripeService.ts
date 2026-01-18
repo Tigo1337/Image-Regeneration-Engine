@@ -40,6 +40,35 @@ export class StripeService {
     });
   }
 
+  async reportMeterEvent(customerId: string, qualityTier: string, quantity: number = 1) {
+    const stripe = await getUncachableStripeClient();
+    
+    // Map quality tier to meter event name - handle all variations
+    const normalizedTier = qualityTier.toLowerCase().trim();
+    let eventName = 'standard_image_generation';
+    
+    if (normalizedTier.includes('high') || normalizedTier.includes('2k')) {
+      eventName = 'high_fidelity_image_generation';
+    } else if (normalizedTier.includes('ultra') || normalizedTier.includes('4k')) {
+      eventName = 'ultra_image_generation';
+    }
+    
+    try {
+      const meterEvent = await (stripe as any).billing.meterEvents.create({
+        event_name: eventName,
+        payload: {
+          value: quantity.toString(),
+          stripe_customer_id: customerId,
+        },
+      });
+      console.log(`Reported meter event: ${eventName} for customer ${customerId}`);
+      return meterEvent;
+    } catch (error) {
+      console.error('Error reporting meter event:', error);
+      throw error;
+    }
+  }
+
   async getProduct(productId: string) {
     const result = await db.execute(
       sql`SELECT * FROM stripe.products WHERE id = ${productId}`
