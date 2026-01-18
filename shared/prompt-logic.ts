@@ -86,7 +86,7 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   } else if (isArchitecturalRemodel) {
       styleGuidance = `Execute a high-end designer remodel of ${style}. Introduce sophisticated architectural textures and professional lighting.`;
   } else {
-      styleGuidance = `Execute a 'Mandatory Architectural Metamorphosis.' Provide a unique, avant-garde 'Designer Signature' take on ${style} focusing on structural geometry.`;
+      styleGuidance = `Execute a 'Mandatory Structural Replacement.' Rebuild the environment from scratch while maintaining the source perspective.`;
   }
 
   let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
@@ -101,38 +101,33 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       The input image is a zoomed-in crop. Focus on texture and material quality.`;
   }
 
-  if (isMetamorphosis) {
-      prompt += `\n\nCRITICAL INSTRUCTION - VANTAGE POINT ANCHOR:
-      1. CAMERA POSITION: Maintain the same camera vantage point (height and distance) relative to the room center.
-      2. PERSPECTIVE FREEDOM: You are AUTHORIZED to re-calculate vanishing points and horizon alignment to accommodate new architectural geometry. Internal lines should converge naturally to the new structural build.`;
-  } else {
-      prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
-      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
-      2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates. Zero perspective deviation.
-      3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation.`;
-  }
+  // FIXED PERSPECTIVE MATH: NO FREEDOM AUTHORIZED
+  prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
+  1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
+  2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates as the input.
+  3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation. Do not re-calculate perspective.`;
 
   if (preservedElements && preservedElements.trim().length > 0) {
       prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
       Strictly analyze the input image to identify and isolate: "${preservedElements}".
-      1. ANCHORING: The "${preservedElements}" must stay fixed to its original floor coordinates.
-      2. IDENTITY LOCK: Render the "${preservedElements}" (including its core body, all integrated components, attached hardware, and structural contours) with 100% geometric fidelity. Every physical detail and specific design element must remain identical to the original.
+      1. ANCHORING: The "${preservedElements}" must stay fixed to its original pixel coordinates.
+      2. IDENTITY & ORIENTATION LOCK: Render the "${preservedElements}" (including its core body, all integrated components, and structural contours) with 100% geometric fidelity. You are FORBIDDEN from changing its rotation, angle, or perceived tilt.
       3. STYLE ISOLATION: Do not apply new aesthetic textures or structural changes to the body of the preserved asset.
-      4. DYNAMIC STAGING: You are authorized to update portable accessories sitting on or inside the "${preservedElements}" (e.g., decorative props) to match the style.`;
+      4. DYNAMIC STAGING: You are authorized to update portable accessories sitting on or inside the "${preservedElements}" to match the style.`;
   }
 
   if (isAestheticRefresh) {
       prompt += `\n\nCONSTRAINT - ROOM STRUCTURE: Keep the architectural layout 100% identical. Only update surface materials and colors.`;
   } else if (isSurfaceRenovation) {
-      prompt += `\n\nCONSTRAINT - ROOM STRUCTURE: Keep primary structure identical. You may add decorative elements like moldings or built-ins.`;
+      prompt += `\n\nCONSTRAINT - ROOM STRUCTURE: Keep primary structure identical. You may add decorative elements like moldings.`;
   } else if (isArchitecturalRemodel) {
-      prompt += `\n\nFREEDOM - ARCHITECTURAL REMODEL: Redesign the internal room shell. You may change ceiling styles and rebuild internal walls, but MUST keep windows in their original positions.`;
+      prompt += `\n\nFREEDOM - ARCHITECTURAL REMODEL: Redesign the internal room shell. Windows and doors must remain in original positions.`;
   } else {
-      prompt += `\n\nFREEDOM - ARCHITECTURAL METAMORPHOSIS (TOTAL DECONSTRUCTION):
-      Execute a complete deconstruction and rebuilding of the room environment.
-      - AUTHORIZED FREEDOM: Absolute creative liberty to reinvent the spatial layout. You are mandated to deconstruct existing boundaries, reposition openings, add or remove partitions, and completely redefine the room's footprint and architectural volume. 
-      - PRESERVATION BOUNDARY: While the room changes, the footprint and immediate components of the "${preservedElements || 'main object'}" are a "No-Fly Zone." The new architecture must wrap around the existing object without modifying its physical form.
-      - NO OVER-PROPPING: Prioritize architectural geometry over decorative clutter.`;
+      prompt += `\n\nFREEDOM - STRUCTURAL REPLACEMENT:
+      Execute a total replacement of all architectural surroundings.
+      - REPLACEMENT MANDATE: Every pixel not part of the "${preservedElements || 'main object'}" must be replaced with new structural geometry (walls, floors, ceilings, openings).
+      - PERSPECTIVE COMPLIANCE: The new architecture MUST wrap around the "${preservedElements || 'main object'}" using the exact 3D orientation found in the source.
+      - CONTENT CLEARANCE: Do not carry over any rugs, furniture, or secondary items from the input. Replace them with empty architectural space or new items matching ${style}.`;
   }
 
   prompt += `\n\nTRANSFORMATION GOAL:
@@ -142,7 +137,7 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   prompt += `\n\nCRITICAL INSTRUCTION - COMPONENT COHERENCE:
   Apply the "Master Finish" to any integrated components or hardware on the preserved "${preservedElements || 'object'}". 
-  GEOMETRY LOCK: You are FORBIDDEN from changing the shape, size, or model of these parts. Only update their surface material and color. The physical design must remain 100% identical to the input.`;
+  GEOMETRY LOCK: You are FORBIDDEN from changing the shape, size, or model of these parts. Only update their surface material and color. The physical design and orientation must remain 100% identical to the input.`;
 
   prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. Zero perspective drift.`;
 

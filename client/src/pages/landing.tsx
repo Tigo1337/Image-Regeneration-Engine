@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import {
   Shield,
   Clock
 } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 40 },
@@ -115,7 +115,7 @@ function HeroSection() {
         </motion.div>
         
         <motion.div
-          className="relative max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-2xl border border-border/50"
+          className="relative max-w-6xl mx-auto rounded-2xl overflow-hidden shadow-2xl border border-border/50"
           initial={{ opacity: 0, y: 50, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1, delay: 0.8 }}
@@ -124,17 +124,33 @@ function HeroSection() {
           <ReactCompareSlider
             itemOne={
               <ReactCompareSliderImage
-                src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop"
+                src="https://res.cloudinary.com/olilepage/image/upload/q_auto:best/v1768703379/room-scene-update/maax-tori-6732-mt-wh-front-deco-scandinavian-ultra-4k-ar-16-9.webp"
                 alt="Original room"
+                className="object-cover w-full h-full"
+                style={{ 
+                  imageRendering: 'auto',
+                  WebkitBackfaceVisibility: 'hidden',
+                  transform: 'translate3d(0, 0, 0)'
+                }}
               />
             }
             itemTwo={
               <ReactCompareSliderImage
-                src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200&h=800&fit=crop"
+                src="https://res.cloudinary.com/olilepage/image/upload/q_auto:best/v1768703253/room-scene-update/maax-tori-6732-mt-wh-front-deco-mountain-modern-ultra-4k-ar-16-9.webp"
                 alt="Redesigned room"
+                className="object-cover w-full h-full"
+                style={{ 
+                  imageRendering: 'auto',
+                  WebkitBackfaceVisibility: 'hidden',
+                  transform: 'translate3d(0, 0, 0)'
+                }}
               />
             }
-            className="aspect-video"
+            className="w-full h-full"
+            style={{ 
+              willChange: 'transform',
+              WebkitFontSmoothing: 'antialiased'
+            }}
           />
           <div className="absolute bottom-4 left-4 z-20">
             <Badge variant="secondary" className="backdrop-blur-sm">Before</Badge>
@@ -241,77 +257,140 @@ function FeaturesSection() {
 }
 
 function GallerySection() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
   const images = [
-    { src: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&h=400&fit=crop", style: "Modern" },
-    { src: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&h=400&fit=crop", style: "Scandinavian" },
-    { src: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=600&h=400&fit=crop", style: "Industrial" },
-    { src: "https://images.unsplash.com/photo-1617806118233-18e1de247200?w=600&h=400&fit=crop", style: "Minimalist" },
-    { src: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=400&fit=crop", style: "Contemporary" },
-    { src: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&h=400&fit=crop", style: "Bohemian" },
+    { 
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705684/room-scene-update/floating-vanity-walnut-brown-modern-ultra-4k-ar-16-9.jpg", 
+      style: "Modern Minimalist", 
+      desc: "Clean lines and uncluttered spaces." 
+    },
+    { 
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705684/room-scene-update/floating-vanity-walnut-brown-contemporary-ultra-4k-ar-16-9.jpg", 
+      style: "Contemporary Warmth", 
+      desc: "Bold textures meeting soft lighting." 
+    },
+    { 
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705685/room-scene-update/floating-vanity-walnut-brown-industrial-chic-ultra-4k-ar-16-9.jpg", 
+      style: "Industrial Chic", 
+      desc: "Raw materials with refined finishes." 
+    },
+    { 
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705685/room-scene-update/floating-vanity-walnut-brown-japandi-ultra-4k-ar-16-9.jpg", 
+      style: "Japandi Balance", 
+      desc: "The harmony of Japanese and Nordic design." 
+    },
+    { 
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705685/room-scene-update/floating-vanity-walnut-brown-zen-spa-ultra-4k-ar-16-9.jpg", 
+      style: "Zen Sanctuary", 
+      desc: "A peaceful retreat for mind and body." 
+    },
+    { 
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705815/room-scene-update/floating-vanity-walnut-brown-organic-modern-ultra-4k-ar-16-9.jpg", 
+      style: "Organic Modern", 
+      desc: "Nature-inspired tones and curves." 
+    },
   ];
 
   return (
-    <section id="gallery" className="py-32 px-4 relative scroll-mt-20">
-      <div className="max-w-7xl mx-auto">
-        <motion.div 
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <Badge variant="outline" className="mb-4">Gallery</Badge>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Stunning Transformations
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            See what's possible with AI-powered interior design. Every image created in seconds.
-          </p>
-        </motion.div>
-        
-        <motion.div 
-          className="grid grid-cols-2 md:grid-cols-3 gap-4"
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
-          viewport={{ once: true }}
-        >
-          {images.map((image, index) => (
-            <motion.div
-              key={index}
-              variants={fadeInUp}
-              className="relative group overflow-hidden rounded-xl"
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.3 }}
-              data-testid={`gallery-image-${index}`}
-            >
-              <img 
-                src={image.src} 
-                alt={`${image.style} room design`}
-                className="w-full aspect-[3/2] object-cover transition-transform duration-500 group-hover:scale-110"
+    <section id="gallery" className="py-24 relative overflow-hidden bg-black/5">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8">
+
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="max-w-xl"
+          >
+            
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+              Six Styles. One Room.
+            </h2>
+          </motion.div>
+
+          <motion.div
+             initial={{ opacity: 0, x: 20 }}
+             whileInView={{ opacity: 1, x: 0 }}
+             viewport={{ once: true }}
+          >
+          </motion.div>
+        </div>
+
+        {/* Interactive "Cinema" Container */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[600px] md:h-[750px]">
+
+          {/* Navigation Menu (Left) */}
+          <div className="lg:col-span-4 flex flex-col justify-center space-y-2 pr-4 z-10 order-2 lg:order-1">
+             {images.map((img, index) => (
+               <motion.button
+                 key={index}
+                 initial={{ opacity: 0, x: -20 }}
+                 whileInView={{ opacity: 1, x: 0 }}
+                 transition={{ delay: index * 0.05 }}
+                 viewport={{ once: true }}
+                 onClick={() => setActiveIndex(index)}
+                 onMouseEnter={() => setActiveIndex(index)}
+                 className={`group relative flex flex-col items-start p-6 rounded-xl text-left transition-all duration-300 border ${
+                   activeIndex === index 
+                     ? 'bg-background border-border shadow-lg scale-[1.02]' 
+                     : 'hover:bg-background/50 border-transparent hover:border-border/30 opacity-60 hover:opacity-100'
+                 }`}
+               >
+                 <span className={`text-lg font-bold tracking-tight mb-1 transition-colors ${
+                   activeIndex === index ? 'text-primary' : 'text-foreground'
+                 }`}>
+                   {img.style}
+                 </span>
+                 <span className="text-sm text-muted-foreground line-clamp-1">
+                   {img.desc}
+                 </span>
+
+                 {/* Animated Progress Bar for Active State */}
+                 {activeIndex === index && (
+                   <motion.div 
+                     layoutId="active-glow"
+                     className="absolute left-0 top-0 w-1 h-full bg-primary rounded-l-xl" 
+                   />
+                 )}
+               </motion.button>
+             ))}
+          </div>
+
+          {/* Viewport (Right) */}
+          <div className="lg:col-span-8 relative rounded-3xl overflow-hidden shadow-2xl border border-border/50 bg-muted order-1 lg:order-2">
+            <AnimatePresence mode="popLayout">
+              <motion.img
+                key={activeIndex}
+                src={images[activeIndex].src}
+                alt={images[activeIndex].style}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  // The Slat Fix: Hardware acceleration + sub-pixel scaling
+                  imageRendering: 'auto',
+                  transform: 'translate3d(0, 0, 0) scale(1.001)', 
+                  willChange: 'transform, opacity'
+                }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <Badge className="backdrop-blur-sm">{image.style}</Badge>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-        
-        <motion.div 
-          className="text-center mt-12"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-        >
-          <Button size="lg" variant="outline" asChild data-testid="button-view-more-gallery">
-            <Link href="/gallery">
-              View Full Gallery
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </Button>
-        </motion.div>
+            </AnimatePresence>
+
+            {/* Overlay Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+            {/* Mobile-only Label (since menu is separate on mobile) */}
+            <div className="absolute bottom-6 left-6 lg:hidden">
+              <Badge className="backdrop-blur-md bg-black/50 text-white border-white/20 text-base py-1 px-4">
+                {images[activeIndex].style}
+              </Badge>
+            </div>
+          </div>
+
+        </div>
       </div>
     </section>
   );
