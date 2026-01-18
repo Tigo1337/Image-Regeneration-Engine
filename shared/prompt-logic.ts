@@ -66,7 +66,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   const { 
     style, 
     preservedElements, 
-    viewAngle = "Original",
     cameraZoom = 100,
     creativityLevel = 2,
     customStyleDescription 
@@ -74,7 +73,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   const specificAesthetic = customStyleDescription || styleDescriptions[style] || styleDescriptions["Scandinavian"];
 
-  // 4-TIER CREATIVITY LOGIC
   const isAestheticRefresh = creativityLevel === 1;   
   const isSurfaceRenovation = creativityLevel === 2;  
   const isArchitecturalRemodel = creativityLevel === 3; 
@@ -93,7 +91,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
 
   let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
 
-  // PHASE 2: CANVAS & ZOOM
   if (cameraZoom < 85) {
       prompt += `\n\nCRITICAL INSTRUCTION - WIDE ANGLE CONTEXT (Outpainting):
       The input image is centered with empty white space around it.
@@ -104,7 +101,6 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       The input image is a zoomed-in crop. Focus on texture and material quality.`;
   }
 
-  // PHASE 3: DYNAMIC PERSPECTIVE MATH (FIXED)
   if (isMetamorphosis) {
       prompt += `\n\nCRITICAL INSTRUCTION - VANTAGE POINT ANCHOR:
       1. CAMERA POSITION: Maintain the same camera vantage point (height and distance) relative to the room center.
@@ -116,17 +112,15 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation.`;
   }
 
-  // PHASE 4: OBJECT ANCHORING
   if (preservedElements && preservedElements.trim().length > 0) {
       prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
       Strictly analyze the input image to identify and isolate: "${preservedElements}".
       1. ANCHORING: The "${preservedElements}" must stay fixed to its original floor coordinates.
-      2. IDENTITY LOCK: Render the core body of the "${preservedElements}" with 100% fidelity to the original design and contours.
-      3. STYLE ISOLATION: Do not apply new aesthetic textures to the structural body of the preserved asset.
-      4. DYNAMIC STAGING: You are authorized to update accessories sitting on or inside the "${preservedElements}" to match the style.`;
+      2. IDENTITY LOCK: Render the "${preservedElements}" (including its core body, all integrated components, attached hardware, and structural contours) with 100% geometric fidelity. Every physical detail and specific design element must remain identical to the original.
+      3. STYLE ISOLATION: Do not apply new aesthetic textures or structural changes to the body of the preserved asset.
+      4. DYNAMIC STAGING: You are authorized to update portable accessories sitting on or inside the "${preservedElements}" (e.g., decorative props) to match the style.`;
   }
 
-  // PHASE 5: STRUCTURAL SHELL & 4-TIER LOGIC
   if (isAestheticRefresh) {
       prompt += `\n\nCONSTRAINT - ROOM STRUCTURE: Keep the architectural layout 100% identical. Only update surface materials and colors.`;
   } else if (isSurfaceRenovation) {
@@ -137,23 +131,22 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       prompt += `\n\nFREEDOM - ARCHITECTURAL METAMORPHOSIS (TOTAL DECONSTRUCTION):
       Execute a complete deconstruction and rebuilding of the room environment.
       - AUTHORIZED FREEDOM: Absolute creative liberty to reinvent the spatial layout. You are mandated to deconstruct existing boundaries, reposition openings, add or remove partitions, and completely redefine the room's footprint and architectural volume. 
-      - ANCHOR POINT: Ensure the "${preservedElements || 'main object'}" stays anchored to its floor position, but the architecture around it must change completely.
+      - PRESERVATION BOUNDARY: While the room changes, the footprint and immediate components of the "${preservedElements || 'main object'}" are a "No-Fly Zone." The new architecture must wrap around the existing object without modifying its physical form.
       - NO OVER-PROPPING: Prioritize architectural geometry over decorative clutter.`;
   }
 
-  // PHASE 6: AESTHETIC TRANSFORMATION
   prompt += `\n\nTRANSFORMATION GOAL:
   Style: ${styleGuidance}
   Key Characteristics: ${specificAesthetic}.
   Unified Hardware: Apply a single "Master Finish" (e.g., Matte Black) to ALL metallic elements.`;
 
-  // PHASE 7: FIXTURE COHERENCE
-  prompt += `\n\nCRITICAL INSTRUCTION - FIXTURE COHERENCE:
-  Update the metallic finish of any fixtures on the preserved "${preservedElements || 'object'}" to match the "Master Finish".`;
+  prompt += `\n\nCRITICAL INSTRUCTION - COMPONENT COHERENCE:
+  Apply the "Master Finish" to any integrated components or hardware on the preserved "${preservedElements || 'object'}". 
+  GEOMETRY LOCK: You are FORBIDDEN from changing the shape, size, or model of these parts. Only update their surface material and color. The physical design must remain 100% identical to the input.`;
 
   prompt += `\n\nFINAL OUTPUT: Photorealistic 8k architectural render. Zero perspective drift.`;
 
-      prompt += `\n\nMANDATORY PERSPECTIVE OVERRIDE:
+  prompt += `\n\nMANDATORY PERSPECTIVE OVERRIDE:
       You are FORBIDDEN from changing the camera angle or the X/Y position of the "${preservedElements}". The output MUST align pixel-perfectly with the input.`;
 
   return prompt;
