@@ -19,7 +19,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black">
       <div className="flex h-14 items-center justify-between px-4 gap-4">
         <div className="flex items-center gap-6">
-          <Link href="/app" className="flex items-center h-full">
+          <Link href="/app" className="flex items-center h-8">
             <img 
               src="https://res.cloudinary.com/olilepage/image/upload/v1768747146/room-scene-update/logos/room-reimagine-logo-walnut-marble-black-background-cropped.jpg" 
               alt="RoomReimagine AI Logo" 
