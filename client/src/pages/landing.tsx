@@ -669,11 +669,11 @@ function FooterSection() {
     <footer className="border-t py-12 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center h-12">
             <img 
               src="https://res.cloudinary.com/olilepage/image/upload/v1768745854/room-scene-update/logos/room-reimagine-logo-walnut-marble-black-background.jpg" 
               alt="RoomReimagine AI Logo" 
-              className="h-8 w-auto rounded-sm opacity-80 hover:opacity-100 transition-opacity"
+              className="h-full w-auto aspect-video object-contain opacity-80 hover:opacity-100 transition-opacity"
             />
           </div>
 

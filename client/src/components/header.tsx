@@ -19,11 +19,11 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between px-4 gap-4">
         <div className="flex items-center gap-6">
-          <Link href="/app" className="flex items-center gap-2">
+          <Link href="/app" className="flex items-center h-full">
             <img 
               src="https://res.cloudinary.com/olilepage/image/upload/v1768745854/room-scene-update/logos/room-reimagine-logo-walnut-marble-black-background.jpg" 
               alt="RoomReimagine AI Logo" 
-              className="h-7 w-auto rounded-sm"
+              className="h-full w-auto aspect-video object-contain"
               data-testid="img-app-logo"
             />
           </Link>

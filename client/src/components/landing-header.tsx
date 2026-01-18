@@ -30,11 +30,11 @@ export function LandingHeader() {
     >
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center h-full">
             <img 
               src="https://res.cloudinary.com/olilepage/image/upload/v1768745854/room-scene-update/logos/room-reimagine-logo-walnut-marble-black-background.jpg" 
               alt="RoomReimagine AI Logo" 
-              className="h-8 w-auto rounded-sm"
+              className="h-full w-auto aspect-video object-contain"
               data-testid="img-landing-logo"
             />
           </Link>
