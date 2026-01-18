@@ -183,8 +183,6 @@ function HeroSection() {
 function SmartLockSection() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Using your existing images that show the SAME room/vanity in different styles
-  // This perfectly demonstrates the "Lock" feature.
   const rotationImages = [
     "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768767323/room-scene-update/matte-black-kitchen-pull-down-faucet-modern-ultra-4k-ar-1-1.jpg",
     "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768767323/room-scene-update/matte-black-kitchen-pull-down-faucet-modern-farmhouse-ultra-4k-ar-1-1.jpg",
@@ -193,7 +191,6 @@ function SmartLockSection() {
     "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768767323/room-scene-update/matte-black-kitchen-pull-down-faucet-japandi-ultra-4k-ar-1-1.jpg"
   ];
 
-  // Rotate images every 2.5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % rotationImages.length);
@@ -226,7 +223,6 @@ function SmartLockSection() {
                Our AI intelligently redesigns the room around them, blending new styles with your existing treasures.
              </p>
 
-             {/* Feature List */}
              <div className="space-y-4">
                {['Preserve expensive fixtures', 'Keep structural elements', 'Mix old charm with new styles'].map((item, i) => (
                  <div key={i} className="flex items-center gap-3">
@@ -247,10 +243,8 @@ function SmartLockSection() {
              transition={{ duration: 0.8 }}
              className="relative"
           >
-             {/* Image Container */}
-             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-black">
+             <div className="relative aspect-square rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-black">
 
-                {/* Rotating Images */}
                 <AnimatePresence mode="popLayout">
                   <motion.img
                     key={currentImageIndex}
@@ -264,13 +258,12 @@ function SmartLockSection() {
                   />
                 </AnimatePresence>
 
-                {/* Overlay Gradient to make the "Lock" UI pop */}
                 <div className="absolute inset-0 bg-black/10 pointer-events-none" />
 
-                {/* "Locked" UI Element - Positioned over the vanity */}
+                {/* "Locked" UI Element */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center z-20">
-                   {/* Pulse Effect */}
-                   <div className="absolute inset-0 bg-primary/30 rounded-full animate-ping opacity-75" />
+                   {/* Pulse Effect - Uniform all around */}
+                   <div className="absolute inset-0 bg-primary/40 rounded-full animate-ping opacity-50" />
 
                    {/* Lock Badge */}
                    <div className="relative bg-background/90 backdrop-blur-md border border-primary/50 text-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
@@ -278,15 +271,9 @@ function SmartLockSection() {
                      <span className="text-sm font-semibold">Locked: Faucet</span>
                    </div>
 
-                   {/* Scanning Line Effect (Optional: adds dynamic feel) */}
-                   <motion.div 
-                     className="absolute top-full mt-4 w-64 h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent"
-                     animate={{ opacity: [0, 1, 0], scaleX: [0.5, 1.2, 0.5] }}
-                     transition={{ duration: 2, repeat: Infinity }}
-                   />
+                   {/* Removed scanning line to eliminate bottom artifact */}
                 </div>
 
-                {/* Status Badge Bottom Left */}
                 <div className="absolute bottom-4 left-4 z-20">
                    <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white">
                       Generating Style {currentImageIndex + 1} of 5...
@@ -294,7 +281,6 @@ function SmartLockSection() {
                 </div>
              </div>
 
-             {/* Background Decorative Blob */}
              <div className="absolute -inset-4 bg-primary/20 rounded-3xl blur-3xl -z-10 opacity-50" />
           </motion.div>
         </div>

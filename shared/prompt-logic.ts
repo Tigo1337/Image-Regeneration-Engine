@@ -86,7 +86,7 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   } else if (isArchitecturalRemodel) {
       styleGuidance = `Execute a high-end designer remodel of ${style}. Introduce sophisticated architectural textures and professional lighting.`;
   } else {
-      styleGuidance = `Execute a 'Mandatory Structural Replacement.' Rebuild the environment from scratch while maintaining the source perspective.`;
+      styleGuidance = `Execute a 'Mandatory Architectural Metamorphosis.' Provide a unique, avant-garde 'Designer Signature' take on ${style} focusing on structural geometry.`;
   }
 
   let prompt = `You are an expert interior designer and architectural visualizer. Use a high-end architectural photography style.`;
@@ -101,11 +101,18 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
       The input image is a zoomed-in crop. Focus on texture and material quality.`;
   }
 
-  // FIXED PERSPECTIVE MATH: NO FREEDOM AUTHORIZED
-  prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
-  1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
-  2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates as the input.
-  3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation. Do not re-calculate perspective.`;
+  // --- REVISED PERSPECTIVE LOGIC ---
+  if (isMetamorphosis) {
+      prompt += `\n\nCRITICAL INSTRUCTION - VANTAGE POINT ANCHOR:
+      1. CAMERA POSITION: Maintain the same camera height, distance, and tilt relative to the room center.
+      2. PERSPECTIVE FREEDOM: You are AUTHORIZED to re-calculate vanishing points and horizon alignment to accommodate new architectural geometry. Internal lines should converge naturally to the new structural build.
+      3. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the source image.`;
+  } else {
+      prompt += `\n\nCRITICAL INSTRUCTION - GEOMETRIC PERSPECTIVE LOCK:
+      1. HORIZON LINE: Maintain the EXACT vertical position of the horizon line from the original input image.
+      2. VANISHING POINTS: All orthogonal lines in the new environment must converge at the exact same coordinates as the input.
+      3. VANTAGE POINT: The camera height, tilt, and pan must remain at 0% deviation. Do not re-calculate perspective.`;
+  }
 
   if (preservedElements && preservedElements.trim().length > 0) {
       prompt += `\n\nCRITICAL INSTRUCTION - OBJECT PRESERVATION:
@@ -123,17 +130,19 @@ export function constructRoomScenePrompt(config: PromptConfig): string {
   } else if (isArchitecturalRemodel) {
       prompt += `\n\nFREEDOM - ARCHITECTURAL REMODEL: Redesign the internal room shell. Windows and doors must remain in original positions.`;
   } else {
-      prompt += `\n\nFREEDOM - STRUCTURAL REPLACEMENT:
-      Execute a total replacement of all architectural surroundings.
-      - REPLACEMENT MANDATE: Every pixel not part of the "${preservedElements || 'main object'}" must be replaced with new structural geometry (walls, floors, ceilings, openings).
-      - PERSPECTIVE COMPLIANCE: The new architecture MUST wrap around the "${preservedElements || 'main object'}" using the exact 3D orientation found in the source.
-      - CONTENT CLEARANCE: Do not carry over any rugs, furniture, or secondary items from the input. Replace them with empty architectural space or new items matching ${style}.`;
+      // --- REVISED METAMORPHOSIS FREEDOM ---
+      prompt += `\n\nFREEDOM - ARCHITECTURAL METAMORPHOSIS (TOTAL DECONSTRUCTION):
+      Execute a complete deconstruction and rebuilding of the room environment.
+      - AUTHORIZED FREEDOM: Absolute creative liberty to reinvent the spatial layout. You are mandated to deconstruct existing boundaries, reposition openings, add or remove partitions, and completely redefine the room's footprint and architectural volume. 
+      - REPLACEMENT MANDATE: Every pixel not part of the "${preservedElements || 'main object'}" must be replaced with new structural geometry.
+      - PRESERVATION BOUNDARY: While the room changes, the footprint and immediate coordinates of the "${preservedElements || 'main object'}" are a "No-Fly Zone." The new architecture must wrap around it without modifying its physical form or 3D orientation.
+      - CONTENT CLEARANCE: Discard ALL original furniture, textiles, cabinetry, and secondary objects.`;
   }
 
   prompt += `\n\nTRANSFORMATION GOAL:
   Style: ${styleGuidance}
   Key Characteristics: ${specificAesthetic}.
-  Unified Hardware: Apply a single "Master Finish" (e.g., Matte Black) to ALL metallic elements.`;
+  Unified Hardware: Apply a single "Master Finish" (e.g., Matte Black) to ALL metallic elements.${isMetamorphosis ? "\n  MANDATORY: Generate a brand-new architectural environment from scratch. Do not reuse any layout logic from the source image." : ""}`;
 
   prompt += `\n\nCRITICAL INSTRUCTION - COMPONENT COHERENCE:
   Apply the "Master Finish" to any integrated components or hardware on the preserved "${preservedElements || 'object'}". 
