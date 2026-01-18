@@ -12,12 +12,16 @@ import {
   Crop, 
   Ruler, 
   Star, 
-  Check,
-  Zap,
-  Shield,
-  Clock
+  Check, 
+  Zap, 
+  Shield, 
+  Clock,
+  UploadCloud,
+  Palette,
+  Lock, // Added
+  Scan  // Added
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 40 },
@@ -39,7 +43,7 @@ function HeroSection() {
     target: ref,
     offset: ["start start", "end start"]
   });
-  
+
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
@@ -49,12 +53,12 @@ function HeroSection() {
         className="absolute inset-0 bg-gradient-to-br from-primary/10 via-black to-black"
         style={{ y }}
       />
-      
+
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
-      
+
       <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-      
+
       <motion.div 
         className="relative z-10 max-w-7xl mx-auto px-4 py-20 text-center"
         style={{ opacity }}
@@ -69,7 +73,7 @@ function HeroSection() {
             AI-Powered Interior Design
           </Badge>
         </motion.div>
-        
+
         <motion.h1 
           className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6"
           initial={{ opacity: 0, y: 30 }}
@@ -84,7 +88,7 @@ function HeroSection() {
             In Seconds
           </span>
         </motion.h1>
-        
+
         <motion.p 
           className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10"
           initial={{ opacity: 0, y: 30 }}
@@ -94,7 +98,7 @@ function HeroSection() {
           Upload any room photo and watch AI reimagine it in stunning new styles. 
           From modern minimalism to cozy bohemian — see your vision come to life.
         </motion.p>
-        
+
         <motion.div 
           className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
           initial={{ opacity: 0, y: 30 }}
@@ -113,7 +117,7 @@ function HeroSection() {
             </Link>
           </Button>
         </motion.div>
-        
+
         <motion.div
           className="relative max-w-6xl mx-auto rounded-2xl overflow-hidden shadow-2xl border border-border/50"
           initial={{ opacity: 0, y: 50, scale: 0.95 }}
@@ -160,7 +164,7 @@ function HeroSection() {
           </div>
         </motion.div>
       </motion.div>
-      
+
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
         <motion.div
           animate={{ y: [0, 10, 0] }}
@@ -176,81 +180,206 @@ function HeroSection() {
   );
 }
 
-function FeaturesSection() {
-  const features: Array<{
-    icon: typeof Wand2;
-    title: string;
-    description: string;
-    gradient: string;
-  }> = [
+function SmartLockSection() {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Using your existing images that show the SAME room/vanity in different styles
+  // This perfectly demonstrates the "Lock" feature.
+  const rotationImages = [
+    "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768767323/room-scene-update/matte-black-kitchen-pull-down-faucet-modern-ultra-4k-ar-1-1.jpg",
+    "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768767323/room-scene-update/matte-black-kitchen-pull-down-faucet-modern-farmhouse-ultra-4k-ar-1-1.jpg",
+    "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768767322/room-scene-update/matte-black-kitchen-pull-down-faucet-soft-modern-ultra-4k-ar-1-1.jpg",
+    "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768767323/room-scene-update/matte-black-kitchen-pull-down-faucet-dark-scandi-ultra-4k-ar-1-1.jpg",
+    "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768767323/room-scene-update/matte-black-kitchen-pull-down-faucet-japandi-ultra-4k-ar-1-1.jpg"
+  ];
+
+  // Rotate images every 2.5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % rotationImages.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [rotationImages.length]);
+
+  return (
+    <section className="py-24 relative overflow-hidden bg-muted/5">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          {/* Text Content */}
+          <motion.div
+             initial={{ opacity: 0, x: -30 }}
+             whileInView={{ opacity: 1, x: 0 }}
+             viewport={{ once: true }}
+             transition={{ duration: 0.6 }}
+          >
+             <Badge variant="secondary" className="mb-6 text-primary border-primary/20">
+               <Lock className="w-3 h-3 mr-2" />
+               Precision Control
+             </Badge>
+             <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+               Keep what you love. <br/>
+               <span className="text-muted-foreground">Change the rest.</span>
+             </h2>
+             <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+               Most AI tools wipe the slate clean. We give you control. 
+               Simply click to <strong>lock</strong> your favorite furniture, cabinets, or architectural details. 
+               Our AI intelligently redesigns the room around them, blending new styles with your existing treasures.
+             </p>
+
+             {/* Feature List */}
+             <div className="space-y-4">
+               {['Preserve expensive fixtures', 'Keep structural elements', 'Mix old charm with new styles'].map((item, i) => (
+                 <div key={i} className="flex items-center gap-3">
+                   <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                     <Check className="w-3.5 h-3.5 text-primary" />
+                   </div>
+                   <span className="font-medium text-foreground/80">{item}</span>
+                 </div>
+               ))}
+             </div>
+          </motion.div>
+
+          {/* Visual Animation */}
+          <motion.div
+             initial={{ opacity: 0, scale: 0.95 }}
+             whileInView={{ opacity: 1, scale: 1 }}
+             viewport={{ once: true }}
+             transition={{ duration: 0.8 }}
+             className="relative"
+          >
+             {/* Image Container */}
+             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-black">
+
+                {/* Rotating Images */}
+                <AnimatePresence mode="popLayout">
+                  <motion.img
+                    key={currentImageIndex}
+                    src={rotationImages[currentImageIndex]}
+                    alt="Room Style Variation"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </AnimatePresence>
+
+                {/* Overlay Gradient to make the "Lock" UI pop */}
+                <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+
+                {/* "Locked" UI Element - Positioned over the vanity */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center z-20">
+                   {/* Pulse Effect */}
+                   <div className="absolute inset-0 bg-primary/30 rounded-full animate-ping opacity-75" />
+
+                   {/* Lock Badge */}
+                   <div className="relative bg-background/90 backdrop-blur-md border border-primary/50 text-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                     <Lock className="w-4 h-4 text-primary" />
+                     <span className="text-sm font-semibold">Locked: Faucet</span>
+                   </div>
+
+                   {/* Scanning Line Effect (Optional: adds dynamic feel) */}
+                   <motion.div 
+                     className="absolute top-full mt-4 w-64 h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent"
+                     animate={{ opacity: [0, 1, 0], scaleX: [0.5, 1.2, 0.5] }}
+                     transition={{ duration: 2, repeat: Infinity }}
+                   />
+                </div>
+
+                {/* Status Badge Bottom Left */}
+                <div className="absolute bottom-4 left-4 z-20">
+                   <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white">
+                      Generating Style {currentImageIndex + 1} of 5...
+                   </Badge>
+                </div>
+             </div>
+
+             {/* Background Decorative Blob */}
+             <div className="absolute -inset-4 bg-primary/20 rounded-3xl blur-3xl -z-10 opacity-50" />
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HowItWorksSection() {
+  const steps = [
     {
-      icon: Wand2,
-      title: "Room Redesign",
-      description: "Transform any room with 15+ design styles. From Modern to Bohemian, Mid-Century to Industrial — instantly visualize your dream space.",
-      gradient: "from-violet-500 to-purple-500"
+      num: "01",
+      title: "Upload Photo",
+      desc: "Snap a photo of your room or upload an existing image. We support all standard formats including JPG and PNG.",
+      icon: UploadCloud,
+      delay: 0
     },
     {
-      icon: Crop,
-      title: "Smart Crop",
-      description: "Intelligent object detection and background removal. Isolate furniture, decor, or architectural elements with pixel-perfect precision.",
-      gradient: "from-blue-500 to-cyan-500"
+      num: "02",
+      title: "Select Style",
+      desc: "Choose from our library of 15+ professional styles, from Modern Minimalist to Industrial Chic.",
+      icon: Palette,
+      delay: 0.2
     },
     {
-      icon: Ruler,
-      title: "Dimensional Images",
-      description: "Add professional dimension lines and measurements to your designs. Perfect for presentations, client proposals, and planning.",
-      gradient: "from-orange-500 to-amber-500"
+      num: "03",
+      title: "Generate",
+      desc: "Our AI analyzes your room's geometry and lighting to render a photorealistic transformation in seconds.",
+      icon: Zap,
+      delay: 0.4
     }
   ];
 
   return (
-    <section id="features" className="py-32 px-4 relative overflow-hidden scroll-mt-20">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background" />
-      
-      <div className="relative max-w-7xl mx-auto">
+    <section className="py-24 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black via-muted/20 to-black/5" />
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10" />
+
+      <div className="relative max-w-7xl mx-auto px-4">
         <motion.div 
           className="text-center mb-20"
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <Badge variant="outline" className="mb-4">Features</Badge>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Everything You Need to
+          <Badge variant="outline" className="mb-4">Simple Workflow</Badge>
+          <h2 className="text-3xl md:text-5xl font-bold">
+            From Photo to Dream Room
             <br />
-            <span className="text-primary">Visualize Perfect Spaces</span>
+            <span className="text-muted-foreground">In Three Simple Steps</span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Professional-grade AI tools that turn your interior design ideas into stunning, photorealistic visualizations.
-          </p>
         </motion.div>
-        
-        <motion.div 
-          className="grid md:grid-cols-3 gap-8"
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
-          viewport={{ once: true }}
-        >
-          {features.map((feature, index) => (
+
+        <div className="grid md:grid-cols-3 gap-8 relative">
+          {/* Connecting Line (Desktop Only) */}
+          <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-[2px] bg-gradient-to-r from-border/0 via-border to-border/0 z-0" />
+
+          {steps.map((step, index) => (
             <motion.div
-              key={feature.title}
-              variants={fadeInUp}
-              whileHover={{ y: -8, transition: { duration: 0.3 } }}
+              key={index}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: step.delay }}
+              className="relative z-10 group"
             >
-              <Card className="h-full border-border/50 bg-card/50 backdrop-blur-sm hover-elevate" data-testid={`card-feature-${index}`}>
-                <CardContent className="p-8">
-                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6`}>
-                    <feature.icon className="w-7 h-7 text-white" />
+              <div className="flex flex-col items-center text-center">
+                <div className="w-24 h-24 rounded-2xl bg-card border border-border/50 shadow-xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300 relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <step.icon className="w-10 h-10 text-primary" />
+                  <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-xs font-bold font-mono">
+                    {step.num}
                   </div>
-                  <h3 className="text-2xl font-semibold mb-4">{feature.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-                </CardContent>
-              </Card>
+                </div>
+
+                <h3 className="text-xl font-bold mb-4">{step.title}</h3>
+                <p className="text-muted-foreground leading-relaxed max-w-xs">
+                  {step.desc}
+                </p>
+              </div>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -296,25 +425,20 @@ function GallerySection() {
     <section id="gallery" className="py-24 relative overflow-hidden bg-black/5">
       <div className="max-w-[1600px] mx-auto px-4 md:px-8">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+        {/* Header - Updated to be Centered with New Text */}
+        <div className="flex flex-col items-center justify-center mb-12 text-center">
           <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-xl"
+            className="max-w-3xl"
           >
-            
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-              Six Styles. One Room.
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+              One Room. Endless Styles.
             </h2>
-          </motion.div>
-
-          <motion.div
-             initial={{ opacity: 0, x: 20 }}
-             whileInView={{ opacity: 1, x: 0 }}
-             viewport={{ once: true }}
-          >
+            <p className="text-muted-foreground text-lg">
+              Explore our library of 15+ design aesthetics. Here are just a few possibilities.
+            </p>
           </motion.div>
         </div>
 
@@ -431,7 +555,7 @@ function TestimonialsSection() {
   return (
     <section className="py-32 px-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background" />
-      
+
       <div className="relative max-w-7xl mx-auto">
         <motion.div 
           className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-20"
@@ -452,7 +576,7 @@ function TestimonialsSection() {
             </motion.div>
           ))}
         </motion.div>
-        
+
         <motion.div 
           className="text-center mb-16"
           initial={{ opacity: 0, y: 30 }}
@@ -465,7 +589,7 @@ function TestimonialsSection() {
             Loved by Designers & Homeowners
           </h2>
         </motion.div>
-        
+
         <motion.div 
           className="grid md:grid-cols-3 gap-8"
           variants={staggerContainer}
@@ -515,7 +639,7 @@ function PricingCTASection() {
   return (
     <section className="py-32 px-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
-      
+
       <motion.div 
         className="relative max-w-4xl mx-auto text-center"
         initial={{ opacity: 0, y: 30 }}
@@ -530,14 +654,14 @@ function PricingCTASection() {
         <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
           Join thousands of designers, agents, and homeowners transforming spaces with AI.
         </p>
-        
+
         <div className="flex flex-col items-center mb-10">
           <div className="text-5xl font-bold mb-2">
             $29<span className="text-xl font-normal text-muted-foreground">/month</span>
           </div>
           <p className="text-muted-foreground">+ usage-based billing for generations</p>
         </div>
-        
+
         <motion.div 
           className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10 max-w-2xl mx-auto"
           variants={staggerContainer}
@@ -557,7 +681,7 @@ function PricingCTASection() {
             </motion.div>
           ))}
         </motion.div>
-        
+
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button size="lg" className="text-lg px-10 py-6" asChild data-testid="button-get-started-pricing">
             <Link href="/pricing">
@@ -571,7 +695,7 @@ function PricingCTASection() {
             </Link>
           </Button>
         </div>
-        
+
         <div className="flex items-center justify-center gap-6 mt-8 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4" />
@@ -629,12 +753,11 @@ function FAQSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <Badge variant="outline" className="mb-4">FAQ</Badge>
           <h2 className="text-4xl md:text-5xl font-bold">
             Frequently Asked Questions
           </h2>
         </motion.div>
-        
+
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -701,7 +824,9 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background pt-[124px]">
       <HeroSection />
-      <FeaturesSection />
+      {/* Inserted SmartLockSection to highlight key feature before process */}
+      <SmartLockSection />
+      <HowItWorksSection />
       <GallerySection />
       <TestimonialsSection />
       <PricingCTASection />
