@@ -661,7 +661,7 @@ function PricingCTASection() {
 
         <div className="flex flex-col items-center mb-10">
           <div className="text-5xl font-bold mb-2">
-            $29<span className="text-xl font-normal text-muted-foreground">/month</span>
+            $79<span className="text-xl font-normal text-muted-foreground">/month</span>
           </div>
           <p className="text-muted-foreground">+ usage-based billing for generations</p>
         </div>
@@ -735,7 +735,7 @@ function FAQSection() {
     },
     {
       question: "How is billing calculated?",
-      answer: "We use a simple monthly subscription ($29/month) plus usage-based pricing per generated image. Standard quality is $0.20/image, High Fidelity is $0.35, and Ultra 4K is $0.50. You only pay for what you use."
+      answer: "We use a simple monthly subscription ($79/month) plus usage-based pricing per generated image. Standard quality is $0.20/image, High Fidelity is $0.35, and Ultra 4K is $0.50. You only pay for what you use."
     },
     {
       question: "What design styles are available?",
