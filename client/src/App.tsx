@@ -9,6 +9,7 @@ import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import Gallery from "@/pages/gallery";
 import Pricing from "@/pages/pricing";
+import PrivacyPolicy from "@/pages/privacy"; // [NEW] Import
 import NotFound from "@/pages/not-found";
 
 function AppRoutes() {
@@ -17,6 +18,7 @@ function AppRoutes() {
       <Route path="/app" component={Home} />
       <Route path="/gallery" component={Gallery} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/privacy" component={PrivacyPolicy} /> {/* [NEW] Route */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -24,14 +26,16 @@ function AppRoutes() {
 
 function App() {
   const [location] = useLocation();
-  const isLandingPage = location === "/";
+  // Update logic: Neither Landing nor Privacy page should show the App Header
+  const isMarketingPage = location === "/" || location === "/privacy"; 
 
-  if (isLandingPage) {
+  if (isMarketingPage) {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <LandingHeader />
-          <Landing />
+          {/* Render Landing strictly on root, otherwise let Router handle /privacy */}
+          {location === "/" ? <Landing /> : <AppRoutes />} 
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>

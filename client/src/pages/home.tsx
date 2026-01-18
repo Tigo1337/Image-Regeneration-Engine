@@ -11,6 +11,23 @@ import { useToast } from "@/hooks/use-toast";
 import { Sparkles } from "lucide-react";
 import { styleDescriptions, constructPrompt, type PromptType } from "@/lib/prompt-builder";
 
+// [NEW] Minimal Footer for Legal Compliance
+// This fulfills the "Functionality" requirement of Law 25 without cluttering the UI.
+const ComplianceFooter = () => (
+  <footer className="w-full p-2 border-t border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground flex justify-between items-center px-6 z-50">
+    <div className="flex items-center gap-2">
+      <Sparkles size={10} />
+      <span>© 2026 Doculoom.</span>
+    </div>
+    <div className="flex gap-4">
+      {/* Functional Requirement: User MUST be able to download their data. */}
+      <a href="/api/account/export" target="_blank" className="hover:underline hover:text-primary transition-colors">
+        Export My Data
+      </a>
+    </div>
+  </footer>
+);
+
 export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [originalFileName, setOriginalFileName] = useState<string>("image");
@@ -149,7 +166,7 @@ export default function Home() {
         title: "Variation Error",
         description: "Failed to generate perspectives.",
       });
-    }
+    },
   });
 
   const smartCropMutation = useMutation({
@@ -382,57 +399,61 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <aside className="w-96 border-r border-border bg-card flex flex-col">
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            {generatedImage ? (
-              <button
-                onClick={handleReset}
-                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover-elevate font-medium text-sm"
-                data-testid="button-back-to-home"
-              >
-                ← Back to Home
-              </button>
-            ) : (
-              <ImageUploadTabs onImageLoad={handleImageLoad} />
-            )}
+    <div className="flex h-screen overflow-hidden bg-background flex-col">
+      <div className="flex flex-1 overflow-hidden">
+        <aside className="w-96 border-r border-border bg-card flex flex-col">
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-6">
+              {generatedImage ? (
+                <button
+                  onClick={handleReset}
+                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover-elevate font-medium text-sm"
+                  data-testid="button-back-to-home"
+                >
+                  ← Back to Home
+                </button>
+              ) : (
+                <ImageUploadTabs onImageLoad={handleImageLoad} />
+              )}
 
-            <ControlPanel 
-              onGenerate={handleGenerate}
-              onGenerateVariations={handleGenerateVariations}
-              onGenerateBatchStyles={handleGenerateBatchStyles}
-              onSmartCrop={handleSmartCrop}
-              onGenerateDimensional={handleGenerateDimensional}
-              disabled={!originalImage}
-              isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending}
-              isModificationMode={!!generatedImage && generationType === "design"}
-              modificationPrompt={modificationPrompt}
-              onModificationPromptChange={setModificationPrompt}
-              referenceImages={referenceImages}
-              onReferenceImagesChange={setReferenceImages}
-              inspirationImages={inspirationImages}
-              onInspirationImagesChange={setInspirationImages}
-              referenceDrawing={referenceDrawing}
-              onReferenceDrawingChange={setReferenceDrawing}
-            />
+              <ControlPanel 
+                onGenerate={handleGenerate}
+                onGenerateVariations={handleGenerateVariations}
+                onGenerateBatchStyles={handleGenerateBatchStyles}
+                onSmartCrop={handleSmartCrop}
+                onGenerateDimensional={handleGenerateDimensional}
+                disabled={!originalImage}
+                isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending}
+                isModificationMode={!!generatedImage && generationType === "design"}
+                modificationPrompt={modificationPrompt}
+                onModificationPromptChange={setModificationPrompt}
+                referenceImages={referenceImages}
+                onReferenceImagesChange={setReferenceImages}
+                inspirationImages={inspirationImages}
+                onInspirationImagesChange={setInspirationImages}
+                referenceDrawing={referenceDrawing}
+                onReferenceDrawingChange={setReferenceDrawing}
+              />
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      <main className="flex-1 overflow-auto">
-        <ImageCanvas 
-          originalImage={originalImage}
-          generatedImage={generatedImage}
-          generationType={generationType}
-          generatedVariations={generatedVariations}
-          originalFileName={originalFileName}
-          currentFormData={currentFormData || undefined}
-          currentSmartCropData={currentSmartCropData || undefined}
-          referenceImages={referenceImages}
-          batchStyleResults={batchStyleResults}
-        />
-      </main>
+        <main className="flex-1 overflow-auto">
+          <ImageCanvas 
+            originalImage={originalImage}
+            generatedImage={generatedImage}
+            generationType={generationType}
+            generatedVariations={generatedVariations}
+            originalFileName={originalFileName}
+            currentFormData={currentFormData || undefined}
+            currentSmartCropData={currentSmartCropData || undefined}
+            referenceImages={referenceImages}
+            batchStyleResults={batchStyleResults}
+          />
+        </main>
+      </div>
+
+      <ComplianceFooter />
 
       {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending) && <LoadingOverlay />}
     </div>

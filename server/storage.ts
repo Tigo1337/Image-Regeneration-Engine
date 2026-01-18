@@ -15,6 +15,9 @@ export interface IStorage {
 
   createPromptLog(log: InsertPromptLog): Promise<PromptLog>;
   getPromptLogs(): Promise<PromptLog[]>;
+
+  // [NEW] LAW 25 COMPLIANCE: Right to Erasure
+  deleteAllUserData(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -60,7 +63,6 @@ export class DatabaseStorage implements IStorage {
     return saved;
   }
 
-  // [NEW] Implementation
   async updateGeneratedDesign(id: string, updates: Partial<GeneratedDesign>): Promise<GeneratedDesign | undefined> {
     const [updated] = await db
       .update(generatedDesigns)
@@ -71,8 +73,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGeneratedDesigns(userId?: string | null): Promise<GeneratedDesign[]> {
-    // If userId is provided, return only that user's designs + anonymous designs
-    // If no userId, return all designs (admin view / anonymous user)
     if (userId) {
       return await db
         .select()
@@ -107,6 +107,15 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(promptLogs)
       .orderBy(desc(promptLogs.timestamp));
+  }
+
+  // [NEW] LAW 25: Implementation of Right to Erasure
+  async deleteAllUserData(userId: string): Promise<void> {
+    // 1. Delete all generated designs associated with the user
+    await db.delete(generatedDesigns).where(eq(generatedDesigns.userId, userId));
+
+    // 2. Delete the user record itself
+    await db.delete(users).where(eq(users.id, userId));
   }
 }
 

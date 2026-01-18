@@ -670,16 +670,24 @@ function FooterSection() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <span className="font-semibold text-lg">RoomReimagine AI</span>
+            <img 
+              src="https://res.cloudinary.com/olilepage/image/upload/v1768745854/room-scene-update/logos/room-reimagine-logo-walnut-marble-black-background.jpg" 
+              alt="RoomReimagine AI Logo" 
+              className="h-8 w-auto rounded-sm opacity-80 hover:opacity-100 transition-opacity"
+            />
           </div>
-          
+
           <nav className="flex items-center gap-6 text-sm text-muted-foreground">
             <Link href="/app" className="hover:text-foreground transition-colors" data-testid="footer-link-app">Design App</Link>
             <Link href="/gallery" className="hover:text-foreground transition-colors" data-testid="footer-link-gallery">Gallery</Link>
             <Link href="/pricing" className="hover:text-foreground transition-colors" data-testid="footer-link-pricing">Pricing</Link>
+
+            {/* [NEW] Privacy Link */}
+            <Link href="/privacy" className="hover:text-foreground transition-colors underline decoration-border hover:decoration-foreground underline-offset-4">
+              Privacy & Legal
+            </Link>
           </nav>
-          
+
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} RoomReimagine AI. All rights reserved.
           </p>

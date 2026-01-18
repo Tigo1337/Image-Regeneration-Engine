@@ -20,8 +20,12 @@ export function Header() {
       <div className="flex h-14 items-center justify-between px-4 gap-4">
         <div className="flex items-center gap-6">
           <Link href="/app" className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <span className="font-semibold text-lg" data-testid="text-app-name">RoomReimagine AI</span>
+            <img 
+              src="https://res.cloudinary.com/olilepage/image/upload/v1768745854/room-scene-update/logos/room-reimagine-logo-walnut-marble-black-background.jpg" 
+              alt="RoomReimagine AI Logo" 
+              className="h-7 w-auto rounded-sm"
+              data-testid="img-app-logo"
+            />
           </Link>
           
           <nav className="hidden md:flex items-center gap-1">
