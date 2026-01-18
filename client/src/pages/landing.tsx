@@ -428,55 +428,47 @@ function GallerySection() {
           </motion.div>
         </div>
 
-        {/* Interactive "Cinema" Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[750px]">
-
+        {/* Desktop View (Interactive Cinema Container) */}
+        <div className="hidden lg:grid grid-cols-12 gap-6 h-[750px]">
           {/* Navigation Menu (Left) */}
-          <div className="lg:col-span-4 flex flex-col justify-center space-y-2 lg:pr-4 z-10 order-2 lg:order-1 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0">
-             <div className="flex lg:flex-col gap-2 min-w-max lg:min-w-0">
-               {images.map((img, index) => (
-                 <motion.button
-                   key={index}
-                   initial={{ opacity: 0, x: -20 }}
-                   whileInView={{ opacity: 1, x: 0 }}
-                   transition={{ delay: index * 0.05 }}
-                   viewport={{ once: true }}
-                   onClick={() => setActiveIndex(index)}
-                   className={`group relative flex flex-col items-start p-4 lg:p-6 rounded-xl text-left transition-all duration-300 border shrink-0 lg:shrink ${
-                     activeIndex === index 
-                       ? 'bg-background border-border shadow-lg scale-[1.02]' 
-                       : 'hover:bg-background/50 border-transparent hover:border-border/30 opacity-60 hover:opacity-100'
-                   }`}
-                 >
-                   <span className={`text-base lg:text-lg font-bold tracking-tight mb-1 transition-colors ${
-                     activeIndex === index ? 'text-primary' : 'text-foreground'
-                   }`}>
-                     {img.style}
-                   </span>
-                   <span className="text-xs lg:text-sm text-muted-foreground line-clamp-1">
-                     {img.desc}
-                   </span>
+          <div className="col-span-4 flex flex-col justify-center space-y-2 pr-4 z-10">
+             {images.map((img, index) => (
+               <motion.button
+                 key={index}
+                 initial={{ opacity: 0, x: -20 }}
+                 whileInView={{ opacity: 1, x: 0 }}
+                 transition={{ delay: index * 0.05 }}
+                 viewport={{ once: true }}
+                 onClick={() => setActiveIndex(index)}
+                 onMouseEnter={() => setActiveIndex(index)}
+                 className={`group relative flex flex-col items-start p-6 rounded-xl text-left transition-all duration-300 border ${
+                   activeIndex === index 
+                     ? 'bg-background border-border shadow-lg scale-[1.02]' 
+                     : 'hover:bg-background/50 border-transparent hover:border-border/30 opacity-60 hover:opacity-100'
+                 }`}
+               >
+                 <span className={`text-lg font-bold tracking-tight mb-1 transition-colors ${
+                   activeIndex === index ? 'text-primary' : 'text-foreground'
+                 }`}>
+                   {img.style}
+                 </span>
+                 <span className="text-sm text-muted-foreground line-clamp-1">
+                   {img.desc}
+                 </span>
 
-                   {/* Animated Progress Bar for Active State */}
-                   {activeIndex === index && (
-                     <motion.div 
-                       layoutId="active-glow"
-                       className="absolute left-0 top-0 w-1 h-full bg-primary rounded-l-xl hidden lg:block" 
-                     />
-                   )}
-                   {activeIndex === index && (
-                     <motion.div 
-                       layoutId="active-glow-mobile"
-                       className="absolute bottom-0 left-0 h-1 w-full bg-primary rounded-b-xl lg:hidden" 
-                     />
-                   )}
-                 </motion.button>
-               ))}
-             </div>
+                 {/* Animated Progress Bar for Active State */}
+                 {activeIndex === index && (
+                   <motion.div 
+                     layoutId="active-glow"
+                     className="absolute left-0 top-0 w-1 h-full bg-primary rounded-l-xl" 
+                   />
+                 )}
+               </motion.button>
+             ))}
           </div>
 
           {/* Viewport (Right) */}
-          <div className="lg:col-span-8 relative rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl border border-border/50 bg-muted order-1 lg:order-2 aspect-video lg:aspect-auto">
+          <div className="col-span-8 relative rounded-3xl overflow-hidden shadow-2xl border border-border/50 bg-muted">
             <AnimatePresence mode="popLayout">
               <motion.img
                 key={activeIndex}
@@ -488,26 +480,79 @@ function GallerySection() {
                 transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{
-                  // The Slat Fix: Hardware acceleration + sub-pixel scaling
                   imageRendering: 'auto',
                   transform: 'translate3d(0, 0, 0) scale(1.001)', 
                   willChange: 'transform, opacity'
                 }}
               />
             </AnimatePresence>
-
-            {/* Overlay Gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+          </div>
+        </div>
 
-            {/* Mobile-only Label (since menu is separate on mobile) */}
-            <div className="absolute bottom-6 left-6 lg:hidden">
-              <Badge className="backdrop-blur-md bg-black/50 text-white border-white/20 text-base py-1 px-4">
-                {images[activeIndex].style}
+        {/* Mobile View (Swipeable Carousel) */}
+        <div className="lg:hidden">
+          <div className="relative overflow-hidden rounded-2xl border border-border/50 shadow-xl bg-muted">
+            <motion.div 
+              className="flex"
+              drag="x"
+              dragConstraints={{ left: -1000, right: 0 }} // Simplified for now, or use a ref
+              onDragEnd={(_, info) => {
+                const threshold = 50;
+                if (info.offset.x < -threshold && activeIndex < images.length - 1) {
+                  setActiveIndex(activeIndex + 1);
+                } else if (info.offset.x > threshold && activeIndex > 0) {
+                  setActiveIndex(activeIndex - 1);
+                }
+              }}
+              animate={{ x: -activeIndex * 100 + "%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 200 }}
+            >
+              {images.map((img, index) => (
+                <div key={index} className="min-w-full flex flex-col">
+                  <div className="aspect-video relative">
+                    <img 
+                      src={img.src} 
+                      alt={img.style} 
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                  </div>
+                  <div className="p-6 bg-background border-t">
+                    <h3 className="text-xl font-bold text-primary mb-2">{img.style}</h3>
+                    <p className="text-muted-foreground">{img.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+
+            {/* Swipe Indicator Overlay */}
+            <div className="absolute top-4 right-4 z-10">
+              <Badge variant="secondary" className="bg-black/40 backdrop-blur-md border-white/10 text-white flex items-center gap-2">
+                <motion.div
+                  animate={{ x: [0, -4, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                >
+                  <Zap className="w-3 h-3" />
+                </motion.div>
+                Swipe to explore
               </Badge>
             </div>
-          </div>
 
+            {/* Dots Indicator */}
+            <div className="absolute bottom-24 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+              {images.map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === activeIndex ? "w-6 bg-primary" : "w-1.5 bg-white/30"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
+
       </div>
     </section>
   );
