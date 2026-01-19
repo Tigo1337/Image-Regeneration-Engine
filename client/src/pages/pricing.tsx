@@ -146,7 +146,7 @@ export default function Pricing() {
             <CardContent>
               <div className="mb-6">
                 <span className="text-4xl font-bold">
-                  ${monthlyPrice ? (monthlyPrice.unit_amount / 100).toFixed(2) : "79.00"}
+                  $79.00
                 </span>
                 <span className="text-muted-foreground">/month</span>
               </div>
