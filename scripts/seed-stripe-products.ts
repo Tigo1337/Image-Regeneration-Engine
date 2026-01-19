@@ -15,17 +15,17 @@ async function seedProducts() {
   });
   console.log(`Created subscription product: ${subscriptionProduct.id}`);
 
-  // Create monthly subscription price ($29/month)
+  // Create monthly subscription price ($79/month)
   const monthlyPrice = await stripe.prices.create({
     product: subscriptionProduct.id,
-    unit_amount: 2900, // $29.00/month
+    unit_amount: 7900, // $79.00/month
     currency: 'usd',
     recurring: { interval: 'month' },
     metadata: {
       type: 'subscription',
     }
   });
-  console.log(`Created monthly price: ${monthlyPrice.id} ($29.00/month)`);
+  console.log(`Created monthly price: ${monthlyPrice.id} ($79.00/month)`);
 
   // 2. Create usage-based product for image generation
   const usageProduct = await stripe.products.create({
