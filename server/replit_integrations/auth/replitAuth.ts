@@ -154,7 +154,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
     return next();
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Token refresh failed:", error?.message || error);
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
