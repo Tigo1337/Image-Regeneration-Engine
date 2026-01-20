@@ -100,18 +100,14 @@ export async function setupAuth(app: Express) {
     }
   };
 
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
-
-  app.get("/api/login", (req, res, next) => {
+  // Helper function to ensure strategy exists for a domain
+  const ensureStrategy = (host: string) => {
     // Replit Auth OIDC requires HTTPS. 
     // In Replit workspace, we might see various hostnames (repl.co, replit.dev).
     // The issuer (replit.com/oidc) is very strict about redirect URIs.
-    const protocol = "https"; 
-    const host = req.hostname;
+    const protocol = "https";
     const strategyName = `replitauth:${host}`;
     
-    // Check if we need to register or update the strategy for this host
     if (!registeredStrategies.has(strategyName)) {
       const strategy = new Strategy(
         {
@@ -125,6 +121,15 @@ export async function setupAuth(app: Express) {
       passport.use(strategy);
       registeredStrategies.add(strategyName);
     }
+    return strategyName;
+  };
+
+  passport.serializeUser((user: Express.User, cb) => cb(null, user));
+  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+  app.get("/api/login", (req, res, next) => {
+    const host = req.hostname;
+    const strategyName = ensureStrategy(host);
     
     passport.authenticate(strategyName, {
       prompt: "login consent",
@@ -134,7 +139,7 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     const host = req.hostname;
-    const strategyName = `replitauth:${host}`;
+    const strategyName = ensureStrategy(host);
     
     passport.authenticate(strategyName, {
       successReturnToOrRedirect: "/",
