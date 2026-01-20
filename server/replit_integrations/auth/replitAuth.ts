@@ -86,9 +86,14 @@ export async function setupAuth(app: Express) {
   const ensureAuthStrategy = (host: string) => {
     // Replit Auth OIDC requires HTTPS. 
     // In Replit workspace, we might see various hostnames (repl.co, replit.dev).
-    // The issuer (replit.com/oidc) is very strict about redirect URIs.
+    // However, the Replit Auth OIDC client is often configured with a specific redirect URI
+    // linked to the REPLIT_DEV_DOMAIN.
     const protocol = "https";
-    const strategyName = `replitauth:${host}`;
+    
+    // If we have a REPLIT_DEV_DOMAIN, we should prefer using it for the callback
+    // to avoid "invalid_redirect_uri" errors caused by using .repl.co
+    const effectiveHost = process.env.REPLIT_DEV_DOMAIN || host;
+    const strategyName = `replitauth:${effectiveHost}`;
     
     if (!registeredStrategies.has(strategyName)) {
       const strategy = new Strategy(
@@ -96,7 +101,7 @@ export async function setupAuth(app: Express) {
           name: strategyName,
           config,
           scope: "openid email profile offline_access",
-          callbackURL: `${protocol}://${host}/api/callback`,
+          callbackURL: `${protocol}://${effectiveHost}/api/callback`,
         },
         verify
       );
