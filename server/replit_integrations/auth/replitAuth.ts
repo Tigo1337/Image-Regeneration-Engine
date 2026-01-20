@@ -83,25 +83,7 @@ export async function setupAuth(app: Express) {
   const registeredStrategies = new Set<string>();
 
   // Helper function to ensure strategy exists for a domain
-  const ensureStrategy = (domain: string) => {
-    const strategyName = `replitauth:${domain}`;
-    if (!registeredStrategies.has(strategyName)) {
-      const strategy = new Strategy(
-        {
-          name: strategyName,
-          config,
-          scope: "openid email profile offline_access",
-          callbackURL: `https://${domain}/api/callback`,
-        },
-        verify
-      );
-      passport.use(strategy);
-      registeredStrategies.add(strategyName);
-    }
-  };
-
-  // Helper function to ensure strategy exists for a domain
-  const ensureStrategy = (host: string) => {
+  const ensureAuthStrategy = (host: string) => {
     // Replit Auth OIDC requires HTTPS. 
     // In Replit workspace, we might see various hostnames (repl.co, replit.dev).
     // The issuer (replit.com/oidc) is very strict about redirect URIs.
@@ -129,7 +111,7 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/login", (req, res, next) => {
     const host = req.hostname;
-    const strategyName = ensureStrategy(host);
+    const strategyName = ensureAuthStrategy(host);
     
     passport.authenticate(strategyName, {
       prompt: "login consent",
@@ -139,7 +121,7 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     const host = req.hostname;
-    const strategyName = ensureStrategy(host);
+    const strategyName = ensureAuthStrategy(host);
     
     passport.authenticate(strategyName, {
       successReturnToOrRedirect: "/",
