@@ -104,7 +104,10 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+    // Replit Auth OIDC requires HTTPS. 
+    // In Replit workspace, we might see various hostnames (repl.co, replit.dev).
+    // The issuer (replit.com/oidc) is very strict about redirect URIs.
+    const protocol = "https"; 
     const host = req.hostname;
     const strategyName = `replitauth:${host}`;
     
