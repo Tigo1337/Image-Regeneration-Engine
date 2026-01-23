@@ -158,26 +158,28 @@ function HeroSection() {
 
           {/* Reserved Space: Force the container to 16:9 ratio */}
           <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border/50 aspect-video w-full bg-muted/5">
-            <AnimatePresence mode="popLayout">
+            {heroSlides.map((slide, idx) => (
               <motion.div
-                key={currentSlide}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="w-full h-full"
+                key={idx}
+                initial={false}
+                animate={{ 
+                  opacity: currentSlide === idx ? 1 : 0,
+                  pointerEvents: currentSlide === idx ? "auto" : "none"
+                }}
+                transition={{ duration: 0.8, ease: "easeInOut" }}
+                className="absolute inset-0 w-full h-full"
               >
                 <ReactCompareSlider
                   itemOne={
                     <ReactCompareSliderImage
-                      src={heroSlides[currentSlide].before}
+                      src={slide.before}
                       alt="Original"
                       className="object-cover w-full h-full"
                     />
                   }
                   itemTwo={
                     <ReactCompareSliderImage
-                      src={heroSlides[currentSlide].after}
+                      src={slide.after}
                       alt="Redesigned"
                       className="object-cover w-full h-full"
                     />
@@ -185,7 +187,7 @@ function HeroSection() {
                   className="w-full h-full"
                 />
               </motion.div>
-            </AnimatePresence>
+            ))}
 
             <div className="absolute bottom-4 left-4 z-20">
               <Badge variant="secondary" className="backdrop-blur-sm">Before</Badge>
