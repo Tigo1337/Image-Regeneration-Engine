@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Sparkles, 
   ArrowRight, 
+  ArrowLeft,
   Wand2, 
   Crop, 
   Ruler, 
@@ -18,8 +19,10 @@ import {
   Clock,
   UploadCloud,
   Palette,
-  Lock, // Added
-  Scan  // Added
+  Lock,
+  Scan,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 
@@ -44,13 +47,32 @@ function HeroSection() {
     offset: ["start start", "end start"]
   });
 
-  // Parallax effect for background (kept this)
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Removed the opacity transform here
+  const heroSlides = [
+    {
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769117667/room-scene-update/wooden-bed-frame-modern-standard-ar-16-9-japandi-ultra-4k-ar-16-9.webp",
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769117667/room-scene-update/wooden-bed-frame-modern-standard-ar-16-9-mountain-modern-ultra-4k-ar-16-9-v2.webp",
+      label: "Bedroom Transformation"
+    },
+    {
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769141734/room-scene-update/modular-corner-sectional-dark-gray-modern-ultra-4k-ar-16-9.webp",
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769141734/room-scene-update/modular-corner-sectional-dark-gray-modern-ultra-4k-ar-16-9-dark-scandi-ultra-4k-ar-16-9-v3.webp",
+      label: "Living Room Swap"
+    },
+    {
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769141734/room-scene-update/dining-table-set-8-chairs-contemporary-ultra-4k-ar-16-9-dark-scandi-ultra-4k-ar-16-9.webp",
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769141733/room-scene-update/dining-table-set-8-chairs-contemporary-ultra-4k-ar-16-9-modern-farmhouse-ultra-4k-ar-16-9.webp",
+      label: "Dining Room Update"
+    }
+  ];
+
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
 
   return (
-    <section ref={ref} className="relative min-h-[calc(100vh-124px)] flex items-center justify-center overflow-hidden bg-black">
+    <section ref={ref} className="relative min-h-[calc(100vh-124px)] flex items-center justify-center overflow-hidden bg-black pb-20">
       <motion.div 
         className="absolute inset-0 bg-gradient-to-br from-primary/10 via-black to-black"
         style={{ y }}
@@ -61,10 +83,7 @@ function HeroSection() {
       <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
 
-      <motion.div 
-        className="relative z-10 max-w-7xl mx-auto px-4 py-20 text-center"
-        // Removed style={{ opacity }} prop here
-      >
+      <motion.div className="relative z-10 max-w-7xl mx-auto px-4 py-20 text-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -120,64 +139,94 @@ function HeroSection() {
           </Button>
         </motion.div>
 
-        <motion.div
-          className="relative max-w-6xl mx-auto rounded-2xl overflow-hidden shadow-2xl border border-border/50"
-          initial={{ opacity: 0, y: 50, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 1, delay: 0.8 }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent z-10 pointer-events-none" />
-          <ReactCompareSlider
-            itemOne={
-              <ReactCompareSliderImage
-                src="https://res.cloudinary.com/olilepage/image/upload/q_auto:best/v1768703379/room-scene-update/maax-tori-6732-mt-wh-front-deco-scandinavian-ultra-4k-ar-16-9.webp"
-                alt="Original room"
-                className="object-cover w-full h-full"
-                style={{ 
-                  imageRendering: 'auto',
-                  WebkitBackfaceVisibility: 'hidden',
-                  transform: 'translate3d(0, 0, 0)'
-                }}
-              />
-            }
-            itemTwo={
-              <ReactCompareSliderImage
-                src="https://res.cloudinary.com/olilepage/image/upload/q_auto:best/v1768703253/room-scene-update/maax-tori-6732-mt-wh-front-deco-mountain-modern-ultra-4k-ar-16-9.webp"
-                alt="Redesigned room"
-                className="object-cover w-full h-full"
-                style={{ 
-                  imageRendering: 'auto',
-                  WebkitBackfaceVisibility: 'hidden',
-                  transform: 'translate3d(0, 0, 0)'
-                }}
-              />
-            }
-            className="w-full h-full"
-            style={{ 
-              willChange: 'transform',
-              WebkitFontSmoothing: 'antialiased'
-            }}
-          />
-          <div className="absolute bottom-4 left-4 z-20">
-            <Badge variant="secondary" className="backdrop-blur-sm">Before</Badge>
-          </div>
-          <div className="absolute bottom-4 right-4 z-20">
-            <Badge className="backdrop-blur-sm">After</Badge>
-          </div>
-        </motion.div>
-      </motion.div>
+        {/* --- STABLE SLIDER CONTAINER --- */}
+        <div className="relative max-w-6xl mx-auto group/slider">
 
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
-        <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="text-muted-foreground"
-        >
-          <div className="w-6 h-10 border-2 border-muted-foreground/50 rounded-full flex justify-center pt-2">
-            <div className="w-1.5 h-3 bg-muted-foreground/50 rounded-full" />
+          <button 
+            onClick={prevSlide}
+            className="absolute left-[-60px] top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-12 h-12 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-white transition-all hover:bg-white/20 hover:scale-110 active:scale-95 opacity-60 hover:opacity-100"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          <button 
+            onClick={nextSlide}
+            className="absolute right-[-60px] top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-12 h-12 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-white transition-all hover:bg-white/20 hover:scale-110 active:scale-95 opacity-60 hover:opacity-100"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
+          {/* Reserved Space: Force the container to 16:9 ratio */}
+          <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border/50 aspect-video w-full bg-muted/5">
+            <AnimatePresence mode="popLayout">
+              <motion.div
+                key={currentSlide}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="w-full h-full"
+              >
+                <ReactCompareSlider
+                  itemOne={
+                    <ReactCompareSliderImage
+                      src={heroSlides[currentSlide].before}
+                      alt="Original"
+                      className="object-cover w-full h-full"
+                    />
+                  }
+                  itemTwo={
+                    <ReactCompareSliderImage
+                      src={heroSlides[currentSlide].after}
+                      alt="Redesigned"
+                      className="object-cover w-full h-full"
+                    />
+                  }
+                  className="w-full h-full"
+                />
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="absolute bottom-4 left-4 z-20">
+              <Badge variant="secondary" className="backdrop-blur-sm">Before</Badge>
+            </div>
+            <div className="absolute bottom-4 right-4 z-20">
+              <Badge className="backdrop-blur-sm">After</Badge>
+            </div>
           </div>
-        </motion.div>
-      </div>
+
+          {/* Indicators & Labels */}
+          <div className="mt-10 w-full flex flex-col items-center justify-center gap-4">
+            <div className="flex justify-center gap-4">
+              {heroSlides.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className="group relative"
+                  aria-label={`Go to slide ${idx + 1}`}
+                >
+                  <div className={`h-1 rounded-full transition-all duration-300 ${
+                    currentSlide === idx ? "bg-primary w-12" : "bg-white/10 w-6 group-hover:bg-white/30"
+                  }`} />
+                </button>
+              ))}
+            </div>
+            <div className="h-6 flex items-center justify-center">
+              <AnimatePresence mode="wait">
+                <motion.span 
+                  key={currentSlide}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  className="text-[10px] uppercase tracking-[0.2em] font-bold text-primary"
+                >
+                  {heroSlides[currentSlide].label}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      </motion.div>
     </section>
   );
 }
