@@ -4,7 +4,7 @@ import { detectObjectBoundingBox } from "../gemini";
 import { requireActiveSubscription } from "../middleware/auth";
 import sharp from "sharp";
 
-export function registerImageToolRoutes(app: Express) {
+export function registerCropRoutes(app: Express) {
   // Smart Crop Route
   app.post("/api/smart-crop", requireActiveSubscription, async (req, res) => {
     try {

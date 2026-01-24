@@ -1,16 +1,15 @@
 import type { Express } from "express";
-import { roomRedesignRequestSchema, dimensionalImageRequestSchema, modifyGeneratedRequestSchema } from "@shared/schema";
+import { roomRedesignRequestSchema } from "@shared/schema";
 import { generateRoomRedesign, analyzeObjectStructure, detectObjectBoundingBox } from "../gemini";
 import { processImageForGemini, applyPerspectiveMockup, applySmartObjectZoom } from "../image-utils";
 import { storage } from "../storage";
 import { uploadImageToStorage } from "../image-storage";
 import { getUserId, requireActiveSubscription, reportGenerationUsage } from "../middleware/auth";
-import { buildModificationPrompt, buildVariationPrompt } from "../lib/prompt-utils";
-import { constructDimensionalPrompt } from "../dimensional-prompt";
+import { buildVariationPrompt } from "../lib/prompt-utils";
 import { constructRoomScenePrompt } from "@shared/prompt-logic";
 import sharp from "sharp";
 
-export function registerGenerationRoutes(app: Express) {
+export function registerDesignRoutes(app: Express) {
   // Main Generation Endpoint
   app.post("/api/generate", requireActiveSubscription, async (req, res) => {
     try {
@@ -370,155 +369,6 @@ export function registerGenerationRoutes(app: Express) {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Failed to generate variations"
-      });
-    }
-  });
-
-  // Modify Route (legacy)
-  app.post("/api/modify", async (req, res) => {
-    try {
-      const { imageData, referenceImage, prompt, ...formData } = req.body;
-      const validatedData = roomRedesignRequestSchema.parse(formData);
-      if (!imageData || !referenceImage || !prompt) return res.status(400).json({ success: false, error: "Missing fields" });
-
-      const processedReference = await processImageForGemini(referenceImage);
-      const generatedImage = await generateRoomRedesign({
-        imageBase64: processedReference,
-        preservedElements: validatedData.preservedElements,
-        targetStyle: validatedData.targetStyle,
-        quality: validatedData.quality,
-        aspectRatio: validatedData.aspectRatio,
-        creativityLevel: validatedData.creativityLevel,
-        customPrompt: prompt,
-        outputFormat: validatedData.outputFormat,
-      });
-
-      res.json({ success: true, generatedImage });
-    } catch (error) {
-      res.status(500).json({ success: false, error: "Failed" });
-    }
-  });
-
-  // Modify Generated Image - Dedicated endpoint with logging
-  app.post("/api/modify-generated", requireActiveSubscription, async (req, res) => {
-    try {
-      // Validate request body using zod schema
-      const validatedData = modifyGeneratedRequestSchema.parse(req.body);
-      
-      const { 
-        sourceGeneratedImage,
-        originalImage,
-        modificationRequest,
-        currentStyle,
-        preservedElements,
-        quality,
-        creativityLevel,
-      } = validatedData;
-
-      console.log(`[modify-generated] Processing modification request: "${modificationRequest.substring(0, 50)}..."`);
-
-      // Process the source generated image
-      const processedSourceImage = await processImageForGemini(sourceGeneratedImage);
-
-      // Build controlled modification prompt
-      const modificationPrompt = buildModificationPrompt({
-        modificationRequest: modificationRequest.trim(),
-        currentStyle: currentStyle,
-        preservedElements: preservedElements,
-        creativityLevel: creativityLevel,
-      });
-
-      console.log(`[modify-generated] Built prompt (${modificationPrompt.length} chars)`);
-
-      // Call Gemini API to generate modified image
-      const modifiedImage = await generateRoomRedesign({
-        imageBase64: processedSourceImage,
-        preservedElements: preservedElements,
-        targetStyle: currentStyle,
-        quality: quality,
-        aspectRatio: "Original",
-        creativityLevel: creativityLevel,
-        customPrompt: modificationPrompt,
-        outputFormat: "PNG",
-      });
-
-      // Upload modified image to storage
-      const modifiedImageUrl = await uploadImageToStorage(modifiedImage, "generated");
-
-      // LOG to prompt_logs with dedicated job type
-      if (storage.createPromptLog) {
-        await storage.createPromptLog({
-          jobType: "modify-generated",
-          prompt: modificationPrompt,
-          parameters: {
-            modificationRequest: modificationRequest.trim(),
-            currentStyle: currentStyle,
-            preservedElements: preservedElements,
-            creativityLevel: creativityLevel,
-            quality: quality,
-            userId: getUserId(req),
-          }
-        });
-        console.log(`[modify-generated] Logged to prompt_logs (job_type: modify-generated)`);
-      }
-
-      // Report usage to Stripe (skipped for super admins)
-      await reportGenerationUsage(req, quality);
-
-      res.json({
-        success: true,
-        generatedImage: modifiedImage,
-        modifiedImageUrl,
-        appliedPrompt: modificationPrompt,
-      });
-
-    } catch (error) {
-      console.error("Error in /api/modify-generated:", error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to modify generated image"
-      });
-    }
-  });
-
-  // Dimensional Image Generation
-  app.post("/api/generate-dimensional", requireActiveSubscription, async (req, res) => {
-    try {
-      const { imageData, ...formData } = req.body;
-      const validatedData = dimensionalImageRequestSchema.parse(formData);
-
-      if (!imageData) {
-        return res.status(400).json({ success: false, error: "No image data provided" });
-      }
-
-      const processedImage = await processImageForGemini(imageData);
-      const dimensionalPrompt = constructDimensionalPrompt(validatedData);
-
-      const generatedImage = await generateRoomRedesign({
-        imageBase64: processedImage,
-        preservedElements: "the entire product",
-        targetStyle: "Technical Documentation",
-        quality: "High Fidelity (2K)",
-        aspectRatio: "1:1",
-        creativityLevel: 2,
-        customPrompt: dimensionalPrompt,
-        outputFormat: "PNG",
-      });
-
-      // Report usage to Stripe (skipped for super admins)
-      await reportGenerationUsage(req, "High Fidelity (2K)");
-
-      res.json({
-        success: true,
-        generatedImage,
-        prompt: dimensionalPrompt,
-      });
-
-    } catch (error) {
-      console.error("Error in /api/generate-dimensional:", error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to generate dimensional image",
       });
     }
   });
