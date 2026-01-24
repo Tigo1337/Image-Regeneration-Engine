@@ -108,8 +108,11 @@ Preferred communication style: Simple, everyday language.
   - `account.ts` - Law 25 compliance (data erasure, export, admin info)
   - `billing.ts` - Stripe payment endpoints (config, products, subscription, checkout, portal)
   - `gallery.ts` - Gallery and prompt history endpoints
-  - `generation.ts` - Core AI generation with Bill C-27 watermarking
-  - `image-tools.ts` - Smart crop functionality
+  - `design.ts` - Core AI generation (/api/generate, /api/generate/batch-styles, /api/variations) with Bill C-27 watermarking
+  - `dimensions.ts` - Technical drawing generation (/api/generate-dimensional)
+  - `crop.ts` - Smart crop functionality (/api/smart-crop)
+  - `modify-generated.ts` - Modify previously generated images (/api/modify-generated)
+  - `modify.ts` - Legacy modify route, foundation for Specific Element Update feature (/api/modify)
 - Authentication middleware extracted to `server/middleware/auth.ts`:
   - `getUserId`, `isSuperAdmin`, `requireActiveSubscription`, `reportGenerationUsage`
   - Dynamic imports for stripeService to avoid circular dependencies
