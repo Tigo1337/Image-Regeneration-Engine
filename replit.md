@@ -47,7 +47,11 @@ Preferred communication style: Simple, everyday language.
 
 **API Design:**
 - RESTful endpoint structure
-- Single primary endpoint `/api/generate` for room redesign generation
+- Primary endpoint `/api/generate` for room redesign generation
+- Dedicated `/api/modify-generated` endpoint for modifying previously generated images
+  - Uses `modifyGeneratedRequestSchema` for zod validation
+  - Logs to `prompt_logs` table with job type "modify-generated"
+  - Supports creativity levels 1-4 for controlled modification intensity
 - Request/response validation using Zod schemas shared between client and server
 
 **Image Processing:**
