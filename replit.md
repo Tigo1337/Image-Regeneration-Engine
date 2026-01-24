@@ -155,3 +155,7 @@ Preferred communication style: Simple, everyday language.
 - **esbuild**: Production JavaScript bundler
 - **PostCSS** with **Autoprefixer**: CSS processing
 - **tsx**: TypeScript execution for development
+- **Storybook**: Component development and documentation
+  - Run with: `CI=true npx storybook dev -p 6007 --host 0.0.0.0`
+  - Port: 6007 (separate from main app on 5000)
+  - Stories located in `stories/` and `client/src/**/*.stories.tsx`
