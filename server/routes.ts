@@ -1,6 +1,6 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
-import { roomRedesignRequestSchema, smartCropRequestSchema, dimensionalImageRequestSchema } from "@shared/schema";
+import { roomRedesignRequestSchema, smartCropRequestSchema, dimensionalImageRequestSchema, modifyGeneratedRequestSchema } from "@shared/schema";
 import { generateRoomRedesign, analyzeObjectStructure, detectObjectBoundingBox } from "./gemini"; 
 import { processImageForGemini, cropImage, padImage, applyPerspectiveMockup, applySmartObjectZoom } from "./image-utils";
 import { storage } from "./storage";
@@ -102,6 +102,66 @@ async function reportGenerationUsage(req: Request, qualityTier: string) {
     console.error("Usage reporting error:", error);
     // Don't fail the request if usage reporting fails
   }
+}
+
+// Prompt Builder for Modification Requests
+interface ModificationPromptParams {
+  modificationRequest: string;
+  currentStyle: string;
+  preservedElements: string;
+  creativityLevel: number;
+}
+
+function buildModificationPrompt(params: ModificationPromptParams): string {
+  const { modificationRequest, currentStyle, preservedElements, creativityLevel } = params;
+  
+  // Map creativity level to instruction intensity
+  const creativityInstructions = {
+    1: "Make ONLY the specific change requested. Preserve everything else exactly as-is. Zero creative interpretation.",
+    2: "Apply the requested modification while maintaining visual consistency. Minor harmonizing adjustments are acceptable.",
+    3: "Apply the modification and feel free to make supporting aesthetic adjustments that enhance the overall design.",
+    4: "Apply the modification creatively. You may reinterpret elements to better integrate the change into a cohesive design.",
+  };
+
+  const creativityText = creativityInstructions[creativityLevel as keyof typeof creativityInstructions] || creativityInstructions[2];
+
+  let prompt = `ROLE: Expert Interior Design Editor.
+
+TASK: Apply a SPECIFIC MODIFICATION to the generated room design shown in the input image.
+
+=== USER'S MODIFICATION REQUEST ===
+"${modificationRequest}"
+===================================
+
+=== MODIFICATION RULES (STRICT) ===
+1. FOCUSED CHANGE: Your ONLY task is to implement the user's modification request. This is NOT a full redesign.
+2. PRESERVE EVERYTHING ELSE: All elements NOT mentioned in the modification request must remain EXACTLY as they appear in the input image.
+3. STYLE CONTINUITY: The current design style is "${currentStyle}". Any modifications must be harmonious with this style.
+4. PHOTOREALISTIC OUTPUT: The result must be indistinguishable from a real photograph. Match the lighting, shadows, and material quality of the input image.
+
+=== CREATIVITY LEVEL: ${creativityLevel}/4 ===
+${creativityText}
+
+`;
+
+  if (preservedElements && preservedElements.trim() !== "") {
+    prompt += `=== PROTECTED ELEMENTS (DO NOT MODIFY) ===
+The following elements are LOCKED and must remain EXACTLY as shown:
+${preservedElements}
+=============================================
+
+`;
+  }
+
+  prompt += `=== OUTPUT REQUIREMENTS ===
+1. Generate a photorealistic image showing the room with the requested modification applied.
+2. Maintain the exact camera angle, perspective, and framing of the input image.
+3. Preserve the lighting conditions and color temperature.
+4. Ensure seamless integration of the modification into the existing scene.
+
+CRITICAL: This is an EDIT operation, not a regeneration. The output should be 95%+ identical to the input, with only the requested modification visible.`;
+
+  return prompt;
 }
 
 // Prompt Builder for Perspectives
@@ -707,6 +767,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, generatedImage });
     } catch (error) {
       res.status(500).json({ success: false, error: "Failed" });
+    }
+  });
+
+  // [NEW] Modify Generated Image - Dedicated endpoint with logging
+  // This endpoint takes a previously generated image and applies specific modifications
+  app.post("/api/modify-generated", requireActiveSubscription, async (req, res) => {
+    try {
+      // Validate request body using zod schema
+      const validatedData = modifyGeneratedRequestSchema.parse(req.body);
+      
+      const { 
+        sourceGeneratedImage,
+        originalImage,
+        modificationRequest,
+        currentStyle,
+        preservedElements,
+        quality,
+        creativityLevel,
+      } = validatedData;
+
+      console.log(`[modify-generated] Processing modification request: "${modificationRequest.substring(0, 50)}..."`);
+
+      // Process the source generated image
+      const processedSourceImage = await processImageForGemini(sourceGeneratedImage);
+
+      // Build controlled modification prompt
+      const modificationPrompt = buildModificationPrompt({
+        modificationRequest: modificationRequest.trim(),
+        currentStyle: currentStyle,
+        preservedElements: preservedElements,
+        creativityLevel: creativityLevel,
+      });
+
+      console.log(`[modify-generated] Built prompt (${modificationPrompt.length} chars)`);
+
+      // Call Gemini API to generate modified image
+      const modifiedImage = await generateRoomRedesign({
+        imageBase64: processedSourceImage,
+        preservedElements: preservedElements,
+        targetStyle: currentStyle,
+        quality: quality,
+        aspectRatio: "Original",
+        creativityLevel: creativityLevel,
+        customPrompt: modificationPrompt,
+        outputFormat: "PNG",
+      });
+
+      // Upload modified image to storage
+      const modifiedImageUrl = await uploadImageToStorage(modifiedImage, "generated");
+
+      // LOG to prompt_logs with dedicated job type
+      if (storage.createPromptLog) {
+        await storage.createPromptLog({
+          jobType: "modify-generated",
+          prompt: modificationPrompt,
+          parameters: {
+            modificationRequest: modificationRequest.trim(),
+            currentStyle: currentStyle,
+            preservedElements: preservedElements,
+            creativityLevel: creativityLevel,
+            quality: quality,
+            userId: getUserId(req),
+          }
+        });
+        console.log(`[modify-generated] Logged to prompt_logs (job_type: modify-generated)`);
+      }
+
+      // Report usage to Stripe (skipped for super admins)
+      await reportGenerationUsage(req, quality);
+
+      res.json({
+        success: true,
+        generatedImage: modifiedImage,
+        modifiedImageUrl,
+        appliedPrompt: modificationPrompt,
+      });
+
+    } catch (error) {
+      console.error("Error in /api/modify-generated:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to modify generated image"
+      });
     }
   });
 

@@ -79,11 +79,12 @@ export default function Home() {
   };
 
   const generateMutation = useMutation({
-    mutationFn: async (data: RoomRedesignRequest & { imageData: string; referenceImage?: string; prompt: string; isModification?: boolean }) => {
-      const endpoint = data.isModification ? "/api/modify" : "/api/generate";
+    mutationFn: async (data: RoomRedesignRequest & { imageData: string; prompt: string }) => {
+      // All generations now go through /api/generate
+      // Modifications use the dedicated modifyGeneratedMutation instead
       const res = await apiRequest(
         "POST",
-        endpoint,
+        "/api/generate",
         data
       );
       return res.json() as Promise<RoomRedesignResponse & { variations?: string[] }>;
@@ -199,6 +200,50 @@ export default function Home() {
     }
   });
 
+  // NEW: Dedicated mutation for modifying generated images
+  const modifyGeneratedMutation = useMutation({
+    mutationFn: async (data: {
+      sourceGeneratedImage: string;
+      originalImage: string;
+      modificationRequest: string;
+      currentStyle: string;
+      preservedElements: string;
+      quality: string;
+      creativityLevel: number;
+    }) => {
+      const res = await apiRequest("POST", "/api/modify-generated", data);
+      return res.json();
+    },
+    onSuccess: (response) => {
+      if (response.success && response.generatedImage) {
+        setGeneratedImage(response.generatedImage);
+        setGenerationType("design");
+        setModificationPrompt("");
+        
+        // Invalidate gallery to show the modified image
+        queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
+        
+        toast({
+          title: "Modification Applied!",
+          description: "Your changes have been applied to the design.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Modification Failed",
+          description: response.error || "Failed to apply modification",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to modify design",
+      });
+    },
+  });
+
   const dimensionalMutation = useMutation({
     mutationFn: async (data: DimensionalImageRequest & { imageData: string }) => {
         const res = await apiRequest("POST", "/api/generate-dimensional", data);
@@ -296,20 +341,25 @@ export default function Home() {
 
     setCurrentFormData(requestData as RoomRedesignRequest);
 
-    if (generatedImage && generationType !== 'crop') {
-      generateMutation.mutate({
-        ...requestData,
-        imageData: originalImage,
-        referenceImage: generatedImage,
-        prompt: prompt,
-        isModification: true
+    // Check if this is a modification of an existing generated image
+    // Use the new dedicated /api/modify-generated endpoint for modifications
+    if (generatedImage && generationType === 'design' && modificationPrompt.trim() !== '') {
+      // Use the new dedicated modification endpoint
+      modifyGeneratedMutation.mutate({
+        sourceGeneratedImage: generatedImage,
+        originalImage: originalImage,
+        modificationRequest: modificationPrompt,
+        currentStyle: formData.targetStyle || 'Modern',
+        preservedElements: formData.preservedElements || '',
+        quality: formData.quality || 'Standard',
+        creativityLevel: formData.creativityLevel || 2,
       });
     } else {
+      // Regular generation (not a modification)
       generateMutation.mutate({
         ...requestData,
         imageData: originalImage,
         prompt: prompt,
-        isModification: false
       });
     }
   };
@@ -423,7 +473,7 @@ export default function Home() {
                 onSmartCrop={handleSmartCrop}
                 onGenerateDimensional={handleGenerateDimensional}
                 disabled={!originalImage}
-                isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending}
+                isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending}
                 isModificationMode={!!generatedImage && generationType === "design"}
                 modificationPrompt={modificationPrompt}
                 onModificationPromptChange={setModificationPrompt}
@@ -455,7 +505,7 @@ export default function Home() {
 
       <ComplianceFooter />
 
-      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending) && <LoadingOverlay />}
+      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending) && <LoadingOverlay />}
     </div>
   );
 }

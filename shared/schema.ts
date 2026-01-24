@@ -149,9 +149,21 @@ export const dimensionalImageRequestSchema = z.object({
   showBottomDisclaimer: z.boolean().default(true),
 });
 
+// Modify Generated Image Request Schema
+export const modifyGeneratedRequestSchema = z.object({
+  sourceGeneratedImage: z.string().min(1, "Source generated image is required"),
+  originalImage: z.string().optional(),
+  modificationRequest: z.string().min(1, "Modification request is required"),
+  currentStyle: z.string().default("Modern"),
+  preservedElements: z.string().default(""),
+  quality: z.enum(["Standard", "High Fidelity (2K)", "Ultra (4K)"]).default("Standard"),
+  creativityLevel: z.number().min(1).max(4).default(2),
+});
+
 export type RoomRedesignRequest = z.infer<typeof roomRedesignRequestSchema>;
 export type SmartCropRequest = z.infer<typeof smartCropRequestSchema>;
 export type DimensionalImageRequest = z.infer<typeof dimensionalImageRequestSchema>;
+export type ModifyGeneratedRequest = z.infer<typeof modifyGeneratedRequestSchema>;
 
 // Room redesign response schema
 export interface RoomRedesignResponse {
