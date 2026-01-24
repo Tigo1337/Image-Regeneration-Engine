@@ -103,6 +103,20 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Architectural Decisions
 
+**Modular Backend Architecture (January 2026 Refactor):**
+- Route handlers split into domain-specific modules under `server/routes/`:
+  - `account.ts` - Law 25 compliance (data erasure, export, admin info)
+  - `billing.ts` - Stripe payment endpoints (config, products, subscription, checkout, portal)
+  - `gallery.ts` - Gallery and prompt history endpoints
+  - `generation.ts` - Core AI generation with Bill C-27 watermarking
+  - `image-tools.ts` - Smart crop functionality
+- Authentication middleware extracted to `server/middleware/auth.ts`:
+  - `getUserId`, `isSuperAdmin`, `requireActiveSubscription`, `reportGenerationUsage`
+  - Dynamic imports for stripeService to avoid circular dependencies
+- Prompt utilities extracted to `server/lib/prompt-utils.ts`:
+  - `buildModificationPrompt`, `buildVariationPrompt`
+- Main `server/routes.ts` is now a thin orchestrator that registers all modules
+
 **Monorepo Structure:**
 - Unified codebase with `/client`, `/server`, and `/shared` directories
 - Path aliases configured (`@/`, `@shared/`, `@assets/`) for clean imports
