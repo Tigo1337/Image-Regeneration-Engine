@@ -51,13 +51,20 @@ export default {
           border: "var(--destructive-border)",
         },
         ring: "hsl(var(--ring) / <alpha-value>)",
+        /* Semantic Material Aliases */
+        material: {
+          bronze: "hsl(var(--chart-1) / <alpha-value>)",
+          slate: "hsl(var(--chart-2) / <alpha-value>)",
+          spruce: "hsl(var(--chart-3) / <alpha-value>)",
+          clay: "hsl(var(--chart-4) / <alpha-value>)",
+          sandstone: "hsl(var(--chart-5) / <alpha-value>)",
+        },
         chart: {
           "1": "hsl(var(--chart-1) / <alpha-value>)",
           "2": "hsl(var(--chart-2) / <alpha-value>)",
           "3": "hsl(var(--chart-3) / <alpha-value>)",
           "4": "hsl(var(--chart-4) / <alpha-value>)",
           "5": "hsl(var(--chart-5) / <alpha-value>)",
-          /* Semantic Aliases */
           brand: "hsl(var(--chart-1) / <alpha-value>)",
           accent: "hsl(var(--chart-2) / <alpha-value>)",
           neutral: "hsl(var(--chart-3) / <alpha-value>)",
@@ -86,7 +93,6 @@ export default {
         },
       },
       fontFamily: {
-        /* Primary font variable prioritized */
         sans: ["var(--font-sans)", "Inter", "sans-serif"],
         serif: ["var(--font-serif)", "Georgia", "serif"],
         mono: ["var(--font-mono)", "JetBrains Mono", "monospace"],
