@@ -51,13 +51,11 @@ export default {
           border: "var(--destructive-border)",
         },
         ring: "hsl(var(--ring) / <alpha-value>)",
-        /* Semantic Material Aliases */
-        material: {
-          bronze: "hsl(var(--chart-1) / <alpha-value>)",
-          slate: "hsl(var(--chart-2) / <alpha-value>)",
-          spruce: "hsl(var(--chart-3) / <alpha-value>)",
-          clay: "hsl(var(--chart-4) / <alpha-value>)",
-          sandstone: "hsl(var(--chart-5) / <alpha-value>)",
+        /* Semantic High-Standout Aliases */
+        ui: {
+          glow: "hsl(var(--chart-1) / <alpha-value>)",
+          blueprint: "hsl(var(--chart-2) / <alpha-value>)",
+          electric: "hsl(var(--chart-3) / <alpha-value>)",
         },
         chart: {
           "1": "hsl(var(--chart-1) / <alpha-value>)",
@@ -67,7 +65,6 @@ export default {
           "5": "hsl(var(--chart-5) / <alpha-value>)",
           brand: "hsl(var(--chart-1) / <alpha-value>)",
           accent: "hsl(var(--chart-2) / <alpha-value>)",
-          neutral: "hsl(var(--chart-3) / <alpha-value>)",
         },
         sidebar: {
           ring: "hsl(var(--sidebar-ring) / <alpha-value>)",
