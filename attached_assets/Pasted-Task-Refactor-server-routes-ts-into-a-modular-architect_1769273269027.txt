@@ -1,0 +1,91 @@
+Task: Refactor server/routes.ts into a modular architecture. Goal: Split the monolithic file into domain-specific modules without breaking Law 25 compliance, Bill C-27 watermarking, or Stripe billing.
+
+Step 1: Create Directory Structure
+
+Create folder server/middleware/
+
+Create folder server/routes/
+
+Create folder server/lib/
+
+Step 2: Move Logic to Helper Modules (Preserve Imports)
+
+server/middleware/auth.ts:
+
+Move functions: getUserId, isSuperAdmin, requireActiveSubscription, reportGenerationUsage.
+
+Crucial: You must import storage from ../storage and keep the dynamic import("./stripeService") logic inside requireActiveSubscription to avoid circular dependencies.
+
+server/lib/prompt-utils.ts:
+
+Move function: buildVariationPrompt.
+
+Ensure strict type safety for the formData parameter.
+
+Step 3: Create Route Modules (Register these in the main file later) For each file below, export a function (e.g., export function registerGenerationRoutes(app: Express) { ... }).
+
+server/routes/account.ts (Legal Compliance):
+
+Move: DELETE /api/account/data and GET /api/account/export.
+
+Context: These implement Quebec Law 25. Do not modify the logic.
+
+Move: GET /api/admin/info.
+
+server/routes/billing.ts (Stripe):
+
+Move all /api/stripe/* endpoints (config, products, subscription, checkout, portal).
+
+Ensure stripeClient and stripeService are imported correctly.
+
+server/routes/gallery.ts:
+
+Move: /api/gallery, /api/gallery/save, /api/prompts-history.
+
+Import uploadImageToStorage from ../image-storage.
+
+server/routes/image-tools.ts:
+
+Move: /api/smart-crop.
+
+Import smartCropRequestSchema from @shared/schema.
+
+server/routes/generation.ts (Core AI Logic):
+
+Move: /api/generate, /api/generate/batch-styles, /api/variations, /api/modify, /api/generate-dimensional.
+
+CRITICAL: You must preserve the sharp(...).withMetadata(...) block in /api/generate. This is for Bill C-27 compliance.
+
+CRITICAL: Preserve the analyzeObjectStructure call and its injection into the prompt.
+
+Ensure all imports (gemini, image-utils, dimensional-prompt, zod, sharp) are updated to point to the correct relative paths.
+
+Step 4: Refactor Main Entry Point (server/routes.ts)
+
+Wipe the existing content of server/routes.ts.
+
+Import the new register functions from server/routes/*.ts.
+
+Create the main registerRoutes(app) function.
+
+Order of Operations:
+
+setupAuth(app) & registerAuthRoutes(app) (Must be first).
+
+registerAccountRoutes(app)
+
+registerBillingRoutes(app)
+
+registerGenerationRoutes(app)
+
+registerGalleryRoutes(app)
+
+registerImageToolRoutes(app)
+
+registerObjectStorageRoutes(app) (Keep this existing integration).
+
+Step 5: Final Verification
+
+Check that server/app.ts still has the Stripe Webhook route defined before the JSON middleware. (Do not edit app.ts, just verify).
+
+Ensure no functionality was deleted.
