@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Sparkles, 
   ArrowRight, 
-  ArrowLeft,
   Wand2, 
   Crop, 
   Ruler, 
@@ -72,9 +71,9 @@ function HeroSection() {
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
 
   return (
-    <section ref={ref} className="relative min-h-[calc(100vh-124px)] flex items-center justify-center overflow-hidden bg-black pb-20">
+    <section ref={ref} className="relative min-h-[calc(100vh-124px)] flex items-center justify-center overflow-hidden bg-background pb-20">
       <motion.div 
-        className="absolute inset-0 bg-gradient-to-br from-primary/10 via-black to-black"
+        className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background"
         style={{ y }}
       />
 
@@ -89,7 +88,7 @@ function HeroSection() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8 }}
         >
-          <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm" data-testid="badge-hero">
+          <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm">
             <Sparkles className="w-4 h-4 mr-2" />
             AI-Powered Interior Design
           </Badge>
@@ -126,37 +125,34 @@ function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <Button size="lg" className="text-lg px-8 py-6" asChild data-testid="button-start-designing">
+          <Button size="lg" className="text-lg px-8 py-6" asChild>
             <Link href="/app">
               Start Designing Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
-          <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild data-testid="button-view-gallery">
+          <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
             <Link href="/gallery">
               View Gallery
             </Link>
           </Button>
         </motion.div>
 
-        {/* --- STABLE SLIDER CONTAINER --- */}
         <div className="relative max-w-6xl mx-auto group/slider">
-
           <button 
             onClick={prevSlide}
-            className="absolute left-[-60px] top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-12 h-12 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-white transition-all hover:bg-white/20 hover:scale-110 active:scale-95 opacity-60 hover:opacity-100"
+            className="absolute left-[-60px] top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-12 h-12 rounded-full border border-border bg-background/20 backdrop-blur-md text-foreground transition-all hover:bg-background/40 hover:scale-110 active:scale-95 opacity-60 hover:opacity-100"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
 
           <button 
             onClick={nextSlide}
-            className="absolute right-[-60px] top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-12 h-12 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-white transition-all hover:bg-white/20 hover:scale-110 active:scale-95 opacity-60 hover:opacity-100"
+            className="absolute right-[-60px] top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-12 h-12 rounded-full border border-border bg-background/20 backdrop-blur-md text-foreground transition-all hover:bg-background/40 hover:scale-110 active:scale-95 opacity-60 hover:opacity-100"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
 
-          {/* Reserved Space: Force the container to 16:9 ratio */}
           <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border/50 aspect-video w-full bg-muted/5">
             {heroSlides.map((slide, idx) => (
               <motion.div
@@ -197,7 +193,6 @@ function HeroSection() {
             </div>
           </div>
 
-          {/* Indicators & Labels */}
           <div className="mt-10 w-full flex flex-col items-center justify-center gap-4">
             <div className="flex justify-center gap-4">
               {heroSlides.map((_, idx) => (
@@ -208,7 +203,7 @@ function HeroSection() {
                   aria-label={`Go to slide ${idx + 1}`}
                 >
                   <div className={`h-1 rounded-full transition-all duration-300 ${
-                    currentSlide === idx ? "bg-primary w-12" : "bg-white/10 w-6 group-hover:bg-white/30"
+                    currentSlide === idx ? "bg-primary w-12" : "bg-muted w-6 group-hover:bg-muted-foreground"
                   }`} />
                 </button>
               ))}
@@ -255,7 +250,6 @@ function SmartLockSection() {
     <section className="py-24 relative overflow-hidden bg-muted/5">
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Text Content */}
           <motion.div
              initial={{ opacity: 0, x: -30 }}
              whileInView={{ opacity: 1, x: 0 }}
@@ -288,7 +282,6 @@ function SmartLockSection() {
              </div>
           </motion.div>
 
-          {/* Visual Animation */}
           <motion.div
              initial={{ opacity: 0, scale: 0.95 }}
              whileInView={{ opacity: 1, scale: 1 }}
@@ -296,8 +289,7 @@ function SmartLockSection() {
              transition={{ duration: 0.8 }}
              className="relative"
           >
-             <div className="relative aspect-square rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-black">
-
+             <div className="relative aspect-square rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-card">
                 <AnimatePresence mode="popLayout">
                   <motion.img
                     key={currentImageIndex}
@@ -313,22 +305,16 @@ function SmartLockSection() {
 
                 <div className="absolute inset-0 bg-black/10 pointer-events-none" />
 
-                {/* "Locked" UI Element */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center z-20">
-                   {/* Pulse Effect - Uniform all around */}
                    <div className="absolute inset-0 bg-primary/40 rounded-full animate-ping opacity-50" />
-
-                   {/* Lock Badge */}
                    <div className="relative bg-background/90 backdrop-blur-md border border-primary/50 text-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
                      <Lock className="w-4 h-4 text-primary" />
                      <span className="text-sm font-semibold">Locked: Faucet</span>
                    </div>
-
-                   {/* Removed scanning line to eliminate bottom artifact */}
                 </div>
 
                 <div className="absolute bottom-4 left-4 z-20">
-                   <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white">
+                   <Badge className="bg-background/60 backdrop-blur-md border-border text-foreground">
                       Generating Style {currentImageIndex + 1} of 5...
                    </Badge>
                 </div>
@@ -369,8 +355,7 @@ function HowItWorksSection() {
 
   return (
     <section className="py-24 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-muted/20 to-black/5" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/20 to-background/5" />
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10" />
 
       <div className="relative max-w-7xl mx-auto px-4">
@@ -390,7 +375,6 @@ function HowItWorksSection() {
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-8 relative">
-          {/* Connecting Line (Desktop Only) */}
           <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-[2px] bg-gradient-to-r from-border/0 via-border to-border/0 z-0" />
 
           {steps.map((step, index) => (
@@ -428,43 +412,17 @@ function GallerySection() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const images = [
-    { 
-      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705684/room-scene-update/floating-vanity-walnut-brown-modern-ultra-4k-ar-16-9.jpg", 
-      style: "Modern Minimalist", 
-      desc: "Clean lines and uncluttered spaces." 
-    },
-    { 
-      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705684/room-scene-update/floating-vanity-walnut-brown-contemporary-ultra-4k-ar-16-9.jpg", 
-      style: "Contemporary Warmth", 
-      desc: "Bold textures meeting soft lighting." 
-    },
-    { 
-      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705685/room-scene-update/floating-vanity-walnut-brown-industrial-chic-ultra-4k-ar-16-9.jpg", 
-      style: "Industrial Chic", 
-      desc: "Raw materials with refined finishes." 
-    },
-    { 
-      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705685/room-scene-update/floating-vanity-walnut-brown-japandi-ultra-4k-ar-16-9.jpg", 
-      style: "Japandi Balance", 
-      desc: "The harmony of Japanese and Nordic design." 
-    },
-    { 
-      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705685/room-scene-update/floating-vanity-walnut-brown-zen-spa-ultra-4k-ar-16-9.jpg", 
-      style: "Zen Sanctuary", 
-      desc: "A peaceful retreat for mind and body." 
-    },
-    { 
-      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705815/room-scene-update/floating-vanity-walnut-brown-organic-modern-ultra-4k-ar-16-9.jpg", 
-      style: "Organic Modern", 
-      desc: "Nature-inspired tones and curves." 
-    },
+    { src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705684/room-scene-update/floating-vanity-walnut-brown-modern-ultra-4k-ar-16-9.jpg", style: "Modern Minimalist", desc: "Clean lines and uncluttered spaces." },
+    { src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705684/room-scene-update/floating-vanity-walnut-brown-contemporary-ultra-4k-ar-16-9.jpg", style: "Contemporary Warmth", desc: "Bold textures meeting soft lighting." },
+    { src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705685/room-scene-update/floating-vanity-walnut-brown-industrial-chic-ultra-4k-ar-16-9.jpg", style: "Industrial Chic", desc: "Raw materials with refined finishes." },
+    { src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705685/room-scene-update/floating-vanity-walnut-brown-japandi-ultra-4k-ar-16-9.jpg", style: "Japandi Balance", desc: "The harmony of Japanese and Nordic design." },
+    { src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705685/room-scene-update/floating-vanity-walnut-brown-zen-spa-ultra-4k-ar-16-9.jpg", style: "Zen Sanctuary", desc: "A peaceful retreat for mind and body." },
+    { src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1768705815/room-scene-update/floating-vanity-walnut-brown-organic-modern-ultra-4k-ar-16-9.jpg", style: "Organic Modern", desc: "Nature-inspired tones and curves." },
   ];
 
   return (
-    <section id="gallery" className="py-24 relative overflow-hidden bg-black/5">
+    <section id="gallery" className="py-24 relative overflow-hidden bg-background/50">
       <div className="max-w-[1600px] mx-auto px-4 md:px-8">
-
-        {/* Header */}
         <div className="flex flex-col items-center justify-center mb-12 text-center">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -481,16 +439,7 @@ function GallerySection() {
           </motion.div>
         </div>
 
-        {/* Unified Responsive Container 
-            Mobile: Flex Column (Image First, Menu Second)
-            Desktop: Grid (Menu Left, Image Right)
-        */}
         <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6 h-auto lg:h-[750px]">
-
-          {/* Viewport (Image Area) 
-              Order-1 on Mobile (Top)
-              Order-2 on Desktop (Right)
-          */}
           <div className="order-1 lg:order-2 lg:col-span-8 relative rounded-3xl overflow-hidden shadow-2xl border border-border/50 bg-muted aspect-video lg:aspect-auto">
             <AnimatePresence mode="popLayout">
               <motion.img
@@ -502,31 +451,20 @@ function GallerySection() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
                 className="absolute inset-0 w-full h-full object-cover"
-                style={{
-                  imageRendering: 'auto',
-                  transform: 'translate3d(0, 0, 0) scale(1.001)', 
-                  willChange: 'transform, opacity'
-                }}
+                style={{ imageRendering: 'auto', transform: 'translate3d(0, 0, 0) scale(1.001)', willChange: 'transform, opacity' }}
               />
             </AnimatePresence>
 
-            {/* Overlay Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent pointer-events-none" />
 
-            {/* Mobile-only Label Overlay */}
             <div className="absolute bottom-4 left-4 lg:hidden z-20">
-              <Badge className="backdrop-blur-md bg-black/50 text-white border-white/20 text-sm py-1 px-3">
+              <Badge className="backdrop-blur-md bg-background/50 text-foreground border-border text-sm py-1 px-3">
                 {images[activeIndex].style}
               </Badge>
             </div>
           </div>
 
-          {/* Navigation Menu 
-              Order-2 on Mobile (Bottom)
-              Order-1 on Desktop (Left)
-          */}
-          <div className="order-2 lg:order-1 lg:col-span-4 flex lg:flex-col justify-start lg:justify-center z-10 
-                          overflow-x-auto pb-4 lg:pb-0 gap-3 lg:gap-2 snap-x px-1">
+          <div className="order-2 lg:order-1 lg:col-span-4 flex lg:flex-col justify-start lg:justify-center z-10 overflow-x-auto pb-4 lg:pb-0 gap-3 lg:gap-2 snap-x px-1">
              {images.map((img, index) => (
                <motion.button
                  key={index}
@@ -535,8 +473,7 @@ function GallerySection() {
                  transition={{ delay: index * 0.05 }}
                  viewport={{ once: true }}
                  onClick={() => setActiveIndex(index)}
-                 className={`group relative flex flex-col items-start p-4 lg:p-6 rounded-xl text-left transition-all duration-300 border shrink-0 
-                   w-[200px] lg:w-full snap-start
+                 className={`group relative flex flex-col items-start p-4 lg:p-6 rounded-xl text-left transition-all duration-300 border shrink-0 w-[200px] lg:w-full snap-start
                    ${activeIndex === index 
                      ? 'bg-background border-border shadow-lg scale-[1.02] ring-1 ring-primary/20' 
                      : 'bg-background/40 hover:bg-background/80 border-transparent hover:border-border/30 opacity-70 hover:opacity-100'
@@ -551,24 +488,15 @@ function GallerySection() {
                    {img.desc}
                  </span>
 
-                 {/* Active Indicator Line */}
                  {activeIndex === index && (
-                   <motion.div 
-                     layoutId="active-glow"
-                     className="absolute left-0 top-0 w-1 h-full bg-primary rounded-l-xl hidden lg:block" 
-                   />
+                   <motion.div layoutId="active-glow" className="absolute left-0 top-0 w-1 h-full bg-primary rounded-l-xl hidden lg:block" />
                  )}
-                 {/* Mobile Active Indicator (Bottom Line) */}
                  {activeIndex === index && (
-                   <motion.div 
-                     layoutId="active-glow-mobile"
-                     className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-b-xl lg:hidden" 
-                   />
+                   <motion.div layoutId="active-glow-mobile" className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-b-xl lg:hidden" />
                  )}
                </motion.button>
              ))}
           </div>
-
         </div>
       </div>
     </section>
@@ -577,27 +505,9 @@ function GallerySection() {
 
 function TestimonialsSection() {
   const testimonials = [
-    {
-      name: "Sarah Chen",
-      role: "Interior Designer",
-      avatar: "SC",
-      content: "RoomReimagine has completely transformed my client presentations. I can now show multiple design concepts in minutes instead of days.",
-      rating: 5
-    },
-    {
-      name: "Marcus Johnson",
-      role: "Real Estate Agent",
-      avatar: "MJ",
-      content: "The virtual staging capabilities are incredible. My listings with AI-redesigned photos get 3x more engagement.",
-      rating: 5
-    },
-    {
-      name: "Emily Rodriguez",
-      role: "Homeowner",
-      avatar: "ER",
-      content: "I was skeptical at first, but seeing my living room in 10 different styles helped me finally decide on my renovation direction.",
-      rating: 5
-    }
+    { name: "Sarah Chen", role: "Interior Designer", avatar: "SC", content: "RoomReimagine has completely transformed my client presentations. I can now show multiple design concepts in minutes instead of days.", rating: 5 },
+    { name: "Marcus Johnson", role: "Real Estate Agent", avatar: "MJ", content: "The virtual staging capabilities are incredible. My listings with AI-redesigned photos get 3x more engagement.", rating: 5 },
+    { name: "Emily Rodriguez", role: "Homeowner", avatar: "ER", content: "I was skeptical at first, but seeing my living room in 10 different styles helped me finally decide on my renovation direction.", rating: 5 }
   ];
 
   const stats = [
@@ -619,13 +529,8 @@ function TestimonialsSection() {
           whileInView="animate"
           viewport={{ once: true }}
         >
-          {stats.map((stat, index) => (
-            <motion.div 
-              key={stat.label}
-              variants={fadeInUp}
-              className="text-center"
-              data-testid={`stat-${index}`}
-            >
+          {stats.map((stat) => (
+            <motion.div key={stat.label} variants={fadeInUp} className="text-center">
               <div className="text-4xl md:text-5xl font-bold text-primary mb-2">{stat.value}</div>
               <div className="text-muted-foreground">{stat.label}</div>
             </motion.div>
@@ -640,21 +545,13 @@ function TestimonialsSection() {
           transition={{ duration: 0.6 }}
         >
           <Badge variant="outline" className="mb-4">Testimonials</Badge>
-          <h2 className="text-4xl md:text-5xl font-bold">
-            Loved by Designers & Homeowners
-          </h2>
+          <h2 className="text-4xl md:text-5xl font-bold">Loved by Designers & Homeowners</h2>
         </motion.div>
 
-        <motion.div 
-          className="grid md:grid-cols-3 gap-8"
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
-          viewport={{ once: true }}
-        >
-          {testimonials.map((testimonial, index) => (
+        <div className="grid md:grid-cols-3 gap-8">
+          {testimonials.map((testimonial) => (
             <motion.div key={testimonial.name} variants={fadeInUp}>
-              <Card className="h-full border-border/50 bg-card/50 backdrop-blur-sm" data-testid={`testimonial-${index}`}>
+              <Card className="h-full border-border/50 bg-card/50 backdrop-blur-sm">
                 <CardContent className="p-8">
                   <div className="flex gap-1 mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
@@ -663,9 +560,7 @@ function TestimonialsSection() {
                   </div>
                   <p className="text-lg mb-6 leading-relaxed">"{testimonial.content}"</p>
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
-                      {testimonial.avatar}
-                    </div>
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">{testimonial.avatar}</div>
                     <div>
                       <div className="font-semibold">{testimonial.name}</div>
                       <div className="text-sm text-muted-foreground">{testimonial.role}</div>
@@ -675,26 +570,18 @@ function TestimonialsSection() {
               </Card>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );
 }
 
 function PricingCTASection() {
-  const benefits = [
-    "Unlimited room redesigns",
-    "All 15+ design styles",
-    "Smart Crop & Dimensional tools",
-    "High-resolution exports",
-    "Priority AI processing",
-    "Commercial usage rights"
-  ];
+  const benefits = ["Unlimited room redesigns", "All 15+ design styles", "Smart Crop & Dimensional tools", "High-resolution exports", "Priority AI processing", "Commercial usage rights"];
 
   return (
     <section className="py-32 px-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
-
       <motion.div 
         className="relative max-w-4xl mx-auto text-center"
         initial={{ opacity: 0, y: 30 }}
@@ -703,67 +590,27 @@ function PricingCTASection() {
         transition={{ duration: 0.6 }}
       >
         <Badge className="mb-6">Pro Plan</Badge>
-        <h2 className="text-4xl md:text-6xl font-bold mb-6">
-          Start Creating Today
-        </h2>
-        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Join thousands of designers, agents, and homeowners transforming spaces with AI.
-        </p>
-
+        <h2 className="text-4xl md:text-6xl font-bold mb-6">Start Creating Today</h2>
+        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Join thousands of designers, agents, and homeowners transforming spaces with AI.</p>
         <div className="flex flex-col items-center mb-10">
-          <div className="text-5xl font-bold mb-2">
-            $79<span className="text-xl font-normal text-muted-foreground">/month</span>
-          </div>
+          <div className="text-5xl font-bold mb-2">$79<span className="text-xl font-normal text-muted-foreground">/month</span></div>
           <p className="text-muted-foreground">+ usage-based billing for generations</p>
         </div>
-
-        <motion.div 
-          className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10 max-w-2xl mx-auto"
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
-          viewport={{ once: true }}
-        >
-          {benefits.map((benefit, index) => (
-            <motion.div 
-              key={benefit}
-              variants={fadeInUp}
-              className="flex items-center gap-2 text-left"
-              data-testid={`benefit-${index}`}
-            >
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10 max-w-2xl mx-auto">
+          {benefits.map((benefit) => (
+            <div key={benefit} className="flex items-center gap-2 text-left">
               <Check className="w-5 h-5 text-primary flex-shrink-0" />
               <span className="text-sm">{benefit}</span>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
-
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button size="lg" className="text-lg px-10 py-6" asChild data-testid="button-get-started-pricing">
-            <Link href="/pricing">
-              Get Started
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </Button>
-          <Button size="lg" variant="outline" className="text-lg px-10 py-6" asChild data-testid="button-try-free">
-            <Link href="/app">
-              Try Free First
-            </Link>
-          </Button>
         </div>
-
-        <div className="flex items-center justify-center gap-6 mt-8 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4" />
-            Instant setup
-          </div>
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4" />
-            Cancel anytime
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            7-day trial
-          </div>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button size="lg" className="text-lg px-10 py-6" asChild>
+            <Link href="/pricing">Get Started<ArrowRight className="ml-2 h-5 w-5" /></Link>
+          </Button>
+          <Button size="lg" variant="outline" className="text-lg px-10 py-6" asChild>
+            <Link href="/app">Try Free First</Link>
+          </Button>
         </div>
       </motion.div>
     </section>
@@ -772,71 +619,28 @@ function PricingCTASection() {
 
 function FAQSection() {
   const faqs = [
-    {
-      question: "How does AI room redesign work?",
-      answer: "Simply upload a photo of any room, select your desired style, and our AI will generate a photorealistic visualization of your space in that new style. The AI preserves the room's structure while transforming the decor, furniture, and overall aesthetic."
-    },
-    {
-      question: "What image quality can I expect?",
-      answer: "We offer three quality tiers: Standard (fast previews), High Fidelity 2K (detailed renders), and Ultra 4K (professional-grade). All outputs are photorealistic and suitable for presentations, client proposals, and marketing materials."
-    },
-    {
-      question: "Can I use the generated images commercially?",
-      answer: "Yes! Pro subscribers have full commercial usage rights for all generated images. Use them for client presentations, marketing materials, social media, or any business purpose."
-    },
-    {
-      question: "How is billing calculated?",
-      answer: "We use a simple monthly subscription ($79/month) plus usage-based pricing per generated image. Standard quality is $0.20/image, High Fidelity is $0.35, and Ultra 4K is $0.50. You only pay for what you use."
-    },
-    {
-      question: "What design styles are available?",
-      answer: "We offer 15+ design styles including Modern, Contemporary, Scandinavian, Industrial, Bohemian, Mid-Century Modern, Minimalist, Traditional, Mediterranean, Art Deco, Rustic, Coastal, Japanese, and more."
-    },
-    {
-      question: "Can I preserve specific objects in my room?",
-      answer: "Absolutely! Our AI allows you to specify which elements to keep unchanged during the redesign. Whether it's a cherished piece of furniture or architectural features, you control what stays."
-    }
+    { question: "How does AI room redesign work?", answer: "Simply upload a photo of any room, select your desired style, and our AI will generate a photorealistic visualization of your space in that new style. The AI preserves the room's structure while transforming the decor, furniture, and overall aesthetic." },
+    { question: "What image quality can I expect?", answer: "We offer three quality tiers: Standard (fast previews), High Fidelity 2K (detailed renders), and Ultra 4K (professional-grade). All outputs are photorealistic and suitable for presentations, client proposals, and marketing materials." },
+    { question: "Can I use the generated images commercially?", answer: "Yes! Pro subscribers have full commercial usage rights for all generated images." },
+    { question: "How is billing calculated?", answer: "We use a simple monthly subscription ($79/month) plus usage-based pricing per generated image. You only pay for what you use." },
+    { question: "What design styles are available?", answer: "We offer 15+ design styles including Modern, Contemporary, Scandinavian, Industrial, Bohemian, and more." },
+    { question: "Can I preserve specific objects in my room?", answer: "Absolutely! Our AI allows you to specify which elements to keep unchanged during the redesign." }
   ];
 
   return (
     <section className="py-32 px-4">
+      <div className="max-w-3xl mx-auto text-center mb-16">
+        <h2 className="text-4xl md:text-5xl font-bold">Frequently Asked Questions</h2>
+      </div>
       <div className="max-w-3xl mx-auto">
-        <motion.div 
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <h2 className="text-4xl md:text-5xl font-bold">
-            Frequently Asked Questions
-          </h2>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <Accordion type="single" collapsible className="space-y-4">
-            {faqs.map((faq, index) => (
-              <AccordionItem 
-                key={index} 
-                value={`item-${index}`}
-                className="border rounded-xl px-6 bg-card/50"
-                data-testid={`faq-${index}`}
-              >
-                <AccordionTrigger className="text-left text-lg font-medium py-6 hover:no-underline">
-                  {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-6 leading-relaxed">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </motion.div>
+        <Accordion type="single" collapsible className="space-y-4">
+          {faqs.map((faq, index) => (
+            <AccordionItem key={index} value={`item-${index}`} className="border rounded-xl px-6 bg-card/50">
+              <AccordionTrigger className="text-left text-lg font-medium py-6 hover:no-underline">{faq.question}</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6 leading-relaxed">{faq.answer}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </div>
     </section>
   );
@@ -844,32 +648,18 @@ function FAQSection() {
 
 function FooterSection() {
   return (
-    <footer className="border-t border-white/10 py-12 px-4 bg-black text-white">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center h-10">
-            <img 
-              src="https://res.cloudinary.com/olilepage/image/upload/v1768747146/room-scene-update/logos/room-reimagine-logo-walnut-marble-black-background-cropped.jpg" 
-              alt="RoomReimagine AI Logo" 
-              className="h-full w-auto aspect-[21/9] object-contain opacity-80 hover:opacity-100 transition-opacity"
-            />
-          </div>
-
-          <nav className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/app" className="hover:text-foreground transition-colors" data-testid="footer-link-app">Design App</Link>
-            <Link href="/gallery" className="hover:text-foreground transition-colors" data-testid="footer-link-gallery">Gallery</Link>
-            <Link href="/pricing" className="hover:text-foreground transition-colors" data-testid="footer-link-pricing">Pricing</Link>
-
-            {/* [NEW] Privacy Link */}
-            <Link href="/privacy" className="hover:text-foreground transition-colors underline decoration-border hover:decoration-foreground underline-offset-4">
-              Privacy & Legal
-            </Link>
-          </nav>
-
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} RoomReimagine AI. All rights reserved.
-          </p>
+    <footer className="border-t border-border py-12 px-4 bg-background text-foreground">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center h-10">
+          <img src="https://res.cloudinary.com/olilepage/image/upload/v1768747146/room-scene-update/logos/room-reimagine-logo-walnut-marble-black-background-cropped.jpg" alt="RoomReimagine AI Logo" className="h-full w-auto aspect-[21/9] object-contain opacity-80" />
         </div>
+        <nav className="flex items-center gap-6 text-sm text-muted-foreground">
+          <Link href="/app" className="hover:text-foreground">Design App</Link>
+          <Link href="/gallery" className="hover:text-foreground">Gallery</Link>
+          <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
+          <Link href="/privacy" className="hover:text-foreground underline decoration-border hover:decoration-foreground underline-offset-4">Privacy & Legal</Link>
+        </nav>
+        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} RoomReimagine AI. All rights reserved.</p>
       </div>
     </footer>
   );
@@ -879,7 +669,6 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background pt-[124px]">
       <HeroSection />
-      {/* Inserted SmartLockSection to highlight key feature before process */}
       <SmartLockSection />
       <HowItWorksSection />
       <GallerySection />
