@@ -10,13 +10,15 @@ const preview: Preview = {
       },
     },
     backgrounds: {
-      default: 'dark',
-      values: [
-        { name: 'light', value: '#fcfcfb' },
-        { name: 'dark', value: '#181a18' },
-      ],
+      disable: true,
     },
   },
+  decorators: [
+    (Story) => {
+      document.documentElement.classList.add('dark');
+      return Story();
+    },
+  ],
 };
 
 export default preview;
