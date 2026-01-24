@@ -13,7 +13,7 @@ const preview: Preview = {
     backgrounds: {
       default: 'dark',
       values: [
-        { name: 'light', value: '#fcfcfb' }, // Soft Linen
+        { name: 'light', value: '#ece9e5' }, // Deep Linen
         { name: 'dark', value: '#121417' },  // Deep Obsidian
       ],
     },

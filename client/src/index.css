@@ -14,38 +14,38 @@ html {
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  /* The Atelier Palette - Light Mode */
-  --background: 30 20% 98%; /* Soft Linen */
+  /* The Atelier Palette - Darker Linen Iteration */
+  --background: 30 10% 92%; /* Deepened Linen */
   --foreground: 210 15% 12%; /* Deep Obsidian */
-  --border: 30 10% 90%;
-  --card: 30 15% 96%;
+  --border: 30 10% 85%;      /* Increased contrast for borders */
+  --card: 30 12% 88%;        /* Inset card look */
   --card-foreground: 210 15% 12%;
-  --card-border: 30 10% 92%;
-  --sidebar: 30 12% 95%;
+  --card-border: 30 10% 82%;
+  --sidebar: 30 10% 90%;
   --sidebar-foreground: 210 15% 12%;
-  --sidebar-border: 30 10% 90%;
+  --sidebar-border: 30 10% 85%;
   --sidebar-primary: 35 45% 45%; /* Deep Bronze */
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 30 10% 90%;
+  --sidebar-accent: 30 10% 85%;
   --sidebar-accent-foreground: 210 15% 12%;
   --sidebar-ring: 35 45% 45%;
-  --popover: 30 15% 96%;
+  --popover: 30 12% 90%;
   --popover-foreground: 210 15% 12%;
-  --popover-border: 30 10% 92%;
+  --popover-border: 30 10% 85%;
   --primary: 35 45% 45%; /* Deep Bronze */
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 10% 91%;
+  --secondary: 210 10% 85%;
   --secondary-foreground: 210 15% 12%;
-  --muted: 210 10% 93%;
-  --muted-foreground: 210 10% 46%;
-  --accent: 43 50% 90%; /* Light Brass */
+  --muted: 210 10% 88%;
+  --muted-foreground: 210 10% 40%;
+  --accent: 43 50% 88%; /* Muted Brass */
   --accent-foreground: 210 15% 12%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --input: 210 10% 82%;
+  --input: 210 10% 80%;
   --ring: 35 45% 45%;
 
-  /* Semantic Chart Tokens - Light Mode */
+  /* Semantic Chart Tokens */
   --chart-1: 35 45% 45%; /* Bronze */
   --chart-2: 210 15% 25%; /* Slate */
   --chart-3: 160 15% 40%; /* Muted Spruce */
@@ -56,14 +56,14 @@ html {
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
   --radius: .5rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(30 10% 15% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(30 10% 15% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(30 10% 15% / 0.00), 0px 1px 2px -1px hsl(30 10% 15% / 0.05);
-  --shadow: 0px 2px 0px 0px hsl(30 10% 15% / 0.00), 0px 1px 2px -1px hsl(30 10% 15% / 0.08);
-  --shadow-md: 0px 2px 0px 0px hsl(30 10% 15% / 0.00), 0px 2px 4px -1px hsl(30 10% 15% / 0.10);
-  --shadow-lg: 0px 2px 0px 0px hsl(30 10% 15% / 0.00), 0px 4px 6px -1px hsl(30 10% 15% / 0.12);
-  --shadow-xl: 0px 2px 0px 0px hsl(30 10% 15% / 0.00), 0px 8px 10px -1px hsl(30 10% 15% / 0.15);
-  --shadow-2xl: 0px 2px 0px 0px hsl(30 10% 15% / 0.00);
+  --shadow-2xs: 0px 2px 0px 0px hsl(30 10% 10% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(30 10% 10% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(30 10% 10% / 0.00), 0px 1px 2px -1px hsl(30 10% 10% / 0.05);
+  --shadow: 0px 2px 0px 0px hsl(30 10% 10% / 0.00), 0px 1px 2px -1px hsl(30 10% 10% / 0.08);
+  --shadow-md: 0px 2px 0px 0px hsl(30 10% 10% / 0.00), 0px 2px 4px -1px hsl(30 10% 10% / 0.10);
+  --shadow-lg: 0px 2px 0px 0px hsl(30 10% 10% / 0.00), 0px 4px 6px -1px hsl(30 10% 10% / 0.12);
+  --shadow-xl: 0px 2px 0px 0px hsl(30 10% 10% / 0.00), 0px 8px 10px -1px hsl(30 10% 10% / 0.15);
+  --shadow-2xl: 0px 2px 0px 0px hsl(30 10% 10% / 0.00);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -86,7 +86,7 @@ html {
 
   /* The Atelier Palette - Dark Mode */
   --background: 210 15% 8%; /* Deep Obsidian */
-  --foreground: 30 15% 90%; /* Soft Linen */
+  --foreground: 30 15% 90%; /* Linen-White */
   --border: 210 10% 18%;
   --card: 210 12% 12%;
   --card-foreground: 30 15% 92%;
@@ -115,7 +115,6 @@ html {
   --input: 210 10% 24%;
   --ring: 43 40% 55%;
 
-  /* Semantic Chart Tokens - Dark Mode */
   --chart-1: 43 40% 55%;
   --chart-2: 210 15% 45%;
   --chart-3: 160 15% 55%;

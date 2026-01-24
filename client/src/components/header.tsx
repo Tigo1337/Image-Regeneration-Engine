@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sparkles, LogIn, LogOut, CreditCard, Image } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Header() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -16,7 +17,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black">
+    <header className="sticky top-0 z-50 w-full border-b border-border/10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between px-4 gap-4">
         <div className="flex items-center gap-6">
           <Link href="/app" className="flex items-center h-8">
@@ -63,6 +64,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {isLoading ? (
             <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
           ) : isAuthenticated && user ? (

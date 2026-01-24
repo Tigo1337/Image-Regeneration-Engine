@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { ThemeToggle } from "./theme-toggle";
 
 export function LandingHeader() {
   const { isAuthenticated } = useAuth();
@@ -19,7 +20,7 @@ export function LandingHeader() {
 
   return (
     <motion.header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-black border-b border-white/10 shadow-sm`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-background/80 backdrop-blur-md border-b border-border/10 shadow-sm`}
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5 }}
@@ -48,6 +49,7 @@ export function LandingHeader() {
           </nav>
           
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             {isAuthenticated ? (
               <Button asChild data-testid="button-open-app">
                 <Link href="/app">Open App</Link>
