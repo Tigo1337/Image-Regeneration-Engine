@@ -1,0 +1,72 @@
+Task: Add Quality and Output Format options to the "Modify" (Specific Element Update) feature.
+
+1. Update Backend: server/routes/modify.ts
+
+Modify elementUpdateRequestSchema to include:
+
+quality: z.string().optional().default("High Fidelity (2K)")
+
+outputFormat: z.string().optional().default("PNG")
+
+In the /api/modify/element route:
+
+Destructure quality and outputFormat from the parsed body.
+
+Pass these variables into the generateRoomRedesign function call (replacing the hardcoded values).
+
+Update reportGenerationUsage(req, quality) to use the dynamic quality variable.
+
+2. Update Frontend: client/src/components/control-panel.tsx
+
+Interface: Update ControlPanelProps so onModifyElement accepts 3 arguments:
+
+onModifyElement: (request: string, quality: string, outputFormat: string) => void;
+
+State: Inside the component, add two new state variables:
+
+const [modifyQuality, setModifyQuality] = useState("High Fidelity (2K)");
+
+const [modifyOutputFormat, setModifyOutputFormat] = useState("PNG");
+
+UI: In the TabsContent for value="modify", insert a 2-column grid between the Textarea and the Separator.
+
+Column 1: A Select input for Quality (Options: "Standard", "High Fidelity (2K)", "Ultra (4K)").
+
+Column 2: A Select input for Output Format (Options: "PNG", "JPEG", "WEBP").
+
+Action: Update the "Update Element" button's onClick to pass the new state values:
+
+onClick={() => onModifyElement(elementRequest, modifyQuality, modifyOutputFormat)}
+
+3. Reference Code for Frontend UI Insert this block inside the "modify" tab content:
+
+TypeScript
+<div className="grid grid-cols-2 gap-4">
+  <div className="space-y-2">
+    <Label className="text-sm font-medium">Quality</Label>
+    <Select value={modifyQuality} onValueChange={setModifyQuality}>
+      <SelectTrigger className="bg-background">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="Standard">Standard</SelectItem>
+        <SelectItem value="High Fidelity (2K)">High Fidelity (2K)</SelectItem>
+        <SelectItem value="Ultra (4K)">Ultra (4K)</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+
+  <div className="space-y-2">
+    <Label className="text-sm font-medium">Output Format</Label>
+    <Select value={modifyOutputFormat} onValueChange={setModifyOutputFormat}>
+      <SelectTrigger className="bg-background">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {outputFormats.map((fmt) => (
+          <SelectItem key={fmt} value={fmt}>{fmt}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+</div>
