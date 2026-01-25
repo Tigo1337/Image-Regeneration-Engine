@@ -274,6 +274,41 @@ export default function Home() {
     }
   });
 
+  // NEW: Mutation for Specific Element Update via /api/modify/element
+  const modifyElementMutation = useMutation({
+    mutationFn: async (data: { imageData: string; modificationRequest: string; originalFileName?: string }) => {
+      const res = await apiRequest("POST", "/api/modify/element", data);
+      return res.json();
+    },
+    onSuccess: (response) => {
+      if (response.success && response.generatedImage) {
+        setGeneratedImage(response.generatedImage);
+        setGenerationType("design");
+        
+        // Invalidate gallery to show the modified image
+        queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
+        
+        toast({
+          title: "Element Updated!",
+          description: "Your specific change has been applied to the image.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Update Failed",
+          description: response.error || "Failed to apply element update",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update element",
+      });
+    },
+  });
+
   const batchStylesMutation = useMutation({
     mutationFn: async (data: { imageData: string; formData: RoomRedesignRequest; styles: string[] }) => {
       const res = await apiRequest("POST", "/api/generate/batch-styles", data);
@@ -429,6 +464,28 @@ export default function Home() {
     });
   };
 
+  // NEW: Handler for Specific Element Update
+  const handleModifyElement = (request: string) => {
+    // Use generatedImage if available, otherwise fall back to original
+    const imageToModify = generatedImage || originalImage;
+    
+    if (!imageToModify) {
+      toast({ variant: "destructive", title: "No image", description: "Please upload an image first" });
+      return;
+    }
+
+    if (!request.trim()) {
+      toast({ variant: "destructive", title: "Missing request", description: "Please describe what you want to change" });
+      return;
+    }
+
+    modifyElementMutation.mutate({
+      imageData: imageToModify,
+      modificationRequest: request,
+      originalFileName: originalFileName,
+    });
+  };
+
   const handleReset = () => {
     setOriginalImage(null);
     setOriginalFileName("image");
@@ -472,8 +529,9 @@ export default function Home() {
                 onGenerateBatchStyles={handleGenerateBatchStyles}
                 onSmartCrop={handleSmartCrop}
                 onGenerateDimensional={handleGenerateDimensional}
+                onModifyElement={handleModifyElement}
                 disabled={!originalImage}
-                isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending}
+                isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending || modifyElementMutation.isPending}
                 isModificationMode={!!generatedImage && generationType === "design"}
                 modificationPrompt={modificationPrompt}
                 onModificationPromptChange={setModificationPrompt}
@@ -505,7 +563,7 @@ export default function Home() {
 
       <ComplianceFooter />
 
-      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending) && <LoadingOverlay />}
+      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending || modifyElementMutation.isPending) && <LoadingOverlay />}
     </div>
   );
 }

@@ -38,8 +38,9 @@ interface ControlPanelProps {
   onGenerate: (data: RoomRedesignRequest, prompt: string, batchSize?: number) => void;
   onGenerateVariations?: (selected: string[]) => void;
   onGenerateBatchStyles?: (data: RoomRedesignRequest, prompt: string) => void;
-  onSmartCrop: (data: SmartCropRequest) => void;
-  onGenerateDimensional: (data: DimensionalImageRequest) => void;
+  onSmartCrop?: (data: SmartCropRequest) => void;
+  onGenerateDimensional?: (data: DimensionalImageRequest) => void;
+  onModifyElement: (request: string) => void;
   disabled?: boolean;
   isGenerating?: boolean;
   isModificationMode?: boolean;
@@ -59,6 +60,7 @@ export function ControlPanel({
   onGenerateBatchStyles,
   onSmartCrop,
   onGenerateDimensional,
+  onModifyElement,
   disabled, 
   isGenerating,
   isModificationMode = false,
@@ -80,10 +82,13 @@ export function ControlPanel({
   const [generateMultiple, setGenerateMultiple] = useState(false);
   const [batchSize, setBatchSize] = useState(1);
 
-  // Local state for Smart Crop Tab
+  // Local state for Smart Crop Tab (kept for backwards compatibility)
   const [cropObject, setCropObject] = useState("");
   const [cropFill, setCropFill] = useState(80);
   const [cropRatio, setCropRatio] = useState<"1:1" | "9:16" | "16:9" | "4:5">("1:1");
+
+  // Local state for Element Update Tab
+  const [elementRequest, setElementRequest] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inspirationInputRef = useRef<HTMLInputElement>(null);
@@ -345,10 +350,9 @@ export function ControlPanel({
   return (
     <div className="space-y-4">
       <Tabs defaultValue="design" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="design">Design</TabsTrigger>
-          <TabsTrigger value="crop">Crop</TabsTrigger>
-          <TabsTrigger value="dimensional">Dimensions</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="design" data-testid="tab-design">Design</TabsTrigger>
+          <TabsTrigger value="modify" data-testid="tab-modify">Modify</TabsTrigger>
         </TabsList>
 
         {/* --- DESIGN TAB --- */}
@@ -768,15 +772,15 @@ export function ControlPanel({
           </Form>
         </TabsContent>
 
-        {/* --- SMART CROP TAB --- */}
-        <TabsContent value="crop" className="space-y-6 mt-4">
+        {/* --- MODIFY TAB --- */}
+        <TabsContent value="modify" className="space-y-6 mt-4">
            <div className="bg-muted/50 p-4 rounded-lg border border-border space-y-4">
              <div className="flex items-start gap-2">
-                <Crop className="w-5 h-5 mt-1 text-primary" />
+                <Sparkles className="w-5 h-5 mt-1 text-primary" />
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">Pixel-Perfect Smart Crop</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Specific Element Update</h3>
                   <p className="text-xs text-muted-foreground">
-                    Automatically detect objects and crop/scale them to a consistent ratio.
+                    Change specific details like hardware, colors, or materials without altering the rest of the room.
                   </p>
                 </div>
              </div>
@@ -785,40 +789,14 @@ export function ControlPanel({
 
              <div className="space-y-4">
                 <div className="space-y-2">
-                   <Label className="text-sm font-medium">Target Object</Label>
-                   <Input 
-                     placeholder="e.g., White freestanding bathtub" 
-                     value={cropObject}
-                     onChange={(e) => setCropObject(e.target.value)}
-                     className="bg-background"
+                   <Label className="text-sm font-medium">Modification Request</Label>
+                   <Textarea 
+                     placeholder="e.g., Change all cabinet hardware to Matte Black." 
+                     value={elementRequest}
+                     onChange={(e) => setElementRequest(e.target.value)}
+                     className="bg-background h-32 resize-none"
+                     data-testid="textarea-element-request"
                    />
-                </div>
-
-                <div className="space-y-2">
-                   <div className="flex justify-between">
-                     <Label className="text-sm font-medium">Product Fill Ratio</Label>
-                     <span className="text-xs font-mono">{cropFill}%</span>
-                   </div>
-                   <Slider
-                     min={20} max={100} step={5}
-                     value={[cropFill]}
-                     onValueChange={(v) => setCropFill(v[0])}
-                   />
-                </div>
-
-                <div className="space-y-2">
-                   <Label className="text-sm font-medium">Output Aspect Ratio</Label>
-                   <Select value={cropRatio} onValueChange={(v: any) => setCropRatio(v)}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1:1">Square (1:1)</SelectItem>
-                        <SelectItem value="9:16">Story (9:16)</SelectItem>
-                        <SelectItem value="4:5">Portrait (4:5)</SelectItem>
-                        <SelectItem value="16:9">Landscape (16:9)</SelectItem>
-                      </SelectContent>
-                   </Select>
                 </div>
              </div>
 
@@ -827,22 +805,14 @@ export function ControlPanel({
              <Button 
                className="w-full" 
                size="lg"
-               onClick={() => onSmartCrop({ 
-                 objectName: cropObject, 
-                 fillRatio: cropFill, 
-                 aspectRatio: cropRatio 
-               })}
-               disabled={disabled || isGenerating || !cropObject}
+               onClick={() => onModifyElement(elementRequest)}
+               disabled={disabled || isGenerating || !elementRequest}
+               data-testid="button-update-element"
              >
-               <Crop className="w-5 h-5 mr-2" />
-               {isGenerating ? "Processing..." : "Generate Smart Crop"}
+               <Sparkles className="w-5 h-5 mr-2" />
+               {isGenerating ? "Processing..." : "Update Element"}
              </Button>
            </div>
-        </TabsContent>
-
-        {/* --- DIMENSIONAL TAB --- */}
-        <TabsContent value="dimensional" className="space-y-6 mt-4">
-           {/* ... (Dimensional Tab content remains unchanged) */}
         </TabsContent>
       </Tabs>
     </div>
