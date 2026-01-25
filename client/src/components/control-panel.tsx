@@ -856,82 +856,81 @@ export function ControlPanel({
         </TabsContent>
 
         {/* --- OUTPAINT TAB --- */}
-        <TabsContent value="outpaint" className="space-y-6 mt-4">
-           <div className="bg-muted/50 p-4 rounded-lg border border-border space-y-4">
-             <div className="flex items-start gap-2">
-                <Maximize className="w-5 h-5 mt-1 text-primary" />
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">Outpaint / Uncrop</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Extend your image to a new aspect ratio. The AI will fill in the borders seamlessly.
-                  </p>
-                </div>
-             </div>
+        <TabsContent value="outpaint" className="mt-4 space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-start gap-2">
+              <Maximize className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
+              <div>
+                <Label className="text-sm font-semibold text-card-foreground">
+                  Outpaint / Uncrop
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Extend your image to a new aspect ratio. The AI will fill in the borders seamlessly.
+                </p>
+              </div>
+            </div>
 
-             <Separator />
+            <div className="bg-muted p-4 rounded-md space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Target Aspect Ratio</Label>
+                <Select value={outpaintAspectRatio} onValueChange={setOutpaintAspectRatio}>
+                  <SelectTrigger className="bg-background" data-testid="select-outpaint-ratio">
+                    <SelectValue placeholder="Select ratio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1:1">Square (1:1)</SelectItem>
+                    <SelectItem value="16:9">Landscape (16:9)</SelectItem>
+                    <SelectItem value="9:16">Portrait (9:16)</SelectItem>
+                    <SelectItem value="4:3">Standard (4:3)</SelectItem>
+                    <SelectItem value="3:4">Portrait (3:4)</SelectItem>
+                    <SelectItem value="4:5">Instagram (4:5)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                   <Label className="text-sm font-medium">Target Aspect Ratio</Label>
-                   <Select value={outpaintAspectRatio} onValueChange={setOutpaintAspectRatio}>
-                      <SelectTrigger className="bg-background" data-testid="select-outpaint-ratio">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1:1">Square (1:1)</SelectItem>
-                        <SelectItem value="16:9">Landscape (16:9)</SelectItem>
-                        <SelectItem value="9:16">Portrait (9:16)</SelectItem>
-                        <SelectItem value="4:3">Standard (4:3)</SelectItem>
-                        <SelectItem value="3:4">Portrait (3:4)</SelectItem>
-                        <SelectItem value="4:5">Instagram (4:5)</SelectItem>
-                      </SelectContent>
-                   </Select>
+                  <Label className="text-sm font-medium">Quality</Label>
+                  <Select value={outpaintQuality} onValueChange={setOutpaintQuality}>
+                    <SelectTrigger className="bg-background" data-testid="select-outpaint-quality">
+                      <SelectValue placeholder="Select quality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Standard">Standard</SelectItem>
+                      <SelectItem value="High Fidelity (2K)">High Fidelity (2K)</SelectItem>
+                      <SelectItem value="Ultra (4K)">Ultra (4K)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Quality</Label>
-                    <Select value={outpaintQuality} onValueChange={setOutpaintQuality}>
-                      <SelectTrigger className="bg-background" data-testid="select-outpaint-quality">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Standard">Standard</SelectItem>
-                        <SelectItem value="High Fidelity (2K)">High Fidelity (2K)</SelectItem>
-                        <SelectItem value="Ultra (4K)">Ultra (4K)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Output Format</Label>
-                    <Select value={outpaintOutputFormat} onValueChange={setOutpaintOutputFormat}>
-                      <SelectTrigger className="bg-background" data-testid="select-outpaint-format">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PNG">PNG</SelectItem>
-                        <SelectItem value="JPEG">JPEG</SelectItem>
-                        <SelectItem value="WEBP">WEBP</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Output Format</Label>
+                  <Select value={outpaintOutputFormat} onValueChange={setOutpaintOutputFormat}>
+                    <SelectTrigger className="bg-background" data-testid="select-outpaint-format">
+                      <SelectValue placeholder="Select format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {outputFormats.map(fmt => (
+                        <SelectItem key={fmt} value={fmt}>{fmt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-             </div>
+              </div>
+            </div>
 
-             <Separator />
-
-             <Button 
-               className="w-full" 
-               size="lg"
-               onClick={() => onOutpaint(outpaintAspectRatio, outpaintQuality, outpaintOutputFormat)}
-               disabled={disabled || isGenerating}
-               data-testid="button-outpaint"
-             >
-               <Maximize className="w-5 h-5 mr-2" />
-               {isGenerating ? "Extending..." : "Extend Image"}
-             </Button>
-           </div>
+            <Button
+              type="button"
+              className="w-full"
+              size="lg"
+              disabled={disabled || isGenerating}
+              onClick={() => onOutpaint(outpaintAspectRatio, outpaintQuality, outpaintOutputFormat)}
+              data-testid="button-outpaint"
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              {isGenerating ? "Processing..." : "Extend Image"}
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
