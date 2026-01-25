@@ -783,8 +783,8 @@ export function ControlPanel({
         </TabsContent>
 
         {/* --- MODIFY TAB --- */}
-        <TabsContent value="modify" className="space-y-6 mt-4">
-           <div className="bg-muted/50 p-4 rounded-lg border border-border space-y-4">
+        <TabsContent value="modify" className="mt-4">
+          <div className="space-y-6"> {/* CLEAN CONTAINER */}
              <div className="flex items-start gap-2">
                 <Sparkles className="w-5 h-5 mt-1 text-primary" />
                 <div>
@@ -805,19 +805,20 @@ export function ControlPanel({
                      value={elementRequest}
                      onChange={(e) => setElementRequest(e.target.value)}
                      className="bg-background h-32 resize-none"
-                     data-testid="textarea-element-request"
                    />
                 </div>
 
+                {/* Quality & Format Selectors */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Quality</Label>
                     <Select value={modifyQuality} onValueChange={setModifyQuality}>
-                      <SelectTrigger className="bg-background" data-testid="select-modify-quality">
+                      <SelectTrigger className="bg-background">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Standard">Standard</SelectItem>
+                        {/* TYPO FIX: Removed leading space in value */}
                         <SelectItem value="High Fidelity (2K)">High Fidelity (2K)</SelectItem>
                         <SelectItem value="Ultra (4K)">Ultra (4K)</SelectItem>
                       </SelectContent>
@@ -827,13 +828,13 @@ export function ControlPanel({
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Output Format</Label>
                     <Select value={modifyOutputFormat} onValueChange={setModifyOutputFormat}>
-                      <SelectTrigger className="bg-background" data-testid="select-modify-format">
+                      <SelectTrigger className="bg-background">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PNG">PNG</SelectItem>
-                        <SelectItem value="JPEG">JPEG</SelectItem>
-                        <SelectItem value="WEBP">WEBP</SelectItem>
+                        {outputFormats.map((fmt) => (
+                          <SelectItem key={fmt} value={fmt}>{fmt}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -847,7 +848,6 @@ export function ControlPanel({
                size="lg"
                onClick={() => onModifyElement(elementRequest, modifyQuality, modifyOutputFormat)}
                disabled={disabled || isGenerating || !elementRequest}
-               data-testid="button-update-element"
              >
                <Sparkles className="w-5 h-5 mr-2" />
                {isGenerating ? "Processing..." : "Update Element"}
