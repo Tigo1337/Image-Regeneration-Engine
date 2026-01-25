@@ -196,3 +196,56 @@ export async function applyPerspectiveMockup(
   const output = await pipeline.toBuffer();
   return `data:image/jpeg;base64,${output.toString('base64')}`;
 }
+
+/**
+ * Prepare an image for outpainting by extending it with grey padding
+ * to match the target aspect ratio. The AI treats grey as "unrendered space" to be filled.
+ */
+export async function prepareOutpaintCanvas(
+  imageData: string,
+  targetAspectRatio: string // "1:1", "16:9", "4:5", "9:16"
+): Promise<string> {
+  // Remove header if present
+  const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
+  const buffer = Buffer.from(base64Data, "base64");
+  
+  const metadata = await sharp(buffer).metadata();
+  const width = metadata.width!;
+  const height = metadata.height!;
+  const currentRatio = width / height;
+
+  let targetRatioNum = 1;
+  const [w, h] = targetAspectRatio.split(':').map(Number);
+  if (w && h) targetRatioNum = w / h;
+
+  let newWidth = width;
+  let newHeight = height;
+
+  // Calculate new dimensions to ENCLOSE the original image
+  if (targetRatioNum > currentRatio) {
+    // Target is wider (e.g. Portrait -> Landscape): Height stays same, Width increases
+    newWidth = Math.round(height * targetRatioNum);
+  } else {
+    // Target is taller (e.g. Landscape -> Square): Width stays same, Height increases
+    newHeight = Math.round(width / targetRatioNum);
+  }
+
+  // Calculate padding (centering the image)
+  const padX = Math.max(0, Math.round((newWidth - width) / 2));
+  const padY = Math.max(0, Math.round((newHeight - height) / 2));
+
+  // Create the canvas with neutral grey background
+  // The AI treats grey as "unrendered space" to be filled
+  const canvas = await sharp(buffer)
+    .extend({
+      top: padY,
+      bottom: padY,
+      left: padX,
+      right: padX,
+      background: { r: 128, g: 128, b: 128, alpha: 1 } 
+    })
+    .toFormat("png")
+    .toBuffer();
+
+  return `data:image/png;base64,${canvas.toString('base64')}`;
+}

@@ -309,6 +309,41 @@ export default function Home() {
     },
   });
 
+  // NEW: Mutation for Outpaint/Uncrop via /api/outpaint
+  const outpaintMutation = useMutation({
+    mutationFn: async (data: { imageData: string; aspectRatio: string; quality: string; outputFormat: string }) => {
+      const res = await apiRequest("POST", "/api/outpaint", data);
+      return res.json();
+    },
+    onSuccess: (response) => {
+      if (response.success && response.generatedImage) {
+        setGeneratedImage(response.generatedImage);
+        setGenerationType("design");
+        
+        // Invalidate gallery to show the extended image
+        queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
+        
+        toast({
+          title: "Image Extended!",
+          description: "The borders have been filled in seamlessly.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Outpaint Failed",
+          description: response.error || "Failed to extend image",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to outpaint image",
+      });
+    },
+  });
+
   const batchStylesMutation = useMutation({
     mutationFn: async (data: { imageData: string; formData: RoomRedesignRequest; styles: string[] }) => {
       const res = await apiRequest("POST", "/api/generate/batch-styles", data);
@@ -488,6 +523,24 @@ export default function Home() {
     });
   };
 
+  // NEW: Handler for Outpaint/Uncrop
+  const handleOutpaint = (aspectRatio: string, quality: string, outputFormat: string) => {
+    // Use generatedImage if available, otherwise fall back to original
+    const imageToOutpaint = generatedImage || originalImage;
+    
+    if (!imageToOutpaint) {
+      toast({ variant: "destructive", title: "No image", description: "Please upload an image first" });
+      return;
+    }
+
+    outpaintMutation.mutate({
+      imageData: imageToOutpaint,
+      aspectRatio: aspectRatio,
+      quality: quality,
+      outputFormat: outputFormat,
+    });
+  };
+
   const handleReset = () => {
     setOriginalImage(null);
     setOriginalFileName("image");
@@ -532,8 +585,9 @@ export default function Home() {
                 onSmartCrop={handleSmartCrop}
                 onGenerateDimensional={handleGenerateDimensional}
                 onModifyElement={handleModifyElement}
+                onOutpaint={handleOutpaint}
                 disabled={!originalImage}
-                isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending || modifyElementMutation.isPending}
+                isGenerating={generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending || modifyElementMutation.isPending || outpaintMutation.isPending}
                 isModificationMode={!!generatedImage && generationType === "design"}
                 modificationPrompt={modificationPrompt}
                 onModificationPromptChange={setModificationPrompt}
@@ -565,7 +619,7 @@ export default function Home() {
 
       <ComplianceFooter />
 
-      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending || modifyElementMutation.isPending) && <LoadingOverlay />}
+      {(generateMutation.isPending || variationsMutation.isPending || smartCropMutation.isPending || dimensionalMutation.isPending || batchStylesMutation.isPending || modifyGeneratedMutation.isPending || modifyElementMutation.isPending || outpaintMutation.isPending) && <LoadingOverlay />}
     </div>
   );
 }

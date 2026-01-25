@@ -10,6 +10,7 @@ import { registerDimensionRoutes } from "./routes/dimensions";
 import { registerCropRoutes } from "./routes/crop";
 import { registerModifyGeneratedRoutes } from "./routes/modify-generated";
 import { registerModifyRoutes } from "./routes/modify";
+import { registerOutpaintRoutes } from "./routes/outpaint";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication (MUST be first)
@@ -24,6 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerCropRoutes(app);             // Smart crop functionality (/api/smart-crop)
   registerModifyGeneratedRoutes(app);  // Modify generated images (/api/modify-generated)
   registerModifyRoutes(app);           // Legacy modify route (/api/modify) - foundation for Specific Element Update
+  registerOutpaintRoutes(app);         // Outpaint/uncrop image extension (/api/outpaint)
   registerGalleryRoutes(app);          // Gallery and prompt history
   registerObjectStorageRoutes(app);    // Object storage integration
 
