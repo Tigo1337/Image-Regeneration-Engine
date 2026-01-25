@@ -818,7 +818,6 @@ export function ControlPanel({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Standard">Standard</SelectItem>
-                        {/* TYPO FIX: Removed leading space in value */}
                         <SelectItem value="High Fidelity (2K)">High Fidelity (2K)</SelectItem>
                         <SelectItem value="Ultra (4K)">Ultra (4K)</SelectItem>
                       </SelectContent>
@@ -870,7 +869,7 @@ export function ControlPanel({
               </div>
             </div>
 
-            <div className="bg-muted p-4 rounded-md space-y-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Target Aspect Ratio</Label>
                 <Select value={outpaintAspectRatio} onValueChange={setOutpaintAspectRatio}>
@@ -918,6 +917,8 @@ export function ControlPanel({
                 </div>
               </div>
             </div>
+
+            <Separator />
 
             <Button
               type="button"
