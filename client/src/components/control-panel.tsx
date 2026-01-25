@@ -40,7 +40,7 @@ interface ControlPanelProps {
   onGenerateBatchStyles?: (data: RoomRedesignRequest, prompt: string) => void;
   onSmartCrop?: (data: SmartCropRequest) => void;
   onGenerateDimensional?: (data: DimensionalImageRequest) => void;
-  onModifyElement: (request: string) => void;
+  onModifyElement: (request: string, quality: string, outputFormat: string) => void;
   disabled?: boolean;
   isGenerating?: boolean;
   isModificationMode?: boolean;
@@ -89,6 +89,8 @@ export function ControlPanel({
 
   // Local state for Element Update Tab
   const [elementRequest, setElementRequest] = useState("");
+  const [modifyQuality, setModifyQuality] = useState("High Fidelity (2K)");
+  const [modifyOutputFormat, setModifyOutputFormat] = useState("PNG");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inspirationInputRef = useRef<HTMLInputElement>(null);
@@ -798,6 +800,36 @@ export function ControlPanel({
                      data-testid="textarea-element-request"
                    />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Quality</Label>
+                    <Select value={modifyQuality} onValueChange={setModifyQuality}>
+                      <SelectTrigger className="bg-background" data-testid="select-modify-quality">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Standard">Standard</SelectItem>
+                        <SelectItem value="High Fidelity (2K)">High Fidelity (2K)</SelectItem>
+                        <SelectItem value="Ultra (4K)">Ultra (4K)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Output Format</Label>
+                    <Select value={modifyOutputFormat} onValueChange={setModifyOutputFormat}>
+                      <SelectTrigger className="bg-background" data-testid="select-modify-format">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PNG">PNG</SelectItem>
+                        <SelectItem value="JPEG">JPEG</SelectItem>
+                        <SelectItem value="WEBP">WEBP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
              </div>
 
              <Separator />
@@ -805,7 +837,7 @@ export function ControlPanel({
              <Button 
                className="w-full" 
                size="lg"
-               onClick={() => onModifyElement(elementRequest)}
+               onClick={() => onModifyElement(elementRequest, modifyQuality, modifyOutputFormat)}
                disabled={disabled || isGenerating || !elementRequest}
                data-testid="button-update-element"
              >

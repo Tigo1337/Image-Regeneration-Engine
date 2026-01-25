@@ -276,7 +276,7 @@ export default function Home() {
 
   // NEW: Mutation for Specific Element Update via /api/modify/element
   const modifyElementMutation = useMutation({
-    mutationFn: async (data: { imageData: string; modificationRequest: string; originalFileName?: string }) => {
+    mutationFn: async (data: { imageData: string; modificationRequest: string; originalFileName?: string; quality: string; outputFormat: string }) => {
       const res = await apiRequest("POST", "/api/modify/element", data);
       return res.json();
     },
@@ -465,7 +465,7 @@ export default function Home() {
   };
 
   // NEW: Handler for Specific Element Update
-  const handleModifyElement = (request: string) => {
+  const handleModifyElement = (request: string, quality: string, outputFormat: string) => {
     // Use generatedImage if available, otherwise fall back to original
     const imageToModify = generatedImage || originalImage;
     
@@ -483,6 +483,8 @@ export default function Home() {
       imageData: imageToModify,
       modificationRequest: request,
       originalFileName: originalFileName,
+      quality: quality,
+      outputFormat: outputFormat,
     });
   };
 

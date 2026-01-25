@@ -24,6 +24,8 @@ const elementUpdateRequestSchema = z.object({
   imageData: z.string().min(1, "Image data is required"),
   modificationRequest: z.string().min(1, "Modification request is required"),
   originalFileName: z.string().optional(),
+  quality: z.string().optional().default("High Fidelity (2K)"),
+  outputFormat: z.string().optional().default("PNG"),
 });
 
 export function registerModifyRoutes(app: Express) {
@@ -31,7 +33,7 @@ export function registerModifyRoutes(app: Express) {
   // Specific Element Update Endpoint (New Feature)
   app.post("/api/modify/element", requireActiveSubscription, async (req, res) => {
     try {
-      const { imageData, modificationRequest, originalFileName } = elementUpdateRequestSchema.parse(req.body);
+      const { imageData, modificationRequest, originalFileName, quality, outputFormat } = elementUpdateRequestSchema.parse(req.body);
 
       if (!imageData) {
         return res.status(400).json({ success: false, error: "No image data provided" });
@@ -65,11 +67,11 @@ ${modificationRequest}
         imageBase64: processedImage,
         preservedElements: "the entire room except the requested change", 
         targetStyle: "Photorealistic", 
-        quality: "High Fidelity (2K)",
+        quality: quality,
         aspectRatio: "Original",
         creativityLevel: 1, // FORCE LOW CREATIVITY for precision
         customPrompt: strictPrompt,
-        outputFormat: "PNG",
+        outputFormat: outputFormat,
       });
 
       // Save to storage
@@ -105,7 +107,7 @@ ${modificationRequest}
       }
 
       // Report usage to Stripe
-      await reportGenerationUsage(req, "High Fidelity (2K)");
+      await reportGenerationUsage(req, quality);
 
       res.json({
         success: true,
