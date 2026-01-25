@@ -112,7 +112,7 @@ Preferred communication style: Simple, everyday language.
   - `dimensions.ts` - Technical drawing generation (/api/generate-dimensional)
   - `crop.ts` - Smart crop functionality (/api/smart-crop)
   - `modify-generated.ts` - Modify previously generated images (/api/modify-generated)
-  - `modify.ts` - Legacy modify route, foundation for Specific Element Update feature (/api/modify)
+  - `modify.ts` - Specific Element Update feature (/api/modify/element) + legacy route (/api/modify)
 - Authentication middleware extracted to `server/middleware/auth.ts`:
   - `getUserId`, `isSuperAdmin`, `requireActiveSubscription`, `reportGenerationUsage`
   - Dynamic imports for stripeService to avoid circular dependencies
