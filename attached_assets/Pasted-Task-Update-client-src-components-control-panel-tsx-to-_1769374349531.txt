@@ -1,0 +1,82 @@
+Task: Update client/src/components/control-panel.tsx to reflect the new desired UI structure: "Design" and "Modify" only.
+
+1. Update ControlPanelProps Interface
+
+Add a new prop: onModifyElement: (request: string) => void;
+
+Keep existing props but mark onSmartCrop and onGenerateDimensional as optional if they aren't already, or just leave them unused for now.
+
+2. Modify Tabs Structure
+
+Change the TabsList grid to grid-cols-2.
+
+Remove the TabsTrigger for "Crop" (value="crop") and "Dimensions" (value="dimensional").
+
+Add a new TabsTrigger for "Modify" (value="modify").
+
+3. Implement "Modify" Tab Content
+
+Create a new TabsContent with value="modify".
+
+Inside this tab, add:
+
+A descriptive header explaining this is for specific element updates (e.g., "Change hardware finish").
+
+A Textarea for the user to type their specific request (e.g., "Change all hardware to Brushed Gold").
+
+A Button labeled "Update Element" that calls onModifyElement with the text from the textarea.
+
+Use a local state (e.g., [elementRequest, setElementRequest]) to capture the textarea input.
+
+4. Hide Old Tabs
+
+Completely remove or comment out the TabsContent blocks for value="crop" and value="dimensional" so they are no longer accessible.
+
+5. Constraint
+
+Do not remove the logic for onGenerate (Design tab). That must remain fully functional.
+
+Expected Code Snippet for "Modify" Tab
+You can use this snippet as a reference for what the new tab should look like:
+
+TypeScript
+        {/* --- MODIFY TAB --- */}
+        <TabsContent value="modify" className="space-y-6 mt-4">
+           <div className="bg-muted/50 p-4 rounded-lg border border-border space-y-4">
+             <div className="flex items-start gap-2">
+                <Sparkles className="w-5 h-5 mt-1 text-primary" />
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Specific Element Update</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Change specific details like hardware, colors, or materials without altering the rest of the room.
+                  </p>
+                </div>
+             </div>
+
+             <Separator />
+
+             <div className="space-y-4">
+                <div className="space-y-2">
+                   <Label className="text-sm font-medium">Modification Request</Label>
+                   <Textarea 
+                     placeholder="e.g., Change all cabinet hardware to Matte Black." 
+                     value={elementRequest}
+                     onChange={(e) => setElementRequest(e.target.value)}
+                     className="bg-background h-32 resize-none"
+                   />
+                </div>
+             </div>
+
+             <Separator />
+
+             <Button 
+               className="w-full" 
+               size="lg"
+               onClick={() => onModifyElement(elementRequest)}
+               disabled={disabled || isGenerating || !elementRequest}
+             >
+               <Sparkles className="w-5 h-5 mr-2" />
+               {isGenerating ? "Processing..." : "Update Element"}
+             </Button>
+           </div>
+        </TabsContent>
