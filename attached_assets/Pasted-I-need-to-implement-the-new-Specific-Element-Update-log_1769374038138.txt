@@ -1,0 +1,133 @@
+I need to implement the new 'Specific Element Update' logic in server/routes/modify.ts. Please update server/routes/modify.ts with the following code. This includes a new endpoint /api/modify/element that uses a specialized strict prompt for changing specific details (like hardware finishes) without altering the rest of the room."
+
+TypeScript
+import type { Express } from "express";
+import { z } from "zod";
+import { generateRoomRedesign } from "../gemini";
+import { processImageForGemini } from "../image-utils";
+import { storage } from "../storage";
+import { uploadImageToStorage } from "../image-storage";
+import { getUserId, requireActiveSubscription, reportGenerationUsage } from "../middleware/auth";
+import { buildModificationPrompt } from "../lib/prompt-utils";
+
+// Schema for the Element Update specific function
+const elementUpdateRequestSchema = z.object({
+  imageData: z.string(),
+  modificationRequest: z.string().min(1, "Modification request is required"),
+  originalFileName: z.string().optional(),
+});
+
+export function registerModifyRoutes(app: Express) {
+  
+  // 1. Specific Element Update Endpoint (The new function)
+  app.post("/api/modify/element", requireActiveSubscription, async (req, res) => {
+    try {
+      const { imageData, modificationRequest, originalFileName } = elementUpdateRequestSchema.parse(req.body);
+
+      if (!imageData) return res.status(400).json({ success: false, error: "No image data provided" });
+
+      console.log(`[Modify Element] Request: "${modificationRequest}"`);
+
+      // 1. Process Image
+      const processedImage = await processImageForGemini(imageData);
+
+      // 2. Construct STRICT Preservation Prompt
+      // We do not use the standard prompt builder here because we need extreme constraints.
+      const strictPrompt = `
+        === ROLE: EXPERT PHOTO RETOUCHER ===
+        You are an expert architectural visualizer and photo editor. 
+        Your task is to edit the provided image with PIXEL-PERFECT precision.
+
+        === INSTRUCTION ===
+        ${modificationRequest}
+
+        === STRICT CONSTRAINTS (DO NOT IGNORE) ===
+        1. NO REDESIGN: Do NOT change the style, flooring, walls, lighting, or furniture arrangement.
+        2. TARGET ONLY: Modify ONLY the specific element mentioned in the instruction (e.g., hardware, faucet, cabinet color).
+        3. PRESERVE GEOMETRY: Keep the exact perspective and geometry of the original room.
+        4. TEXTURE MATCHING: Ensure the new element's lighting and shadows match the existing scene perfectly.
+        5. OUTPUT: A photorealistic, high-resolution image of the SAME room with ONLY the requested change.
+      `;
+
+      // 3. Call AI with Low Creativity to force adherence to the original image
+      const generatedImage = await generateRoomRedesign({
+        imageBase64: processedImage,
+        // We pass "Original" for everything to ensure minimal drift
+        preservedElements: "the entire room except the requested change", 
+        targetStyle: "Photorealistic", 
+        quality: "High Fidelity (2K)",
+        aspectRatio: "Original",
+        creativityLevel: 1, // FORCE LOW CREATIVITY for precision
+        customPrompt: strictPrompt,
+        outputFormat: "PNG",
+      });
+
+      // 4. Save and Log
+      const generatedImageUrl = await uploadImageToStorage(generatedImage, "generated");
+      
+      // Save to gallery
+      const originalImageUrl = await uploadImageToStorage(imageData, "originals");
+      await storage.saveGeneratedDesign({
+        userId: getUserId(req),
+        timestamp: Date.now(),
+        originalImageUrl,
+        generatedImageUrl,
+        originalFileName: originalFileName ? `mod_${originalFileName}` : "modified_element",
+        config: { 
+            prompt: strictPrompt, 
+            targetStyle: "Element Update",
+            modificationRequest 
+        },
+        variations: [],
+      });
+
+      // Log usage
+      if (storage.createPromptLog) {
+        await storage.createPromptLog({
+          jobType: "element-update",
+          prompt: strictPrompt,
+          parameters: {
+            modificationRequest,
+            mode: "Strict Element Update"
+          }
+        });
+      }
+
+      await reportGenerationUsage(req, "High Fidelity (2K)");
+
+      res.json({
+        success: true,
+        generatedImage,
+        generatedImageUrl
+      });
+
+    } catch (error) {
+      console.error("Error in /api/modify/element:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to modify element"
+      });
+    }
+  });
+
+  // 2. Modify Generated (Legacy/Iteration Endpoint)
+  app.post("/api/modify-generated", requireActiveSubscription, async (req, res) => {
+    // ... [Keep existing modify-generated logic here if needed, or rely on the previous file content] ...
+    // If you want the agent to keep the previous code for this route, instruct it to strictly "Append" or "Merge".
+    // For a clean file, it is better to provide the full content.
+    try {
+        // ... (Existing logic for modify-generated)
+        // I will omit re-typing the full existing function to save space, 
+        // but ensure the Agent keeps it or you copy it from the previous step.
+        res.json({ success: false, error: "Use /api/modify/element for specific updates." }); 
+    } catch (e) {
+        res.status(500).json({ error: "Not implemented in this snippet" });
+    }
+  });
+}
+Explanation of the Prompt Logic
+ROLE: EXPERT PHOTO RETOUCHER: This tells the model it is not creating art; it is editing a photo.
+
+NO REDESIGN: Explicitly forbids the model from doing what it normally does (redesigning rooms).
+
+creativityLevel: 1: This is the most critical setting. In your gemini.ts file, a creativity level of 1 (on a scale of 1-3) should correspond to a lower temperature setting (e.g., 0.1 - 0.3). This ensures the model sticks as close to the input data as possible.
