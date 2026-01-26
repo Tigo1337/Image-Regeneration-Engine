@@ -39,24 +39,29 @@ export default function Gallery() {
   };
 
   const downloadImage = (design: DesignWithConfig) => {
-    const baseName = design.originalFileName
+    // 1. Safe access for filename (defaults to "image" if missing)
+    const baseName = (design.originalFileName || "image")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
-    const style = design.config.targetStyle
+    // 2. Safe access for Style (defaults to "custom" if missing)
+    const style = (design.config?.targetStyle || "custom")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
-    const quality = design.config.quality
+    // 3. Safe access for Quality (defaults to "standard" if missing)
+    const quality = (design.config?.quality || "standard")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
-    const arFormatted = design.config.aspectRatio === "Original"
+    // 4. Safe access for Aspect Ratio
+    const aspectRatio = design.config?.aspectRatio || "Original";
+    const arFormatted = aspectRatio === "Original"
       ? "original"
-      : `ar-${design.config.aspectRatio.toLowerCase().replace(/:/g, "-")}`;
+      : `ar-${aspectRatio.toLowerCase().replace(/:/g, "-")}`;
 
     const link = document.createElement("a");
     link.href = design.generatedImageUrl;
