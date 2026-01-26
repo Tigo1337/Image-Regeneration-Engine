@@ -326,28 +326,56 @@ function SmartLockSection() {
 }
 
 function MaterialSwapSection() {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Placeholder images for material/finish swapping.
-  // TODO: Replace these with images showing the SAME object with DIFFERENT finishes.
-  const rotationImages = [
-    "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769276725/room-scene-update/cabinet-handles-matte-black-japandi-ultra-4k-ar-1-1-glossy-white-cabinets.webp",
-    "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769276726/room-scene-update/cabinet-handles-matte-black-japandi-ultra-4k-ar-1-1-oak-cabinets.webp",
-    "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769276726/room-scene-update/cabinet-handles-matte-black-japandi-ultra-4k-ar-1-1-walnut-cabinets.webp"
+  // We define two sets of images. 
+  // Set 1: Changing Cabinet Colors (Existing)
+  // Set 2: Changing Hardware Finishes (New)
+
+  const slides = [
+    // --- SET 1: Cabinet Colors ---
+    {
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769276725/room-scene-update/cabinet-handles-matte-black-japandi-ultra-4k-ar-1-1-glossy-white-cabinets.webp",
+      label: "Swapping Cabinet Color..."
+    },
+    {
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769276726/room-scene-update/cabinet-handles-matte-black-japandi-ultra-4k-ar-1-1-oak-cabinets.webp",
+      label: "Swapping Cabinet Color..."
+    },
+    {
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769276726/room-scene-update/cabinet-handles-matte-black-japandi-ultra-4k-ar-1-1-walnut-cabinets.webp",
+      label: "Swapping Cabinet Color..."
+    },
+
+    // --- SET 2: Hardware Finishes ---
+    // TODO: Replace the URLs below with your new images focusing on hardware changes (e.g. Gold, Chrome, Nickel)
+    {
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769385876/room-scene-update/cabinet-handles-brushed-brass-modern-ultra-4k-ar-1-1-ch-handles.webp", // Placeholder 1
+      label: "Swapping Hardware Finish..."
+    },
+    {
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769276725/room-scene-update/cabinet-handles-brushed-brass-modern-ultra-4k-ar-1-1-mb-handles.webp", // Placeholder 2
+      label: "Swapping Hardware Finish..."
+    },
+    {
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769385878/room-scene-update/cabinet-handles-brushed-brass-modern-ultra-4k-ar-1-1-bg-handles.webp", // Placeholder 3
+      label: "Swapping Hardware Finish..."
+    }
   ];
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % rotationImages.length);
-    }, 2500);
+      setCurrentIndex((prev) => (prev + 1) % slides.length);
+    }, 2500); // 2.5 seconds per slide
     return () => clearInterval(interval);
-  }, [rotationImages.length]);
+  }, [slides.length]);
 
   return (
     <section className="py-24 relative overflow-hidden bg-background">
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left Column: Image (Swapped position) */}
+
+          {/* Left Column: Image Area */}
           <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
@@ -358,8 +386,8 @@ function MaterialSwapSection() {
               <div className="relative aspect-video lg:aspect-square rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-card">
                 <AnimatePresence mode="popLayout">
                   <motion.img
-                    key={currentImageIndex}
-                    src={rotationImages[currentImageIndex]}
+                    key={currentIndex}
+                    src={slides[currentIndex].src}
                     alt="Material Option"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -372,22 +400,27 @@ function MaterialSwapSection() {
                 <div className="absolute inset-0 bg-black/10 pointer-events-none" />
 
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center z-20">
-                   {/* Added Ping animation background to match SmartLock section */}
+                   {/* Ping animation background */}
                    <div className="absolute inset-0 bg-primary/40 rounded-full animate-ping opacity-50" />
-                   {/* Badge content */}
-                   <div className="relative bg-background/90 backdrop-blur-md border border-primary/50 text-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+
+                   {/* Badge content with Dynamic Label */}
+                   <motion.div 
+                     key={slides[currentIndex].label} // Animate when label changes
+                     initial={{ opacity: 0, y: 5 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     className="relative bg-background/90 backdrop-blur-md border border-primary/50 text-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2"
+                   >
                      <Scan className="w-4 h-4 text-primary" />
-                     <span className="text-sm font-semibold">Swapping Finish...</span>
-                   </div>
+                     <span className="text-sm font-semibold">{slides[currentIndex].label}</span>
+                   </motion.div>
                 </div>
-                {/* Removed corner badge here */}
               </div>
 
               {/* Decorative background blur */}
               <div className="absolute -inset-4 bg-accent/20 rounded-3xl blur-3xl -z-10 opacity-50" />
           </motion.div>
 
-          {/* Right Column: Text Content (Swapped position) */}
+          {/* Right Column: Text Content */}
           <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -403,8 +436,8 @@ function MaterialSwapSection() {
                 <span className="text-muted-foreground">finish & texture.</span>
               </h2>
               <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-                Details matter. Don't just redesign the room—perfect the specific elements.
-                Instantly cycle through hardware finishes, cabinet colors, and fabric textures
+                Details matter. Don't just redesign the room—perfect the specific elements. 
+                Instantly cycle through hardware finishes, cabinet colors, and fabric textures 
                 without altering the rest of your scene.
               </p>
 

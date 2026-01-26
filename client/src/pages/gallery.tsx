@@ -258,21 +258,26 @@ export default function Gallery() {
         downloadFileName={
           selectedDesign
             ? (() => {
-                const baseName = selectedDesign.originalFileName
+                const baseName = (selectedDesign.originalFileName || "image")
                   .toLowerCase()
                   .replace(/[^a-z0-9]+/g, "-")
                   .replace(/^-|-$/g, "");
-                const style = selectedDesign.config.targetStyle
+                
+                const style = (selectedDesign.config?.targetStyle || "custom")
                   .toLowerCase()
                   .replace(/[^a-z0-9]+/g, "-")
                   .replace(/^-|-$/g, "");
-                const quality = selectedDesign.config.quality
+                
+                const quality = (selectedDesign.config?.quality || "standard")
                   .toLowerCase()
                   .replace(/[^a-z0-9]+/g, "-")
                   .replace(/^-|-$/g, "");
-                const arFormatted = selectedDesign.config.aspectRatio === "Original"
+                
+                const aspectRatio = selectedDesign.config?.aspectRatio || "original";
+                const arFormatted = aspectRatio === "Original"
                   ? "original"
-                  : `ar-${selectedDesign.config.aspectRatio.toLowerCase().replace(/:/g, "-")}`;
+                  : `ar-${aspectRatio.toLowerCase().replace(/:/g, "-")}`;
+                
                 return `${baseName}-${style}-${quality}-${arFormatted}`;
               })()
             : undefined
