@@ -20,6 +20,7 @@ import {
   Palette,
   Lock,
   Scan,
+  Maximize2, // Added for Outpaint Section
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -314,7 +315,6 @@ function SmartLockSection() {
                      <span className="text-sm font-semibold">Locked: Faucet</span>
                    </div>
                 </div>
-                {/* Removed corner badge here */}
               </div>
 
               <div className="absolute -inset-4 bg-primary/20 rounded-3xl blur-3xl -z-10 opacity-50" />
@@ -348,17 +348,16 @@ function MaterialSwapSection() {
     },
 
     // --- SET 2: Hardware Finishes ---
-    // TODO: Replace the URLs below with your new images focusing on hardware changes (e.g. Gold, Chrome, Nickel)
     {
-      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769385876/room-scene-update/cabinet-handles-brushed-brass-modern-ultra-4k-ar-1-1-ch-handles.webp", // Placeholder 1
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769385876/room-scene-update/cabinet-handles-brushed-brass-modern-ultra-4k-ar-1-1-ch-handles.webp", 
       label: "Swapping Hardware Finish..."
     },
     {
-      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769276725/room-scene-update/cabinet-handles-brushed-brass-modern-ultra-4k-ar-1-1-mb-handles.webp", // Placeholder 2
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769276725/room-scene-update/cabinet-handles-brushed-brass-modern-ultra-4k-ar-1-1-mb-handles.webp", 
       label: "Swapping Hardware Finish..."
     },
     {
-      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769385878/room-scene-update/cabinet-handles-brushed-brass-modern-ultra-4k-ar-1-1-bg-handles.webp", // Placeholder 3
+      src: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769385878/room-scene-update/cabinet-handles-brushed-brass-modern-ultra-4k-ar-1-1-bg-handles.webp", 
       label: "Swapping Hardware Finish..."
     }
   ];
@@ -405,7 +404,7 @@ function MaterialSwapSection() {
 
                    {/* Badge content with Dynamic Label */}
                    <motion.div 
-                     key={slides[currentIndex].label} // Animate when label changes
+                     key={slides[currentIndex].label} 
                      initial={{ opacity: 0, y: 5 }}
                      animate={{ opacity: 1, y: 0 }}
                      className="relative bg-background/90 backdrop-blur-md border border-primary/50 text-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2"
@@ -453,6 +452,181 @@ function MaterialSwapSection() {
               </div>
           </motion.div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function OutpaintSection() {
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+  const outpaintSlides = [
+    { 
+      // PAIR 1 (Real Data)
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769388474/room-scene-update/outpaint/cozy-patio-area.jpg",
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769389083/room-scene-update/outpaint/cozy-patio-area-outpainted.webp", 
+      label: "Cozy Patio Area" 
+    },
+    { 
+      // PAIR 2 (Placeholder - Replace URL)
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769388477/room-scene-update/outpaint/japandi-kitchen.jpg", 
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769389060/room-scene-update/outpaint/japandi-kitchen-outpainted.webp", 
+      label: "Bedroom Expansion" 
+    },
+    { 
+      // PAIR 3 (Placeholder - Replace URL)
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769388467/room-scene-update/outpaint/luxury-living-room.jpg", 
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769389061/room-scene-update/outpaint/luxury-living-room-outpainted.webp", 
+      label: "Living Room View" 
+    },
+    { 
+      // PAIR 4 (Placeholder - Replace URL)
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769388469/room-scene-update/outpaint/luxury-living-room-2.jpg", 
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769389085/room-scene-update/outpaint/luxury-living-room-2-outpainted.webp", 
+      label: "Kitchen Detail" 
+    },
+    { 
+      // PAIR 5 (Placeholder - Replace URL)
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769388476/room-scene-update/outpaint/modern-bedroom.jpg", 
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769389063/room-scene-update/outpaint/modern-bedroom-outpainted.webp", 
+      label: "Dining Area" 
+    },
+    { 
+      // PAIR 6 (Placeholder - Replace URL)
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769388473/room-scene-update/outpaint/modern-bedroom-2.jpg", 
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769389096/room-scene-update/outpaint/modern-bedroom-2-outpainted.webp", 
+      label: "Industrial Texture" 
+    },
+    { 
+      // PAIR 7 (Placeholder - Replace URL)
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769388475/room-scene-update/outpaint/modern-patio-area.jpg", 
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769389084/room-scene-update/outpaint/modern-patio-area-outpainted.webp", 
+      label: "Cabinetry Scale" 
+    },
+    { 
+      // PAIR 8 (Placeholder - Replace URL)
+      before: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769388473/room-scene-update/outpaint/sage-marble-kitchen.jpg", 
+      after: "https://res.cloudinary.com/olilepage/image/upload/q_auto:best,dpr_auto/v1769389096/room-scene-update/outpaint/sage-marble-kitchen-outpainted.webp", 
+      label: "Organic Flow" 
+    }
+  ];
+
+useEffect(() => {
+    // 8 seconds total per slide to allow for:
+    // 3s Before + 1.5s Transition + 3.5s After + 1s Crossfade
+    const interval = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % outpaintSlides.length);
+    }, 8000); 
+    return () => clearInterval(interval);
+  }, [outpaintSlides.length]);
+
+  return (
+    <section className="py-24 relative overflow-hidden bg-muted/10">
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background" />
+
+      <div className="relative max-w-6xl mx-auto px-4 text-center">
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-12"
+        >
+          <Badge variant="outline" className="mb-4 border-primary/30 text-primary">
+            <Maximize2 className="w-3 h-3 mr-2" />
+            AI Outpainting
+          </Badge>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">See Beyond the Frame</h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Have portrait images but need a square or landscape version without losing content?
+            Our AI intelligently generates new surroundings, extending your room seamlessly.
+          </p>
+        </motion.div>
+
+        <div className="relative aspect-square max-w-[700px] mx-auto rounded-2xl shadow-2xl overflow-hidden border border-border bg-card">
+          {/* REMOVED mode="wait" to allow crossfading (Fixes the black flicker) */}
+          <AnimatePresence>
+            <motion.div
+              key={currentSlideIndex}
+              className="absolute inset-0 w-full h-full bg-background"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1 }} // Slow crossfade between slides
+            >
+              {/* IMAGE 2 (1:1 Result) - Background Layer 
+                  Starts Masked (4:5) -> Expands to Full (1:1) after 3s delay
+              */}
+              <motion.img
+                src={outpaintSlides[currentSlideIndex].after}
+                alt="Outpainted Version"
+                className="absolute inset-0 w-full h-full object-cover z-10"
+                initial={{ clipPath: "inset(0% 10% 0% 10%)" }} // Force 4:5
+                animate={{ clipPath: "inset(0% 0% 0% 0%)" }}   // Expand to 1:1
+                transition={{
+                  duration: 1.5,
+                  delay: 3, // WAIT 3 seconds before expanding
+                  ease: [0.22, 1, 0.36, 1] // Smooth bezier curve
+                }}
+              />
+
+              {/* IMAGE 1 (4:5 Original) - Foreground Layer
+                  Sits on top. Fades out exactly when Image 2 starts expanding.
+                  This creates the seamless "Morph" effect.
+              */}
+              <motion.img
+                src={outpaintSlides[currentSlideIndex].before}
+                alt="Original Version"
+                className="absolute top-0 left-[10%] w-[80%] h-full object-cover z-20"
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 0 }}
+                transition={{ 
+                  duration: 0.5, // Quick fade to blend
+                  delay: 3       // Match the expansion start time
+                }}
+              />
+
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border text-sm font-semibold shadow-lg whitespace-nowrap"
+                >
+                   {outpaintSlides[currentSlideIndex].label}
+                </motion.div>
+              </div>
+
+              {/* Guide Lines Animation 
+                  Matches the expansion timing
+              */}
+              <motion.div 
+                 className="absolute inset-0 border-x-2 border-primary/30 z-20 pointer-events-none"
+                 initial={{ left: "10%", right: "10%", opacity: 1 }}
+                 animate={{ left: "0%", right: "0%", opacity: 0 }}
+                 transition={{ 
+                    duration: 1.5, 
+                    delay: 3, 
+                    ease: [0.22, 1, 0.36, 1] 
+                 }}
+              />
+
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <div className="flex justify-center gap-2 mt-8">
+          {outpaintSlides.map((_, idx) => (
+            <div 
+              key={idx}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                idx === currentSlideIndex ? "w-8 bg-primary" : "w-1.5 bg-border"
+              }`}
+            />
+          ))}
+        </div>
+
       </div>
     </section>
   );
@@ -595,37 +769,37 @@ function GallerySection() {
           </div>
 
           <div className="order-2 lg:order-1 lg:col-span-4 flex lg:flex-col justify-start lg:justify-center z-10 overflow-x-auto pb-4 lg:pb-0 gap-3 lg:gap-2 snap-x px-1">
-             {images.map((img, index) => (
-               <motion.button
-                 key={index}
-                 initial={{ opacity: 0, x: -20 }}
-                 whileInView={{ opacity: 1, x: 0 }}
-                 transition={{ delay: index * 0.05 }}
-                 viewport={{ once: true }}
-                 onClick={() => setActiveIndex(index)}
-                 className={`group relative flex flex-col items-start p-4 lg:p-6 rounded-xl text-left transition-all duration-300 border shrink-0 w-[200px] lg:w-full snap-start
-                   ${activeIndex === index 
-                     ? 'bg-background border-border shadow-lg scale-[1.02] ring-1 ring-primary/20' 
-                     : 'bg-background/40 hover:bg-background/80 border-transparent hover:border-border/30 opacity-70 hover:opacity-100'
-                 }`}
-               >
-                 <span className={`text-base lg:text-lg font-bold tracking-tight mb-1 transition-colors ${
-                   activeIndex === index ? 'text-primary' : 'text-foreground'
-                 }`}>
-                   {img.style}
-                 </span>
-                 <span className="text-xs lg:text-sm text-muted-foreground line-clamp-1">
-                   {img.desc}
-                 </span>
+              {images.map((img, index) => (
+                <motion.button
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  viewport={{ once: true }}
+                  onClick={() => setActiveIndex(index)}
+                  className={`group relative flex flex-col items-start p-4 lg:p-6 rounded-xl text-left transition-all duration-300 border shrink-0 w-[200px] lg:w-full snap-start
+                    ${activeIndex === index 
+                      ? 'bg-background border-border shadow-lg scale-[1.02] ring-1 ring-primary/20' 
+                      : 'bg-background/40 hover:bg-background/80 border-transparent hover:border-border/30 opacity-70 hover:opacity-100'
+                    }`}
+                >
+                  <span className={`text-base lg:text-lg font-bold tracking-tight mb-1 transition-colors ${
+                    activeIndex === index ? 'text-primary' : 'text-foreground'
+                  }`}>
+                    {img.style}
+                  </span>
+                  <span className="text-xs lg:text-sm text-muted-foreground line-clamp-1">
+                    {img.desc}
+                  </span>
 
-                 {activeIndex === index && (
-                   <motion.div layoutId="active-glow" className="absolute left-0 top-0 w-1 h-full bg-primary rounded-l-xl hidden lg:block" />
-                 )}
-                 {activeIndex === index && (
-                   <motion.div layoutId="active-glow-mobile" className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-b-xl lg:hidden" />
-                 )}
-               </motion.button>
-             ))}
+                  {activeIndex === index && (
+                    <motion.div layoutId="active-glow" className="absolute left-0 top-0 w-1 h-full bg-primary rounded-l-xl hidden lg:block" />
+                  )}
+                  {activeIndex === index && (
+                    <motion.div layoutId="active-glow-mobile" className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-b-xl lg:hidden" />
+                  )}
+                </motion.button>
+              ))}
           </div>
         </div>
       </div>
@@ -801,6 +975,7 @@ export default function Landing() {
       <HeroSection />
       <SmartLockSection />
       <MaterialSwapSection />
+      <OutpaintSection />
       <HowItWorksSection />
       <GallerySection />
       <TestimonialsSection />
