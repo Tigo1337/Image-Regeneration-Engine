@@ -6,6 +6,7 @@ import { processImageForGemini } from "../image-utils";
 import { storage } from "../storage";
 import { uploadImageToStorage } from "../image-storage";
 import { getUserId, requireActiveSubscription, reportGenerationUsage } from "../middleware/auth";
+import { qaAndRepairPrompt } from "../lib/prompt-utils";
 
 /**
  * Modify Routes - Specific Element Update & Legacy Modify
@@ -46,21 +47,36 @@ export function registerModifyRoutes(app: Express) {
 
       // Construct STRICT Preservation Prompt
       // We do not use the standard prompt builder here because we need extreme constraints.
-      const strictPrompt = `
-=== ROLE: EXPERT PHOTO RETOUCHER ===
-You are an expert architectural visualizer and photo editor. 
-Your task is to edit the provided image with PIXEL-PERFECT precision.
+      let strictPrompt = `
+[ROLE]
+You are an expert architectural retoucher performing a constrained image edit.
 
-=== INSTRUCTION ===
+[EDIT_REQUEST]
 ${modificationRequest}
 
-=== STRICT CONSTRAINTS (DO NOT IGNORE) ===
-1. NO REDESIGN: Do NOT change the style, flooring, walls, lighting, or furniture arrangement.
-2. TARGET ONLY: Modify ONLY the specific element mentioned in the instruction (e.g., hardware, faucet, cabinet color).
-3. PRESERVE GEOMETRY: Keep the exact perspective and geometry of the original room.
-4. TEXTURE MATCHING: Ensure the new element's lighting and shadows match the existing scene perfectly.
-5. OUTPUT: A photorealistic, high-resolution image of the SAME room with ONLY the requested change.
+[SCENE_CONSTRAINTS]
+- NO_REDESIGN: Do not alter room style, layout, lighting setup, or furniture arrangement.
+- TARGET_ONLY: Modify only the explicitly requested element.
+- PERSPECTIVE_LOCK: Keep camera framing and geometry unchanged.
+- MATERIAL_MATCH: Match texture, light direction, and shadow softness with original scene.
+
+[PRESERVE_OBJECT]
+- TARGET: Entire room except requested element.
+- PIXEL_LOCK: Unchanged regions should remain visually identical.
+
+[NEGATIVE_PROMPT]
+- No geometry drift
+- No floating hardware
+- No texture seams
+- No inconsistent reflections
+- No relit scene
+
+[OUTPUT_SPEC]
+- Produce one photorealistic high-resolution edit of the same room with only the requested change.
 `;
+
+      const qaResult = qaAndRepairPrompt(strictPrompt, "entire room except requested element");
+      strictPrompt = qaResult.repairedPrompt;
 
       // Call AI with Low Creativity (level 1) to force adherence to the original image
       const generatedImage = await generateRoomRedesign({

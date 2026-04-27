@@ -5,7 +5,7 @@ import { processImageForGemini, applyPerspectiveMockup, applySmartObjectZoom } f
 import { storage } from "../storage";
 import { uploadImageToStorage } from "../image-storage";
 import { getUserId, requireActiveSubscription, reportGenerationUsage } from "../middleware/auth";
-import { buildVariationPrompt } from "../lib/prompt-utils";
+import { buildVariationPrompt, qaAndRepairPrompt } from "../lib/prompt-utils";
 import { constructRoomScenePrompt } from "@shared/prompt-logic";
 import sharp from "sharp";
 
@@ -92,6 +92,12 @@ export function registerDesignRoutes(app: Express) {
 
       if (hasDrawing) {
         finalPrompt += `\n\nCRITICAL: A Technical Drawing (PDF/Image) has been provided. You MUST strictly adhere to the dimensions, orthographic views, and geometry shown in this drawing. It is the "Ground Truth".`;
+      }
+
+      const qaResult = qaAndRepairPrompt(finalPrompt, validatedData.preservedElements);
+      finalPrompt = qaResult.repairedPrompt;
+      if (qaResult.warnings.length > 0) {
+        console.log("[Prompt QA] Applied repairs:", qaResult.warnings);
       }
 
       // Upload original once for gallery association
