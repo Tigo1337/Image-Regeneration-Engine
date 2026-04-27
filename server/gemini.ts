@@ -21,6 +21,12 @@ interface RoomRedesignParams {
   outputFormat?: string;
 }
 
+function roleLabelPart(role: "MAIN_CANVAS" | "PRESERVE_GEOMETRY" | "STYLE_ONLY" | "GROUND_TRUTH_DIMENSIONS", note: string) {
+  return {
+    text: `\n[INPUT_ROLE]\n- ROLE=${role}\n- NOTE=${note}\n`
+  };
+}
+
 // [NEW] Object Detection for Smart Cropping
 export async function detectObjectBoundingBox(imageBase64: string, objectName: string): Promise<number[] | null> {
   try {
@@ -206,6 +212,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
     ];
 
     // Main Canvas Image
+    parts.push(roleLabelPart("MAIN_CANVAS", "Primary scene to edit. Preserve framing and scene continuity."));
     parts.push({
       inlineData: {
         mimeType: "image/jpeg",
@@ -224,6 +231,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       referenceImages.forEach((ref) => {
         if (ref && ref.includes('base64,')) {
           const refBase64 = ref.replace(/^data:image\/[a-z]+;base64,/, '');
+          parts.push(roleLabelPart("PRESERVE_GEOMETRY", "Ground-truth geometry for preserved objects. Prioritize for shape fidelity."));
           parts.push({
             inlineData: {
               mimeType: "image/jpeg",
@@ -248,6 +256,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
       inspirationImages.forEach((insp) => {
         if (insp && insp.includes('base64,')) {
           const inspBase64 = insp.replace(/^data:image\/[a-z]+;base64,/, '');
+          parts.push(roleLabelPart("STYLE_ONLY", "Style-only reference. Borrow palette/material mood; ignore geometric layout."));
           parts.push({
             inlineData: {
               mimeType: "image/jpeg",
@@ -270,6 +279,7 @@ export async function generateRoomRedesign(params: RoomRedesignParams): Promise<
         text: `\n\nTECHNICAL DRAWING REFERENCE:\nThe following input is a Technical Drawing / Blueprint. Use the dimensions, orthographic views, and scale provided in this document to ensure the object is rendered with 100% geometric accuracy. This document takes precedence over all other inputs regarding shape.`
       });
 
+      parts.push(roleLabelPart("GROUND_TRUTH_DIMENSIONS", "Highest-priority geometry source for dimensions and orthographic fidelity."));
       parts.push({
         inlineData: {
           mimeType: mimeType,

@@ -17,6 +17,74 @@ export interface VariationFormData {
   structureAnalysis?: string | null;
 }
 
+export interface PromptQAResult {
+  repairedPrompt: string;
+  warnings: string[];
+  repaired: boolean;
+}
+
+const duplicateCriticalPatterns = [
+  "MANDATORY PERSPECTIVE OVERRIDE",
+  "GEOMETRIC PERSPECTIVE LOCK",
+  "OBJECT PRESERVATION",
+];
+
+/**
+ * Lightweight prompt QA guardrail:
+ * - Deduplicates exact duplicate lines
+ * - Flags contradictory or missing preservation context
+ * - Optionally appends a minimal preservation clause when missing
+ */
+export function qaAndRepairPrompt(prompt: string, preservedElements: string): PromptQAResult {
+  const warnings: string[] = [];
+  const inputLines = prompt.split("\n");
+  const seen = new Set<string>();
+  const cleanedLines: string[] = [];
+
+  for (const line of inputLines) {
+    const normalized = line.trim();
+    if (!normalized) {
+      cleanedLines.push(line);
+      continue;
+    }
+
+    if (seen.has(normalized)) {
+      warnings.push(`Removed duplicate line: "${normalized.slice(0, 80)}"`);
+      continue;
+    }
+
+    seen.add(normalized);
+    cleanedLines.push(line);
+  }
+
+  let repairedPrompt = cleanedLines.join("\n");
+
+  const hasPreserveBlock = repairedPrompt.includes("[PRESERVE_OBJECT]") || repairedPrompt.includes("OBJECT PRESERVATION");
+  const hasPreservedElements = Boolean(preservedElements && preservedElements.trim().length > 0);
+  if (hasPreservedElements && !hasPreserveBlock) {
+    warnings.push("Preservation clause was missing; appended fallback block.");
+    repairedPrompt += `\n\n[PRESERVE_OBJECT]\n- TARGET: "${preservedElements}".\n- Preserve geometry, orientation, and position.\n`;
+  }
+
+  if (repairedPrompt.includes("PIXEL_LOCK") && repairedPrompt.includes("ARCHITECTURAL_METAMORPHOSIS")) {
+    warnings.push("Potential conflict: PIXEL_LOCK with ARCHITECTURAL_METAMORPHOSIS.");
+  }
+
+  const duplicateCriticalFound = duplicateCriticalPatterns.filter((pattern) => {
+    const count = repairedPrompt.split(pattern).length - 1;
+    return count > 1;
+  });
+  if (duplicateCriticalFound.length > 0) {
+    warnings.push(`Repeated critical sections detected: ${duplicateCriticalFound.join(", ")}.`);
+  }
+
+  return {
+    repairedPrompt,
+    warnings,
+    repaired: warnings.length > 0,
+  };
+}
+
 // Prompt Builder for Modification Requests
 export function buildModificationPrompt(params: ModificationPromptParams): string {
   const { modificationRequest, currentStyle, preservedElements, creativityLevel } = params;
